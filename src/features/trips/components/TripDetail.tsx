@@ -10,6 +10,8 @@ import {
   getTripBudgetLineViews,
   getTripDayCount,
   getTripStatus,
+  tripBudgetStatusLabel,
+  tripStatusLabel,
   type TripBudgetStatus,
   type TripDetailTab,
 } from '../utils/tripUtils'
@@ -28,18 +30,7 @@ type TripDetailProps = {
   onAddBudgetLine: (trip: Trip) => void
   onEditBudgetLine: (trip: Trip, line: BudgetLine) => void
   onDeleteBudgetLine: (trip: Trip, categoryId: string) => void
-}
-
-const statusLabel = {
-  upcoming: 'กำลังจะไป',
-  ongoing: 'กำลังเดินทาง',
-  completed: 'จบแล้ว',
-}
-
-const budgetStatusLabel: Record<TripBudgetStatus, string> = {
-  safe: 'ยังปลอดภัย',
-  'near-limit': 'ใกล้เต็มงบ',
-  'over-budget': 'เกินงบ',
+  onBackToList?: () => void
 }
 
 const budgetStatusTone: Record<TripBudgetStatus, 'income' | 'warning' | 'expense'> = {
@@ -68,6 +59,7 @@ export function TripDetail({
   onAddBudgetLine,
   onEditBudgetLine,
   onDeleteBudgetLine,
+  onBackToList,
 }: TripDetailProps) {
   if (!trip) {
     return <EmptyState title="ยังไม่ได้เลือกทริป" description="เลือกทริปจากรายการหรือสร้างทริปใหม่" />
@@ -85,7 +77,7 @@ export function TripDetail({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-extrabold text-blue-950">{trip.name}</h2>
-              <Badge tone={getTripStatus(trip) === 'completed' ? 'neutral' : 'active'}>{statusLabel[getTripStatus(trip)]}</Badge>
+              <Badge tone={getTripStatus(trip) === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[getTripStatus(trip)]}</Badge>
             </div>
             <p className="mt-1 text-sm text-blue-700">
               {trip.destination || '-'} · {formatDate(trip.startDate)} · {formatDate(trip.endDate)} · {getTripDayCount(trip)} วัน
@@ -93,6 +85,7 @@ export function TripDetail({
             {trip.note && <p className="mt-2 text-sm text-blue-800">{trip.note}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
+            {onBackToList ? <Button size="sm" onClick={onBackToList}>กลับไปดูรายการทริป</Button> : null}
             <Button size="sm" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>
             <Button size="sm" onClick={() => onEditTrip(trip)}>แก้ไขทริป</Button>
             <Button size="sm" variant="danger" onClick={() => onDeleteTrip(trip.id)}>{th.common.delete}</Button>
@@ -175,7 +168,7 @@ export function TripDetail({
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-extrabold">{view.categoryId}</h3>
-                        <Badge tone={budgetStatusTone[view.status]}>{budgetStatusLabel[view.status]}</Badge>
+                        <Badge tone={budgetStatusTone[view.status]}>{tripBudgetStatusLabel[view.status]}</Badge>
                       </div>
                       {view.line.note && <p className="mt-1 text-sm text-slate-500">{view.line.note}</p>}
                     </div>

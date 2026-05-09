@@ -6,6 +6,18 @@ export type TripStatusFilter = 'all' | TripStatus
 export type TripDetailTab = 'overview' | 'actual' | 'plan'
 export type TripBudgetStatus = 'safe' | 'near-limit' | 'over-budget'
 
+export const tripStatusLabel: Record<TripStatus, string> = {
+  upcoming: 'ยังไม่เริ่ม',
+  ongoing: 'กำลังเดินทาง',
+  completed: 'จบทริปแล้ว',
+}
+
+export const tripBudgetStatusLabel: Record<TripBudgetStatus, string> = {
+  safe: 'ยังปลอดภัย',
+  'near-limit': 'ใกล้เต็มงบ',
+  'over-budget': 'เกินงบ',
+}
+
 export type TripFilters = {
   keyword: string
   year: string
@@ -384,5 +396,4 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       updatedAt: trip.updatedAt,
     } satisfies TransactionEntry)))
 }
-
 

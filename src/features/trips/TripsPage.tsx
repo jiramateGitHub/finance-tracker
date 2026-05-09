@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
 import type { AppData, BudgetLine, Trip, TripItem } from '../../types/finance'
 import { TripDetail } from './components/TripDetail'
 import { TripBudgetFormModal } from './components/TripBudgetFormModal'
+import { TripCalendar } from './components/TripCalendar'
 import { TripFilters } from './components/TripFilters'
 import { TripItemModal } from './components/TripItemModal'
 import { TripList } from './components/TripList'
@@ -54,6 +56,8 @@ type DeleteTarget =
   | { type: 'item'; trip: Trip; itemId: string }
   | { type: 'budgetLine'; trip: Trip; categoryId: string }
 
+type TripViewMode = 'list' | 'calendar'
+
 export function TripsPage({
   data,
   onAddTrip,
@@ -65,19 +69,30 @@ export function TripsPage({
   const [filters, setFilters] = useState<TripFiltersState>(createEmptyTripFilters)
   const [activeTripId, setActiveTripId] = useState<string | null>(() => data.trips[0]?.id ?? null)
   const [activeTab, setActiveTab] = useState<TripDetailTab>('overview')
+  const [viewMode, setViewMode] = useState<TripViewMode>('list')
   const [tripModal, setTripModal] = useState<TripModalState>({ open: false, trip: null })
   const [itemModal, setItemModal] = useState<TripItemModalState>({ open: false, trip: null, item: null })
   const [budgetModal, setBudgetModal] = useState<TripBudgetModalState>({ open: false, trip: null, line: null })
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const detailRef = useRef<HTMLDivElement | null>(null)
 
   const filteredTrips = useMemo(() => filterTrips(data.trips, filters), [data.trips, filters])
-  const activeTrip = data.trips.find((trip) => trip.id === activeTripId) ?? filteredTrips[0] ?? data.trips[0] ?? null
+  const effectiveActiveTripId = filteredTrips.some((trip) => trip.id === activeTripId)
+    ? activeTripId
+    : filteredTrips[0]?.id ?? null
+  const activeTrip = filteredTrips.find((trip) => trip.id === effectiveActiveTripId) ?? null
   const summary = useMemo(() => summarizeTrips(data, filteredTrips), [data, filteredTrips])
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
 
   function selectTrip(tripId: string): void {
     setActiveTripId(tripId)
     setActiveTab('overview')
+    window.setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+  }
+
+  function backToList(): void {
+    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function openAddTrip(): void {
@@ -172,16 +187,19 @@ export function TripsPage({
       const nextTrip = data.trips.find((trip) => trip.id !== deleteTarget.tripId)
       setActiveTripId(nextTrip?.id ?? null)
       setActiveTab('overview')
+      setDeleteTarget(null)
       return
     }
     if (deleteTarget.type === 'item') {
       const nextTrip = deleteTripItem(deleteTarget.trip, deleteTarget.itemId)
       onUpdateTrip(nextTrip.id, nextTrip)
       setActiveTab('actual')
+      setDeleteTarget(null)
       return
     }
     onDeleteTripBudgetLine(deleteTarget.trip.id, deleteTarget.categoryId)
     setActiveTab('plan')
+    setDeleteTarget(null)
   }
 
   function getDeleteTitle(): string {
@@ -209,27 +227,44 @@ export function TripsPage({
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)]">
-        <Card title="รายการทริป">
-          <TripList data={data} trips={filteredTrips} activeTripId={activeTrip?.id ?? null} onSelectTrip={selectTrip} />
+        <Card title={viewMode === 'list' ? 'รายการทริป' : 'ปฏิทินทริป'}>
+          <div ref={listRef} className="grid gap-3">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant={viewMode === 'list' ? 'primary' : 'light'} onClick={() => setViewMode('list')}>
+                รายการ
+              </Button>
+              <Button size="sm" variant={viewMode === 'calendar' ? 'primary' : 'light'} onClick={() => setViewMode('calendar')}>
+                ปฏิทิน
+              </Button>
+            </div>
+            {viewMode === 'list' ? (
+              <TripList data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+            ) : (
+              <TripCalendar data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+            )}
+          </div>
         </Card>
 
-        <Card title="รายละเอียดทริป">
-          <TripDetail
-            data={data}
-            trip={activeTrip}
-            activeTab={activeTab}
-            onChangeTab={setActiveTab}
-            onEditTrip={openEditTrip}
-            onDeleteTrip={handleDeleteTrip}
-            onAddItem={openAddItem}
-            onEditItem={openEditItem}
-            onDeleteItem={handleDeleteItem}
-            onToggleItemPaid={handleToggleItemPaid}
-            onAddBudgetLine={openAddBudgetLine}
-            onEditBudgetLine={openEditBudgetLine}
-            onDeleteBudgetLine={handleDeleteBudgetLine}
-          />
-        </Card>
+        <div ref={detailRef}>
+          <Card title="รายละเอียดทริป">
+            <TripDetail
+              data={data}
+              trip={activeTrip}
+              activeTab={activeTab}
+              onChangeTab={setActiveTab}
+              onEditTrip={openEditTrip}
+              onDeleteTrip={handleDeleteTrip}
+              onAddItem={openAddItem}
+              onEditItem={openEditItem}
+              onDeleteItem={handleDeleteItem}
+              onToggleItemPaid={handleToggleItemPaid}
+              onAddBudgetLine={openAddBudgetLine}
+              onEditBudgetLine={openEditBudgetLine}
+              onDeleteBudgetLine={handleDeleteBudgetLine}
+              onBackToList={backToList}
+            />
+          </Card>
+        </div>
       </div>
 
       {tripModal.open && (

@@ -6,7 +6,7 @@ import { MonthInput } from '../../../components/ui/MonthInput'
 import { SelectField } from '../../../components/ui/SelectField'
 import { TextInput } from '../../../components/ui/TextInput'
 import { th } from '../../../i18n/th'
-import type { TripFilters as TripFiltersState, TripStatusFilter } from '../utils/tripUtils'
+import { tripStatusLabel, type TripFilters as TripFiltersState, type TripStatusFilter } from '../utils/tripUtils'
 
 type TripFiltersProps = {
   filters: TripFiltersState
@@ -66,9 +66,9 @@ export function TripFilters({ filters, resultCount, categoryOptions, onChange, o
           value={filters.status}
           options={[
             { value: 'all', label: 'ทั้งหมด' },
-            { value: 'upcoming', label: 'กำลังจะไป' },
-            { value: 'ongoing', label: 'กำลังเดินทาง' },
-            { value: 'completed', label: 'จบแล้ว' },
+            { value: 'upcoming', label: tripStatusLabel.upcoming },
+            { value: 'ongoing', label: tripStatusLabel.ongoing },
+            { value: 'completed', label: tripStatusLabel.completed },
           ]}
           onChange={(event) => onChange({ ...filters, status: event.target.value as TripStatusFilter })}
         />

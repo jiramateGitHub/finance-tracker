@@ -2,7 +2,7 @@ import { Badge } from '../../../components/ui/Badge'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import type { AppData, Trip } from '../../../types/finance'
 import { clampPercent, formatDate, formatMoney } from '../../../utils/formatters'
-import { calculateTripTotals, getTripStatus } from '../utils/tripUtils'
+import { calculateTripTotals, getTripStatus, tripStatusLabel } from '../utils/tripUtils'
 
 type TripListProps = {
   data: AppData
@@ -11,15 +11,9 @@ type TripListProps = {
   onSelectTrip: (tripId: string) => void
 }
 
-const statusLabel = {
-  upcoming: 'กำลังจะไป',
-  ongoing: 'กำลังเดินทาง',
-  completed: 'จบแล้ว',
-}
-
 export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListProps) {
   if (!trips.length) {
-    return <EmptyState title="ยังไม่พบทริป" description="สร้างทริปเพื่อเริ่มติดตามงบและค่าใช้จ่ายจริง" />
+    return <EmptyState title="ไม่พบทริป" description="เพิ่มทริปใหม่เพื่อเริ่มติดตามงบและค่าใช้จ่ายจริง" />
   }
 
   return (
@@ -43,7 +37,7 @@ export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListPr
                   {trip.destination || '-'} · {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
                 </p>
               </div>
-              <Badge tone={getTripStatus(trip) === 'completed' ? 'neutral' : 'active'}>{statusLabel[getTripStatus(trip)]}</Badge>
+              <Badge tone={getTripStatus(trip) === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[getTripStatus(trip)]}</Badge>
             </div>
 
             <div className="rounded-xl border border-blue-100 bg-white p-3">
@@ -59,7 +53,7 @@ export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListPr
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-xs font-bold text-slate-500">
+            <div className="grid gap-2 text-xs font-bold text-slate-500 sm:grid-cols-3">
               <span>{trip.items.length} รายการ</span>
               <span className="text-emerald-700">{formatMoney(totals.paidTotal)} จ่ายแล้ว</span>
               <span className="text-amber-700">{formatMoney(totals.unpaidTotal)} ยังไม่จ่าย</span>
