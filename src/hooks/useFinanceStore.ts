@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { calculateEntryTotals } from '../lib/finance-calculations'
 import { useFinanceData, type FinanceDataStatus } from '../state/FinanceDataProvider'
-import type { AppData, Budget, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
+import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
 import { currentDateInputValue, currentIsoTimestamp } from '../utils/formatters'
 
 export interface FinanceStore {
@@ -31,9 +31,9 @@ export interface FinanceStore {
   updateGoal: (goalId: string, patch: Partial<Goal>) => void
   deleteGoal: (goalId: string) => void
   exportJson: () => void
-  importJson: (file: File) => Promise<void>
+  importJson: (file: File) => Promise<FinanceData | null>
   resetDemoData: () => void
-  replaceData: (data: AppData, message?: string) => void
+  replaceData: (data: AppData, message?: string) => FinanceData
 }
 
 function createExpenseDraft(): TransactionEntry {
@@ -69,8 +69,8 @@ export function useFinanceStore(): FinanceStore {
     financeData.addTransaction(createExpenseDraft())
   }
 
-  async function importJson(file: File): Promise<void> {
-    await financeData.importDataFromJson(file)
+  async function importJson(file: File): Promise<FinanceData | null> {
+    return financeData.importDataFromJson(file)
   }
 
   function resetDemoData(): void {

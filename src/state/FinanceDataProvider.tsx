@@ -1,23 +1,29 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, type Dispatch, type PropsWithChildren, type SetStateAction } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type Dispatch, type PropsWithChildren, type SetStateAction } from 'react'
+import { Button } from '../components/ui/Button'
 import { seedData } from '../data/seedData'
 import { createEmptyFinanceData, getDataSchemaVersion, normalizeFinanceData, withUpdatedMeta } from '../lib/dataMigration'
-import { createJsonDownload, loadStoredFinanceData, saveStoredFinanceData } from '../lib/storage'
+import { createJsonDownload } from '../lib/storage'
+import { loadFinanceDataFromCloud } from '../services/firebase/firestoreFinanceRepository'
 import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
 
+export type FinanceDataLoadState = 'loading' | 'ready' | 'error'
+
 export type FinanceDataStatus = {
+  loadState: FinanceDataLoadState
   saveState: 'idle' | 'saved' | 'error'
   importState: 'idle' | 'success' | 'error'
   message: string
+  errorMessage: string | null
 }
 
 export type FinanceDataContextValue = {
   data: FinanceData
   status: FinanceDataStatus
   setData: Dispatch<SetStateAction<FinanceData>>
-  replaceData: (nextData: FinanceData, message?: string) => void
+  replaceData: (nextData: FinanceData, message?: string) => FinanceData
   resetData: () => void
-  importDataFromJson: (file: File) => Promise<void>
+  importDataFromJson: (file: File) => Promise<FinanceData | null>
   exportDataAsJson: () => void
   addTransaction: (transaction: TransactionEntry) => void
   updateTransaction: (transactionId: string, patch: Partial<TransactionEntry>) => void
@@ -41,47 +47,87 @@ export type FinanceDataContextValue = {
 const FinanceDataContext = createContext<FinanceDataContextValue | null>(null)
 
 type FinanceDataProviderProps = PropsWithChildren<{
-  userId?: string
+  userId: string
 }>
 
-function loadInitialData(userId?: string): FinanceData {
-  return loadStoredFinanceData(userId) ?? createEmptyFinanceData()
+const loadingStatus: FinanceDataStatus = {
+  loadState: 'loading',
+  saveState: 'idle',
+  importState: 'idle',
+  message: 'กำลังโหลดข้อมูลจาก Cloud...',
+  errorMessage: null,
+}
+
+function markLoaded(message: string): FinanceDataStatus {
+  return {
+    loadState: 'ready',
+    saveState: 'idle',
+    importState: 'idle',
+    message,
+    errorMessage: null,
+  }
 }
 
 export function FinanceDataProvider({ children, userId }: FinanceDataProviderProps) {
-  const [data, setData] = useState<FinanceData>(() => loadInitialData(userId))
-  const [status, setStatus] = useState<FinanceDataStatus>({
-    saveState: 'idle',
-    importState: 'idle',
-    message: loadStoredFinanceData(userId) ? 'โหลด cache ของบัญชีนี้แล้ว ระหว่างตรวจสอบ Cloud' : 'กำลังตรวจสอบ Cloud สำหรับบัญชีนี้',
-  })
+  const [data, setData] = useState<FinanceData>(() => createEmptyFinanceData())
+  const [status, setStatus] = useState<FinanceDataStatus>(loadingStatus)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
-    try {
-      saveStoredFinanceData(data, userId)
-    } catch {
-      // The next explicit data action will surface a status message in the UI.
-    }
-  }, [data, userId])
+    let cancelled = false
 
-  async function importDataFromJson(file: File): Promise<void> {
+    async function loadCloudData(): Promise<void> {
+      setStatus(loadingStatus)
+      try {
+        const cloudData = await loadFinanceDataFromCloud(userId)
+        if (cancelled) return
+        setData(cloudData ? normalizeFinanceData(cloudData) : createEmptyFinanceData())
+        setStatus(markLoaded(cloudData ? 'โหลดข้อมูลจาก Cloud แล้ว' : 'ยังไม่มีข้อมูลบน Cloud เริ่มเพิ่มรายการแรกได้เลย'))
+      } catch (error) {
+        if (cancelled) return
+        const errorMessage = error instanceof Error ? error.message : 'โหลดข้อมูลจาก Cloud ไม่สำเร็จ'
+        setData(createEmptyFinanceData())
+        setStatus({
+          loadState: 'error',
+          saveState: 'error',
+          importState: 'idle',
+          message: errorMessage,
+          errorMessage,
+        })
+      }
+    }
+
+    void loadCloudData()
+    return () => {
+      cancelled = true
+    }
+  }, [reloadToken, userId])
+
+  const retryLoad = useCallback(() => setReloadToken((current) => current + 1), [])
+
+  async function importDataFromJson(file: File): Promise<FinanceData | null> {
     try {
       const rawText = await file.text()
       const parsed = JSON.parse(rawText) as unknown
       const schemaVersion = getDataSchemaVersion(parsed)
-      const importedData = normalizeFinanceData(parsed)
-      setData(withUpdatedMeta(importedData))
+      const importedData = withUpdatedMeta(normalizeFinanceData(parsed))
+      setData(importedData)
       setStatus({
+        loadState: 'ready',
         saveState: 'saved',
         importState: 'success',
         message: `นำเข้า ${file.name} เป็น schema v${schemaVersion || importedData.schemaVersion} แล้ว`,
+        errorMessage: null,
       })
+      return importedData
     } catch {
       setStatus((current) => ({
         ...current,
         importState: 'error',
         message: 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้',
+        errorMessage: 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้',
       }))
+      return null
     }
   }
 
@@ -96,173 +142,113 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   function resetData(): void {
     setData(withUpdatedMeta(seedData))
     setStatus({
+      loadState: 'ready',
       saveState: 'saved',
       importState: 'idle',
-      message: 'รีเซ็ตข้อมูลในเครื่องเป็นชุดตัวอย่างแล้ว',
+      message: 'โหลดข้อมูลตัวอย่างสำหรับพัฒนาแล้ว กดบันทึกขึ้น Cloud หากต้องการใช้ชุดนี้',
+      errorMessage: null,
     })
   }
 
-  function replaceData(nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud ลงเครื่องแล้ว'): void {
-    setData(withUpdatedMeta(nextData))
+  function replaceData(nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud แล้ว'): FinanceData {
+    const normalized = withUpdatedMeta(nextData)
+    setData(normalized)
     setStatus({
+      loadState: 'ready',
       saveState: 'saved',
       importState: 'idle',
       message,
+      errorMessage: null,
+    })
+    return normalized
+  }
+
+  function updateData(updater: (current: FinanceData) => FinanceData, message: string): void {
+    setData((current) => withUpdatedMeta(updater(current)))
+    setStatus({
+      loadState: 'ready',
+      saveState: 'saved',
+      importState: 'idle',
+      message,
+      errorMessage: null,
     })
   }
 
   function addTransaction(transaction: TransactionEntry): void {
-    setData((current) => withUpdatedMeta({
+    updateData((current) => ({
       ...current,
-      // Canonical v2 write target is transactions; entries mirrors it for older UI/helpers only.
       transactions: [transaction, ...current.transactions],
       entries: [transaction, ...current.transactions],
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'เพิ่มรายการและบันทึกในเครื่องแล้ว',
-    })
+    }), 'เพิ่มรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateTransaction(transactionId: string, patch: Partial<TransactionEntry>): void {
-    setData((current) => {
+    updateData((current) => {
       const transactions = current.transactions.map((transaction) => (
         transaction.id === transactionId ? { ...transaction, ...patch, updatedAt: new Date().toISOString() } : transaction
       ))
-      return withUpdatedMeta({
-        ...current,
-        // Keep the compatibility alias synchronized, but do not treat it as the source of truth.
-        transactions,
-        entries: transactions,
-      })
-    })
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'แก้ไขรายการและบันทึกในเครื่องแล้ว',
-    })
+      return { ...current, transactions, entries: transactions }
+    }, 'แก้ไขรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteTransaction(transactionId: string): void {
-    setData((current) => {
+    updateData((current) => {
       const transactions = current.transactions.filter((transaction) => transaction.id !== transactionId)
-      return withUpdatedMeta({
-        ...current,
-        // Keep the compatibility alias synchronized, but do not treat it as the source of truth.
-        transactions,
-        entries: transactions,
-      })
-    })
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'ลบรายการและบันทึกในเครื่องแล้ว',
-    })
+      return { ...current, transactions, entries: transactions }
+    }, 'ลบรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addInstallmentPlan(plan: InstallmentPlan): void {
-    setData((current) => withUpdatedMeta({
+    updateData((current) => ({
       ...current,
-      // Canonical v2 write target is installmentPlans; installments mirrors it for legacy compatibility.
       installmentPlans: [plan, ...current.installmentPlans],
       installments: [plan, ...current.installmentPlans],
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'เพิ่มแผนผ่อนและบันทึกในเครื่องแล้ว',
-    })
+    }), 'เพิ่มแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateInstallmentPlan(planId: string, patch: Partial<InstallmentPlan>): void {
-    setData((current) => {
+    updateData((current) => {
       const installmentPlans = current.installmentPlans.map((plan) => (
         plan.id === planId ? { ...plan, ...patch, updatedAt: new Date().toISOString() } : plan
       ))
-      return withUpdatedMeta({
-        ...current,
-        // Keep the compatibility alias synchronized, but do not treat it as the source of truth.
-        installmentPlans,
-        installments: installmentPlans,
-      })
-    })
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'แก้ไขแผนผ่อนและบันทึกในเครื่องแล้ว',
-    })
+      return { ...current, installmentPlans, installments: installmentPlans }
+    }, 'แก้ไขแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteInstallmentPlan(planId: string): void {
-    setData((current) => {
+    updateData((current) => {
       const installmentPlans = current.installmentPlans.filter((plan) => plan.id !== planId)
-      return withUpdatedMeta({
-        ...current,
-        // Keep the compatibility alias synchronized, but do not treat it as the source of truth.
-        installmentPlans,
-        installments: installmentPlans,
-      })
-    })
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'ลบแผนผ่อนและบันทึกในเครื่องแล้ว',
-    })
+      return { ...current, installmentPlans, installments: installmentPlans }
+    }, 'ลบแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addTrip(trip: Trip): void {
-    setData((current) => withUpdatedMeta({
-      ...current,
-      trips: [trip, ...current.trips],
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'เพิ่มทริปและบันทึกในเครื่องแล้ว',
-    })
+    updateData((current) => ({ ...current, trips: [trip, ...current.trips] }), 'เพิ่มทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateTrip(tripId: string, patch: Partial<Trip>): void {
-    setData((current) => withUpdatedMeta({
+    updateData((current) => ({
       ...current,
-      trips: current.trips.map((trip) => (
-        trip.id === tripId ? { ...trip, ...patch, updatedAt: new Date().toISOString() } : trip
-      )),
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'แก้ไขทริปและบันทึกในเครื่องแล้ว',
-    })
+      trips: current.trips.map((trip) => trip.id === tripId ? { ...trip, ...patch, updatedAt: new Date().toISOString() } : trip),
+    }), 'แก้ไขทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteTrip(tripId: string): void {
-    setData((current) => withUpdatedMeta({
+    updateData((current) => ({
       ...current,
       trips: current.trips.filter((trip) => trip.id !== tripId),
       budgets: current.budgets.filter((budget) => budget.tripId !== tripId),
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'ลบทริปและบันทึกในเครื่องแล้ว',
-    })
+    }), 'ลบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addOrUpdateTripBudgetLine(tripId: string, categoryId: string, amount: number, note?: string): void {
     const now = new Date().toISOString()
-    setData((current) => {
+    updateData((current) => {
       const existingBudget = current.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId)
       const existingLines = existingBudget?.lines?.length
         ? existingBudget.lines
         : existingBudget
-          ? [{
-            id: existingBudget.id,
-            categoryId: existingBudget.categoryId || existingBudget.category || categoryId,
-            amount: existingBudget.amount,
-            note: existingBudget.note,
-          }]
+          ? [{ id: existingBudget.id, categoryId: existingBudget.categoryId || existingBudget.category || categoryId, amount: existingBudget.amount, note: existingBudget.note }]
           : []
       const lineExists = existingLines.some((line) => line.categoryId === categoryId)
       const lines = lineExists
@@ -284,32 +270,22 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         createdAt: existingBudget?.createdAt ?? now,
         updatedAt: now,
       }
-      return withUpdatedMeta({
+      return {
         ...current,
         budgets: existingBudget
           ? current.budgets.map((budget) => budget.id === existingBudget.id ? nextBudget : budget)
           : [nextBudget, ...current.budgets],
-      })
-    })
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'อัปเดตงบทริปและบันทึกในเครื่องแล้ว',
-    })
+      }
+    }, 'อัปเดตงบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteTripBudgetLine(tripId: string, categoryId: string): void {
     const now = new Date().toISOString()
-    setData((current) => {
+    updateData((current) => {
       const existingBudget = current.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId)
       if (!existingBudget) return current
       const lines = (existingBudget.lines ?? []).filter((line) => line.categoryId !== categoryId)
-      if (!lines.length) {
-        return withUpdatedMeta({
-          ...current,
-          budgets: current.budgets.filter((budget) => budget.id !== existingBudget.id),
-        })
-      }
+      if (!lines.length) return { ...current, budgets: current.budgets.filter((budget) => budget.id !== existingBudget.id) }
       const totalAmount = lines.reduce((total, line) => total + Number(line.amount || 0), 0)
       const nextBudget: Budget = {
         ...existingBudget,
@@ -319,92 +295,61 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         lines,
         updatedAt: now,
       }
-      return withUpdatedMeta({
-        ...current,
-        budgets: current.budgets.map((budget) => budget.id === existingBudget.id ? nextBudget : budget),
-      })
-    })
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'ลบงบทริปและบันทึกในเครื่องแล้ว',
-    })
+      return { ...current, budgets: current.budgets.map((budget) => budget.id === existingBudget.id ? nextBudget : budget) }
+    }, 'ลบงบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addBudget(budget: Budget): void {
-    setData((current) => withUpdatedMeta({
-      ...current,
-      budgets: [budget, ...current.budgets],
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'เพิ่มงบรายเดือนและบันทึกในเครื่องแล้ว',
-    })
+    updateData((current) => ({ ...current, budgets: [budget, ...current.budgets] }), 'เพิ่มงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateBudget(budgetId: string, patch: Partial<Budget>): void {
-    setData((current) => withUpdatedMeta({
+    updateData((current) => ({
       ...current,
-      budgets: current.budgets.map((budget) => (
-        budget.id === budgetId ? { ...budget, ...patch, updatedAt: new Date().toISOString() } : budget
-      )),
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'แก้ไขงบรายเดือนและบันทึกในเครื่องแล้ว',
-    })
+      budgets: current.budgets.map((budget) => budget.id === budgetId ? { ...budget, ...patch, updatedAt: new Date().toISOString() } : budget),
+    }), 'แก้ไขงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteBudget(budgetId: string): void {
-    setData((current) => withUpdatedMeta({
-      ...current,
-      budgets: current.budgets.filter((budget) => budget.id !== budgetId),
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'ลบงบรายเดือนและบันทึกในเครื่องแล้ว',
-    })
+    updateData((current) => ({ ...current, budgets: current.budgets.filter((budget) => budget.id !== budgetId) }), 'ลบงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addGoal(goal: Goal): void {
-    setData((current) => withUpdatedMeta({
-      ...current,
-      goals: [goal, ...current.goals],
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'เพิ่มเป้าหมายและบันทึกในเครื่องแล้ว',
-    })
+    updateData((current) => ({ ...current, goals: [goal, ...current.goals] }), 'เพิ่มเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateGoal(goalId: string, patch: Partial<Goal>): void {
-    setData((current) => withUpdatedMeta({
+    updateData((current) => ({
       ...current,
-      goals: current.goals.map((goal) => (
-        goal.id === goalId ? { ...goal, ...patch, updatedAt: new Date().toISOString() } : goal
-      )),
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'แก้ไขเป้าหมายและบันทึกในเครื่องแล้ว',
-    })
+      goals: current.goals.map((goal) => goal.id === goalId ? { ...goal, ...patch, updatedAt: new Date().toISOString() } : goal),
+    }), 'แก้ไขเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteGoal(goalId: string): void {
-    setData((current) => withUpdatedMeta({
-      ...current,
-      goals: current.goals.filter((goal) => goal.id !== goalId),
-    }))
-    setStatus({
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'ลบเป้าหมายและบันทึกในเครื่องแล้ว',
-    })
+    updateData((current) => ({ ...current, goals: current.goals.filter((goal) => goal.id !== goalId) }), 'ลบเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
+  }
+
+  if (status.loadState === 'loading') {
+    return (
+      <div className="grid min-h-screen place-items-center bg-finance-bg px-4 text-center">
+        <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-finance-sm">
+          <div className="text-lg font-extrabold text-slate-900">กำลังโหลดข้อมูลจาก Cloud...</div>
+          <p className="mt-2 text-sm font-bold text-slate-500">ระบบกำลังดึงข้อมูลของบัญชีนี้จาก Firestore</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status.loadState === 'error') {
+    return (
+      <div className="grid min-h-screen place-items-center bg-finance-bg px-4 text-center">
+        <div className="max-w-md rounded-3xl border border-rose-200 bg-white p-6 shadow-finance-sm">
+          <div className="text-lg font-extrabold text-rose-700">โหลดข้อมูลจาก Cloud ไม่สำเร็จ</div>
+          <p className="mt-2 text-sm font-bold text-slate-500">{status.errorMessage}</p>
+          <Button type="button" variant="primary" className="mt-4" onClick={retryLoad}>ลองอีกครั้ง</Button>
+        </div>
+      </div>
+    )
   }
 
   const value: FinanceDataContextValue = {

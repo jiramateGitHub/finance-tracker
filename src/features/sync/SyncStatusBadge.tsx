@@ -12,9 +12,7 @@ const labelByState: Record<SyncStatus['state'], string> = {
   loading: th.sync.loading,
   saving: th.sync.saving,
   saved: th.sync.saved,
-  conflict: th.sync.conflict,
   error: th.sync.error,
-  'local-only': th.sync.cachePreview,
 }
 
 const toneByState: Record<SyncStatus['state'], 'neutral' | 'income' | 'expense' | 'warning' | 'active'> = {
@@ -22,9 +20,7 @@ const toneByState: Record<SyncStatus['state'], 'neutral' | 'income' | 'expense' 
   loading: 'active',
   saving: 'active',
   saved: 'income',
-  conflict: 'warning',
   error: 'expense',
-  'local-only': 'neutral',
 }
 
 export function SyncStatusBadge({ status, className = '' }: SyncStatusBadgeProps) {

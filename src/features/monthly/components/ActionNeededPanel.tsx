@@ -26,7 +26,7 @@ export function ActionNeededPanel({ month, transactions, budgets, goals, syncSta
     .map((goal) => ({ goal, progress: calculateGoalProgress(goal) }))
     .filter((item) => item.goal.status === 'active' && !item.progress.isCompleted && item.progress.percent >= 80)
     .slice(0, 3)
-  const syncNeedsAction = syncStatus?.state === 'conflict' || syncStatus?.state === 'error'
+  const syncNeedsAction = syncStatus?.state === 'error'
   const hasItems = unpaid.length || budgetAlerts.length || goalAlerts.length || syncNeedsAction
 
   return (

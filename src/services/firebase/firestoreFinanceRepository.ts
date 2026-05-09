@@ -13,8 +13,7 @@ import { createExportableFinanceData, normalizeFinanceData } from '../../lib/dat
 import type { FinanceData } from '../../types/finance'
 import { getFirebaseApp } from './firebaseApp'
 
-const FIRESTORE_ROOT_COLLECTION = 'financeData'
-const FIRESTORE_ROOT_DOC_ID = 'main'
+const META_DOC_ID = 'app'
 const SINGLETON_DOC_ID = 'main'
 const BATCH_CHUNK_SIZE = 400
 
@@ -32,16 +31,17 @@ function requireFirestore(): Firestore {
   return getFirestore(app)
 }
 
-function userFinanceRootRef(db: Firestore, userId: string): DocumentReference {
-  return doc(db, 'users', userId, FIRESTORE_ROOT_COLLECTION, FIRESTORE_ROOT_DOC_ID)
+function userRootRef(db: Firestore, userId: string): DocumentReference {
+  return doc(db, 'users', userId)
 }
 
 function singletonDocRef(db: Firestore, userId: string, collectionName: SingletonCollectionName): DocumentReference {
-  return doc(collection(userFinanceRootRef(db, userId), collectionName), SINGLETON_DOC_ID)
+  const docId = collectionName === 'meta' ? META_DOC_ID : SINGLETON_DOC_ID
+  return doc(db, 'users', userId, collectionName, docId)
 }
 
 function itemCollectionRef(db: Firestore, userId: string, collectionName: ItemCollectionName) {
-  return collection(userFinanceRootRef(db, userId), collectionName)
+  return collection(db, 'users', userId, collectionName)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -157,10 +157,10 @@ export async function saveFinanceDataToCloud(userId: string, data: FinanceData):
   assertValidExportableData(exportableData)
   const operations: WriteOperation[] = [
     (batch) => {
-      batch.set(userFinanceRootRef(db, userId), {
+      batch.set(userRootRef(db, userId), {
         schemaVersion: exportableData.schemaVersion,
         updatedAt: exportableData.meta.updatedAt,
-      })
+      }, { merge: true })
     },
   ]
 

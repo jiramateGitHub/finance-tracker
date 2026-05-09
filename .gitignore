@@ -3,3 +3,4 @@ dist
 .env.local
 .env.*.local
 income_expense_tracker.html
+project*.txt

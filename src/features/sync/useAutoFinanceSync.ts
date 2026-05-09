@@ -3,10 +3,8 @@ import { createExportableFinanceData, normalizeFinanceData } from '../../lib/dat
 import { th } from '../../i18n/th'
 import { loadFinanceDataFromCloud, saveFinanceDataToCloud } from '../../services/firebase/firestoreFinanceRepository'
 import type { FinanceData } from '../../types/finance'
-import { createFinanceDataFingerprint, mergeFinanceData } from './syncData'
+import { createFinanceDataFingerprint } from './syncData'
 import type { SyncStatus } from './syncTypes'
-
-type ConflictResolution = 'use-cloud' | 'keep-local' | 'merge'
 
 type UseAutoFinanceSyncOptions = {
   userId: string
@@ -18,8 +16,8 @@ const AUTO_SAVE_DEBOUNCE_MS = 1800
 
 function createInitialStatus(): SyncStatus {
   return {
-    state: 'loading',
-    message: th.sync.checking,
+    state: 'idle',
+    message: th.sync.idle,
     lastSyncedAt: null,
     errorMessage: null,
   }
@@ -43,17 +41,9 @@ function validateNormalizedData(data: FinanceData): FinanceData {
 
 export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinanceSyncOptions) {
   const [status, setStatus] = useState<SyncStatus>(createInitialStatus)
-  const [pendingCloudData, setPendingCloudData] = useState<FinanceData | null>(null)
-  const autoSaveEnabledRef = useRef(false)
-  const initializedRef = useRef(false)
-  const skipNextSaveRef = useRef(false)
-  const lastSavedFingerprintRef = useRef<string | null>(null)
+  const lastSavedFingerprintRef = useRef<string | null>(createFinanceDataFingerprint(data))
   const saveTimerRef = useRef<number | null>(null)
-  const latestDataRef = useRef(data)
-
-  useEffect(() => {
-    latestDataRef.current = data
-  }, [data])
+  const skipNextSaveRef = useRef(true)
 
   const clearSaveTimer = useCallback(() => {
     if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current)
@@ -74,8 +64,6 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
         await saveFinanceDataToCloud(userId, normalized)
         const syncedAt = new Date().toISOString()
         lastSavedFingerprintRef.current = createFinanceDataFingerprint(normalized)
-        autoSaveEnabledRef.current = true
-        setPendingCloudData(null)
         setStatus({
           state: 'saved',
           message,
@@ -108,7 +96,6 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
     try {
       const cloudData = await loadFinanceDataFromCloud(userId)
       if (!cloudData) {
-        autoSaveEnabledRef.current = true
         setStatus((current) => ({
           ...current,
           state: 'idle',
@@ -120,13 +107,10 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
       skipNextSaveRef.current = true
       replaceData(cloudData, th.sync.loadManual)
       lastSavedFingerprintRef.current = createFinanceDataFingerprint(cloudData)
-      autoSaveEnabledRef.current = true
-      const syncedAt = new Date().toISOString()
-      setPendingCloudData(null)
       setStatus({
         state: 'saved',
         message: th.sync.loadManual,
-        lastSyncedAt: syncedAt,
+        lastSyncedAt: new Date().toISOString(),
         errorMessage: null,
       })
       return true
@@ -142,50 +126,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
     }
   }, [clearSaveTimer, replaceData, userId])
 
-  const resolveConflict = useCallback(
-    async (resolution: ConflictResolution): Promise<void> => {
-      if (!pendingCloudData) return
-
-      if (resolution === 'use-cloud') {
-        skipNextSaveRef.current = true
-        replaceData(pendingCloudData, th.sync.loadManual)
-        lastSavedFingerprintRef.current = createFinanceDataFingerprint(pendingCloudData)
-        autoSaveEnabledRef.current = true
-        setPendingCloudData(null)
-        setStatus({
-          state: 'saved',
-          message: th.sync.usingCloud,
-          lastSyncedAt: new Date().toISOString(),
-          errorMessage: null,
-        })
-        return
-      }
-
-      const nextData = resolution === 'merge' ? mergeFinanceData(data, pendingCloudData) : data
-      if (resolution === 'merge') {
-        skipNextSaveRef.current = true
-        replaceData(nextData, 'รวมข้อมูล Cloud กับข้อมูลในเครื่องแล้ว')
-      }
-      await saveNow(nextData, resolution === 'merge' ? th.sync.merged : th.sync.keptLocal)
-    },
-    [data, pendingCloudData, replaceData, saveNow],
-  )
-
-  const markLocalOnly = useCallback((message = th.sync.localPaused): void => {
-    clearSaveTimer()
-    autoSaveEnabledRef.current = false
-    setPendingCloudData(null)
-    setStatus((current) => ({
-      ...current,
-      state: 'local-only',
-      message,
-      errorMessage: null,
-    }))
-  }, [clearSaveTimer])
-
   const enableAutoSave = useCallback((message = th.sync.enabled): void => {
-    autoSaveEnabledRef.current = true
-    setPendingCloudData(null)
     setStatus((current) => ({
       ...current,
       state: 'idle',
@@ -195,84 +136,19 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-
-    async function initializeCloudState(): Promise<void> {
-      setStatus(createInitialStatus())
-      try {
-        const cloudData = await loadFinanceDataFromCloud(userId)
-        if (cancelled) return
-
-        initializedRef.current = true
-        if (cloudData) {
-          const localFingerprint = createFinanceDataFingerprint(latestDataRef.current)
-          const cloudFingerprint = createFinanceDataFingerprint(cloudData)
-          lastSavedFingerprintRef.current = cloudFingerprint
-          if (localFingerprint === cloudFingerprint) {
-            autoSaveEnabledRef.current = true
-            setPendingCloudData(null)
-            setStatus({
-              state: 'saved',
-              message: th.sync.sameData,
-              lastSyncedAt: cloudData.meta.updatedAt,
-              errorMessage: null,
-            })
-            return
-          }
-          setPendingCloudData(cloudData)
-          autoSaveEnabledRef.current = false
-          setStatus({
-            state: 'conflict',
-            message: th.sync.cloudExists,
-            lastSyncedAt: cloudData.meta.updatedAt,
-            errorMessage: null,
-          })
-          return
-        }
-
-        autoSaveEnabledRef.current = true
-        setStatus({
-          state: 'idle',
-          message: th.sync.noCloud,
-          lastSyncedAt: null,
-          errorMessage: null,
-        })
-      } catch (error) {
-        if (cancelled) return
-        initializedRef.current = true
-        autoSaveEnabledRef.current = false
-        const errorMessage = error instanceof Error ? error.message : 'ซิงก์ Cloud ไม่สำเร็จ'
-        setStatus({
-          state: 'error',
-          message: errorMessage,
-          lastSyncedAt: null,
-          errorMessage,
-        })
-      }
-    }
-
-    initializedRef.current = false
-    autoSaveEnabledRef.current = false
     lastSavedFingerprintRef.current = null
-    clearSaveTimer()
-    void initializeCloudState()
-
-    return () => {
-      cancelled = true
-      clearSaveTimer()
-    }
+    skipNextSaveRef.current = true
+    return clearSaveTimer
   }, [clearSaveTimer, userId])
 
   useEffect(() => {
-    if (!initializedRef.current || !autoSaveEnabledRef.current || status.state === 'loading' || status.state === 'saving') return
-
     const fingerprint = createFinanceDataFingerprint(data)
     if (skipNextSaveRef.current) {
       skipNextSaveRef.current = false
       lastSavedFingerprintRef.current = fingerprint
       return
     }
-    if (fingerprint === lastSavedFingerprintRef.current) return
+    if (fingerprint === lastSavedFingerprintRef.current || status.state === 'loading' || status.state === 'saving') return
 
     clearSaveTimer()
     setStatus((current) => ({
@@ -290,11 +166,8 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
 
   return {
     status,
-    pendingCloudData,
     saveNow,
     loadNow,
-    resolveConflict,
-    markLocalOnly,
     enableAutoSave,
   }
 }

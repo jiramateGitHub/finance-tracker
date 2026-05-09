@@ -2,8 +2,6 @@ import { AppShell } from './components/layout/AppShell'
 import { InstallmentsPage } from './features/installments/InstallmentsPage'
 import { MonthlyPage } from './features/monthly/MonthlyPage'
 import { MorePage } from './features/more/MorePage'
-import { SyncConflictPanel } from './features/sync/SyncConflictPanel'
-import type { ImportSyncMode } from './features/sync/syncTypes'
 import { useAutoFinanceSync } from './features/sync/useAutoFinanceSync'
 import { TripsPage } from './features/trips/TripsPage'
 import { YearlyPage } from './features/yearly/YearlyPage'
@@ -32,13 +30,9 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
     await sync.loadNow()
   }
 
-  async function handleImportJson(file: File, mode: ImportSyncMode): Promise<void> {
-    if (mode === 'local-only') {
-      sync.markLocalOnly(th.sync.localImport)
-    } else {
-      sync.enableAutoSave(th.sync.cloudImport)
-    }
-    await store.importJson(file)
+  async function handleImportJson(file: File): Promise<void> {
+    const importedData = await store.importJson(file)
+    if (importedData) await sync.saveNow(importedData, th.sync.cloudImport)
   }
 
   function renderActiveView() {
@@ -72,7 +66,7 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
           dataStatus={store.dataStatus}
           onExportJson={store.exportJson}
           onImportJson={handleImportJson}
-          onResetDemoData={store.resetDemoData}
+          currentUserId={currentUserId}
           currentUserEmail={currentUserEmail}
           onLogout={onLogout}
           syncStatus={sync.status}
@@ -109,12 +103,6 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
       syncStatus={sync.status}
       onLogout={onLogout}
     >
-      <SyncConflictPanel
-        cloudData={sync.pendingCloudData}
-        onUseCloud={() => sync.resolveConflict('use-cloud')}
-        onKeepLocal={() => sync.resolveConflict('keep-local')}
-        onMerge={() => sync.resolveConflict('merge')}
-      />
       {renderActiveView()}
     </AppShell>
   )

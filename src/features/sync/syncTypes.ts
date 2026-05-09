@@ -1,4 +1,4 @@
-export type SyncState = 'idle' | 'loading' | 'saving' | 'saved' | 'conflict' | 'error' | 'local-only'
+export type SyncState = 'idle' | 'loading' | 'saving' | 'saved' | 'error'
 
 export type SyncStatus = {
   state: SyncState
@@ -6,5 +6,3 @@ export type SyncStatus = {
   lastSyncedAt: string | null
   errorMessage: string | null
 }
-
-export type ImportSyncMode = 'local-only' | 'cloud'
