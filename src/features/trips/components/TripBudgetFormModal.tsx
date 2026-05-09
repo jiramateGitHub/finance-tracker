@@ -65,7 +65,7 @@ export function TripBudgetFormModal({ open, trip, line, categoryOptions, onClose
             <ComboboxField
               value={values.categoryId}
               options={categoryOptions}
-              placeholder="โรงแรม, อาหาร, เดินทาง"
+              placeholder="ที่พัก, ของกิน, เดินทาง"
               onChange={(category) => updateField('categoryId', category)}
             />
           </FormField>
@@ -85,3 +85,5 @@ export function TripBudgetFormModal({ open, trip, line, categoryOptions, onClose
     </div>
   )
 }
+
+

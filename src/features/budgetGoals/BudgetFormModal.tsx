@@ -78,7 +78,7 @@ export function BudgetFormModal({
             <ComboboxField
               value={values.category}
               options={categoryOptions}
-              placeholder="อาหาร, ท่องเที่ยว, บ้าน"
+              placeholder="ของกิน, ท่องเที่ยว, บ้าน/เช่า"
               onChange={(category) => updateField('category', category)}
             />
           </FormField>
@@ -105,3 +105,5 @@ export function BudgetFormModal({
     </div>
   )
 }
+
+

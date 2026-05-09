@@ -2,6 +2,7 @@ export type ViewId = 'monthly' | 'yearly' | 'installments' | 'trips' | 'more'
 
 export type TransactionType = 'income' | 'expense'
 export type TransactionStatus = 'cleared' | 'pending'
+export type CategoryKind = 'income' | 'expense' | 'mixed'
 export type GoalStatus = 'active' | 'paused' | 'completed'
 export type InterestType = 'none' | 'flat' | 'reducing'
 export type BudgetScope = 'monthly' | 'trip'
@@ -173,7 +174,7 @@ export interface FinanceSettings {
 export interface MasterCategory {
   id: string
   label: string
-  kind: 'income' | 'expense' | 'mixed'
+  kind: CategoryKind
   isArchived: boolean
 }
 
@@ -229,3 +230,5 @@ export interface NavItem {
   title: string
   subtitle: string
 }
+
+

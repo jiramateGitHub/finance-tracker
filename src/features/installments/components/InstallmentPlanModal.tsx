@@ -89,7 +89,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
             <TextInput inputMode="numeric" value={values.paidMonths} onChange={(event) => updateField('paidMonths', event.target.value)} />
           </FormField>
           <FormField label="หมวดหมู่">
-            <ComboboxField value={values.category} options={categoryOptions} placeholder="ยอดผ่อน" onChange={(category) => updateField('category', category)} />
+            <ComboboxField value={values.category} options={categoryOptions} placeholder="ผ่อนสินค้า" onChange={(category) => updateField('category', category)} />
           </FormField>
           <FormField label="ประเภทดอกเบี้ย">
             <SelectField
@@ -121,3 +121,5 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
     </div>
   )
 }
+
+

@@ -43,8 +43,8 @@ function createExpenseDraft(): TransactionEntry {
     type: 'expense',
     date: currentDateInputValue(),
     monthKey: currentDateInputValue().slice(0, 7),
-    category: 'Other',
-    categoryId: 'Other',
+    category: 'อื่นๆ',
+    categoryId: 'อื่นๆ',
     title: 'Draft expense from React scaffold',
     amount: 100,
     currency: 'THB',
@@ -113,3 +113,5 @@ export function useFinanceStore(): FinanceStore {
     replaceData: financeData.replaceData,
   }
 }
+
+

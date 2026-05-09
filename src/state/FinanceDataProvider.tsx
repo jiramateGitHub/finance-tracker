@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type Dispa
 import { Button } from '../components/ui/Button'
 import { seedData } from '../data/seedData'
 import { createEmptyFinanceData, getDataSchemaVersion, normalizeFinanceData, withUpdatedMeta } from '../lib/dataMigration'
+import { analyzeImportedFinanceData, type ImportDiagnostics } from '../lib/importDiagnostics'
 import { createJsonDownload } from '../lib/storage'
 import { loadFinanceDataFromCloud } from '../services/firebase/firestoreFinanceRepository'
 import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
@@ -15,6 +16,7 @@ export type FinanceDataStatus = {
   importState: 'idle' | 'success' | 'error'
   message: string
   errorMessage: string | null
+  lastImportDiagnostics: ImportDiagnostics | null
 }
 
 export type FinanceDataContextValue = {
@@ -56,6 +58,7 @@ const loadingStatus: FinanceDataStatus = {
   importState: 'idle',
   message: 'กำลังโหลดข้อมูลจาก Cloud...',
   errorMessage: null,
+  lastImportDiagnostics: null,
 }
 
 function markLoaded(message: string): FinanceDataStatus {
@@ -65,6 +68,7 @@ function markLoaded(message: string): FinanceDataStatus {
     importState: 'idle',
     message,
     errorMessage: null,
+    lastImportDiagnostics: null,
   }
 }
 
@@ -93,6 +97,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
           importState: 'idle',
           message: errorMessage,
           errorMessage,
+          lastImportDiagnostics: null,
         })
       }
     }
@@ -111,6 +116,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
       const parsed = JSON.parse(rawText) as unknown
       const schemaVersion = getDataSchemaVersion(parsed)
       const importedData = withUpdatedMeta(normalizeFinanceData(parsed))
+      const diagnostics = analyzeImportedFinanceData(parsed, importedData, file.name)
       setData(importedData)
       setStatus({
         loadState: 'ready',
@@ -118,6 +124,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         importState: 'success',
         message: `นำเข้า ${file.name} เป็น schema v${schemaVersion || importedData.schemaVersion} แล้ว`,
         errorMessage: null,
+        lastImportDiagnostics: diagnostics,
       })
       return importedData
     } catch {
@@ -126,6 +133,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         importState: 'error',
         message: 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้',
         errorMessage: 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้',
+        lastImportDiagnostics: null,
       }))
       return null
     }
@@ -147,6 +155,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
       importState: 'idle',
       message: 'โหลดข้อมูลตัวอย่างสำหรับพัฒนาแล้ว กดบันทึกขึ้น Cloud หากต้องการใช้ชุดนี้',
       errorMessage: null,
+      lastImportDiagnostics: null,
     })
   }
 
@@ -159,19 +168,21 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
       importState: 'idle',
       message,
       errorMessage: null,
+      lastImportDiagnostics: null,
     })
     return normalized
   }
 
   function updateData(updater: (current: FinanceData) => FinanceData, message: string): void {
     setData((current) => withUpdatedMeta(updater(current)))
-    setStatus({
+    setStatus((current) => ({
+      ...current,
       loadState: 'ready',
       saveState: 'saved',
       importState: 'idle',
       message,
       errorMessage: null,
-    })
+    }))
   }
 
   function addTransaction(transaction: TransactionEntry): void {
@@ -387,3 +398,5 @@ export function useFinanceData(): FinanceDataContextValue {
   if (!context) throw new Error('useFinanceData must be used within FinanceDataProvider')
   return context
 }
+
+

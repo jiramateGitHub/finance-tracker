@@ -1,18 +1,9 @@
+import { LEGACY_CATEGORY_OPTIONS } from './categories'
 import { normalizeFinanceData } from '../lib/dataMigration'
 
 const now = '2026-05-08T00:00:00.000+07:00'
 
-export const CATEGORY_OPTIONS = [
-  'เงินเดือน',
-  'อาหาร',
-  'เดินทาง',
-  'บ้าน',
-  'ช้อปปิ้ง',
-  'ผ่อนสินค้า',
-  'ท่องเที่ยว',
-  'สุขภาพ',
-  'อื่น ๆ',
-]
+export const CATEGORY_OPTIONS = [...LEGACY_CATEGORY_OPTIONS]
 
 export const seedData = normalizeFinanceData({
   settings: {
@@ -38,7 +29,7 @@ export const seedData = normalizeFinanceData({
       id: 'entry-rent-may',
       type: 'expense',
       date: '2026-05-03',
-      category: 'บ้าน',
+      category: 'บ้าน/เช่า',
       title: 'ค่าเช่าห้อง',
       amount: 12000,
       status: 'cleared',
@@ -50,7 +41,7 @@ export const seedData = normalizeFinanceData({
       id: 'entry-food-may',
       type: 'expense',
       date: '2026-05-07',
-      category: 'อาหาร',
+      category: 'ของกิน',
       title: 'อาหารและกาแฟ',
       amount: 320,
       status: 'pending',
@@ -97,7 +88,7 @@ export const seedData = normalizeFinanceData({
         {
           id: 'trip-item-food',
           date: '2026-05-21',
-          category: 'อาหาร',
+          category: 'ของกิน',
           title: 'อาหารระหว่างทริป',
           amount: 3500,
           isPaid: false,
@@ -112,7 +103,7 @@ export const seedData = normalizeFinanceData({
       id: 'budget-food-may',
       scope: 'monthly',
       month: '2026-05',
-      category: 'อาหาร',
+      category: 'ของกิน',
       amount: 9000,
       note: 'งบอาหารเดือนนี้',
       createdAt: now,
@@ -142,3 +133,5 @@ export const seedData = normalizeFinanceData({
     },
   ],
 })
+
+

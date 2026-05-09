@@ -1,3 +1,4 @@
+import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { AppData, Budget, BudgetLine, InstallmentPlan, TransactionEntry, Trip, TripItem, TripStatus } from '../../../types/finance'
 import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
 
@@ -95,7 +96,7 @@ export function getTripBudgetLines(data: AppData, tripId: string): BudgetLine[] 
   if (budget.lines?.length) return budget.lines
   return [{
     id: budget.id,
-    categoryId: budget.categoryId || budget.category || 'ท่องเที่ยว',
+    categoryId: normalizeCategoryId(budget.categoryId || budget.category, 'ท่องเที่ยว'),
     amount: Number(budget.amount || 0),
     note: budget.note,
   }]
@@ -110,7 +111,7 @@ export function getTripPlannedBudget(data: AppData, trip: Trip): number {
 export function getTripActualByCategory(trip: Trip): Map<string, number> {
   const actualByCategory = new Map<string, number>()
   for (const item of trip.items) {
-    const category = item.category || 'ท่องเที่ยว'
+    const category = normalizeCategoryId(item.category, 'ท่องเที่ยว')
     actualByCategory.set(category, (actualByCategory.get(category) ?? 0) + Number(item.amount || 0))
   }
   return actualByCategory
@@ -121,13 +122,13 @@ export function getTripBudgetLineViews(data: AppData, trip: Trip): TripBudgetLin
   return getTripBudgetLines(data, trip.id)
     .map((line) => {
       const planned = Math.max(0, Number(line.amount || 0))
-      const actual = actualByCategory.get(line.categoryId) ?? 0
+      const actual = actualByCategory.get(normalizeCategoryId(line.categoryId, 'ท่องเที่ยว')) ?? 0
       const remaining = planned - actual
       const usagePercent = planned > 0 ? Math.min(100, Math.round((actual / planned) * 100)) : 0
       const status: TripBudgetStatus = actual >= planned ? 'over-budget' : actual / planned >= 0.8 ? 'near-limit' : 'safe'
       return {
         line,
-        categoryId: line.categoryId,
+        categoryId: normalizeCategoryId(line.categoryId, 'ท่องเที่ยว'),
         planned,
         actual,
         remaining,
@@ -202,7 +203,7 @@ export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
         || trip.items.some((item) => item.date.startsWith(filters.year))
     })
     .filter((trip) => tripMatchesMonth(trip, filters.month))
-    .filter((trip) => !filters.category || trip.items.some((item) => item.category === filters.category))
+    .filter((trip) => !filters.category || trip.items.some((item) => normalizeCategoryId(item.category, 'ท่องเที่ยว') === normalizeCategoryId(filters.category, 'ท่องเที่ยว')))
     .filter((trip) => {
       if (!keyword) return true
       return [
@@ -216,10 +217,7 @@ export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
 }
 
 export function getCategoryOptions(data: AppData): string[] {
-  return Array.from(new Set([
-    ...data.masters.categories.map((category) => category.label || category.id),
-    ...data.trips.flatMap((trip) => trip.items.map((item) => item.category)),
-  ].filter(Boolean))).sort((a, b) => a.localeCompare(b))
+  return getCanonicalCategoryOptions(data)
 }
 
 export function getTripYearOptions(trips: Trip[]): string[] {
@@ -272,7 +270,7 @@ export function createTripItemFormValues(item?: TripItem, trip?: Trip): TripItem
     title: item?.title ?? '',
     amount: item?.amount ? String(item.amount) : '',
     date: item?.date ?? trip?.startDate ?? currentDateInputValue(),
-    category: item?.category ?? '',
+    category: normalizeCategoryId(item?.category || '', ''),
     destination: item?.destination ?? trip?.destination ?? '',
     country: item?.country ?? '',
     installmentId: item?.installmentId ?? '',
@@ -287,7 +285,7 @@ export function buildTripItemFromForm(values: TripItemFormValues, existing?: Tri
     title: values.title.trim(),
     amount: Math.max(0, Number(values.amount || 0)),
     date: values.date,
-    category: values.category.trim() || 'ท่องเที่ยว',
+    category: normalizeCategoryId(values.category, 'ท่องเที่ยว'),
     destination: values.destination.trim() || undefined,
     country: values.country.trim() || undefined,
     isPaid: values.isPaid,
@@ -333,7 +331,7 @@ export function toggleTripItemPaid(trip: Trip, itemId: string): Trip {
 
 export function createTripBudgetLineFormValues(line?: BudgetLine): TripBudgetLineFormValues {
   return {
-    categoryId: line?.categoryId ?? '',
+    categoryId: normalizeCategoryId(line?.categoryId || '', ''),
     amount: line ? String(line.amount) : '',
     note: line?.note ?? '',
   }
@@ -341,7 +339,7 @@ export function createTripBudgetLineFormValues(line?: BudgetLine): TripBudgetLin
 
 export function buildTripBudgetLineFromForm(values: TripBudgetLineFormValues): Pick<BudgetLine, 'categoryId' | 'amount' | 'note'> {
   return {
-    categoryId: values.categoryId.trim() || 'ท่องเที่ยว',
+    categoryId: normalizeCategoryId(values.categoryId, 'ท่องเที่ยว'),
     amount: Math.max(0, Number(values.amount || 0)),
     note: values.note.trim() || undefined,
   }
@@ -367,8 +365,8 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       type: 'expense',
       date: item.date,
       monthKey: getMonthKey(item.date),
-      category: item.category || 'ท่องเที่ยว',
-      categoryId: item.category || 'ท่องเที่ยว',
+      category: normalizeCategoryId(item.category, 'ท่องเที่ยว'),
+      categoryId: normalizeCategoryId(item.category, 'ท่องเที่ยว'),
       title: item.title,
       amount: Math.max(0, Number(item.amount || 0)),
       currency: 'THB',
@@ -386,3 +384,5 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       updatedAt: trip.updatedAt,
     } satisfies TransactionEntry)))
 }
+
+

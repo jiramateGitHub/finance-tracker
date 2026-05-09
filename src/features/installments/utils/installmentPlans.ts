@@ -1,3 +1,4 @@
+import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
 import { currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
 
@@ -174,7 +175,7 @@ export function createInstallmentFormValues(plan?: InstallmentPlan): Installment
     monthlyAmount: plan?.monthlyAmount ? String(plan.monthlyAmount) : '',
     startMonth: plan?.startMonth ?? currentMonthKey(),
     monthsTotal: String(plan?.monthsTotal ?? plan?.totalMonths ?? plan?.installmentCount ?? 12),
-    category: plan?.category ?? '',
+    category: normalizeCategoryId(plan?.categoryId || plan?.category || '', ''),
     note: plan?.note ?? '',
     paidMonths: String(plan ? calculateInstallmentProgress(plan).monthsPaid : 0),
     principal: principal ? String(principal) : '',
@@ -187,10 +188,7 @@ export function createInstallmentFormValues(plan?: InstallmentPlan): Installment
 }
 
 export function getCategoryOptions(data: AppData): string[] {
-  return Array.from(new Set([
-    ...data.masters.categories.map((category) => category.label || category.id),
-    ...data.installmentPlans.map((plan) => plan.category),
-  ].filter(Boolean))).sort((a, b) => a.localeCompare(b))
+  return getCanonicalCategoryOptions(data)
 }
 
 export function buildInstallmentPlanFromForm(values: InstallmentFormValues, existing?: InstallmentPlan): InstallmentPlan {
@@ -203,7 +201,7 @@ export function buildInstallmentPlanFromForm(values: InstallmentFormValues, exis
   const startMonth = values.startMonth || currentMonthKey()
   const scheduleMonths = Array.from({ length: monthsTotal }, (_, index) => addMonths(startMonth, index))
   const paidMonthKeys = scheduleMonths.slice(0, paidMonths)
-  const category = values.category.trim() || 'ยอดผ่อน'
+  const category = normalizeCategoryId(values.category, 'ผ่อนสินค้า')
   const dueDay = values.dueDay ? Math.min(31, Math.max(1, Math.floor(Number(values.dueDay)))) : undefined
   const interestRate = values.interestRate ? Math.max(0, Number(values.interestRate)) : null
   const interestType: InterestType = values.interestType
@@ -330,8 +328,8 @@ export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey
           type: 'expense',
           date,
           monthKey: getMonthKey(date),
-          category: plan.category || 'ยอดผ่อน',
-          categoryId: plan.categoryId || plan.category || 'ยอดผ่อน',
+          category: normalizeCategoryId(plan.categoryId || plan.category, 'ผ่อนสินค้า'),
+          categoryId: normalizeCategoryId(plan.categoryId || plan.category, 'ผ่อนสินค้า'),
           title: plan.name,
           amount: Math.max(0, Number(plan.monthlyAmount || plan.paymentAmount || 0)),
           currency: 'THB',
@@ -350,3 +348,5 @@ export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey
       })
   })
 }
+
+

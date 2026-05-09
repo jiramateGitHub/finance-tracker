@@ -1,3 +1,4 @@
+import { SMART_CATEGORY_RULES, normalizeCategoryId } from '../../../data/categories'
 import type { TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
 
@@ -9,44 +10,67 @@ export type QuickAddParseResult = {
   category: string
 }
 
-const expenseKeywords = ['ค่า', 'กาแฟ', 'ข้าว', 'grab', 'taxi', 'รถ', 'อาหาร', 'ซื้อ']
-const incomeKeywords = ['เงินเดือน', 'โบนัส', 'รายรับ', 'รับ']
-const unpaidKeywords = ['ยังไม่จ่าย', 'ค้าง', 'pending', 'unpaid']
+const incomeKeywords = ['income', 'salary', 'bonus', 'commission', 'refund', 'allowance', 'payday', 'เงินเดือน', 'โบนัส', 'รายรับ', 'รายได้', 'คืนเงิน', 'ค่าคอม', 'คอมมิชชั่น', 'เบี้ยเลี้ยง']
+const unpaidKeywords = ['ยังไม่จ่าย', 'ค้างจ่าย', 'ค้าง', 'pending', 'unpaid']
+const paidKeywords = ['จ่ายแล้ว', 'paid', 'cleared']
 
 export function getQuickAddDate(selectedMonth: string): string {
   const today = currentDateInputValue()
   return today.startsWith(selectedMonth) ? today : `${selectedMonth}-01`
 }
 
+export function detectQuickAddCategory(text: string, type: TransactionType): string {
+  const normalizedText = text.trim().toLocaleLowerCase('th-TH')
+  const matchedRule = SMART_CATEGORY_RULES.find((rule) => rule.keywords.some((keyword) => normalizedText.includes(keyword.toLocaleLowerCase('th-TH'))))
+  if (matchedRule) return normalizeCategoryId(matchedRule.category)
+  return type === 'income' ? 'เงินเดือน' : 'อื่นๆ'
+}
+
+function detectQuickAddType(text: string, explicitIncome: boolean, explicitExpense: boolean): TransactionType {
+  const lowered = text.toLocaleLowerCase('th-TH')
+  if (explicitIncome || incomeKeywords.some((keyword) => lowered.includes(keyword.toLocaleLowerCase('th-TH')))) return 'income'
+  if (explicitExpense) return 'expense'
+  return 'expense'
+}
+
+function detectQuickAddStatus(text: string, type: TransactionType): TransactionStatus {
+  if (type === 'income') return 'cleared'
+  const lowered = text.toLocaleLowerCase('th-TH')
+  if (unpaidKeywords.some((keyword) => lowered.includes(keyword.toLocaleLowerCase('th-TH')))) return 'pending'
+  if (paidKeywords.some((keyword) => lowered.includes(keyword.toLocaleLowerCase('th-TH')))) return 'cleared'
+  return 'cleared'
+}
+
+function cleanQuickAddTitle(text: string): string {
+  return text
+    .replace(/ยังไม่จ่าย|ค้างจ่าย|ค้าง|pending|unpaid|จ่ายแล้ว|paid|cleared/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function parseQuickAdd(input: string): QuickAddParseResult | null {
   const normalized = input.trim().replace(/\s+/g, ' ')
   if (!normalized) return null
 
-  const amountMatch = normalized.match(/(\d+(?:\.\d{1,2})?)\s*$/)
-  const amount = amountMatch ? Number(amountMatch[1]) : Number.NaN
-  if (!Number.isFinite(amount) || amount <= 0) return null
+  const amountMatches = Array.from(normalized.matchAll(/\d+(?:\.\d{1,2})?/g))
+  const amountMatch = amountMatches.at(-1)
+  const amount = amountMatch ? Number(amountMatch[0]) : Number.NaN
+  if (!amountMatch || !Number.isFinite(amount) || amount <= 0) return null
 
-  const withoutAmount = normalized.slice(0, amountMatch?.index ?? normalized.length).trim()
+  const withoutAmount = `${normalized.slice(0, amountMatch.index)} ${normalized.slice((amountMatch.index ?? 0) + amountMatch[0].length)}`.trim()
   const explicitIncome = withoutAmount.startsWith('+')
   const explicitExpense = withoutAmount.startsWith('-')
   const text = withoutAmount.replace(/^[+-]\s*/, '').trim()
-  const lowered = text.toLocaleLowerCase()
-  const status: TransactionStatus = unpaidKeywords.some((keyword) => lowered.includes(keyword)) ? 'pending' : 'cleared'
-  const title = text.replace(/ยังไม่จ่าย|ค้าง|pending|unpaid/gi, '').trim()
+  const type = detectQuickAddType(text, explicitIncome, explicitExpense)
+  const title = cleanQuickAddTitle(text)
   if (!title) return null
-
-  const type: TransactionType = explicitIncome || incomeKeywords.some((keyword) => lowered.includes(keyword))
-    ? 'income'
-    : explicitExpense || expenseKeywords.some((keyword) => lowered.includes(keyword))
-      ? 'expense'
-      : 'expense'
 
   return {
     type,
     title,
     amount,
-    status: type === 'income' ? 'cleared' : status,
-    category: 'อื่น ๆ',
+    status: detectQuickAddStatus(text, type),
+    category: detectQuickAddCategory(text, type),
   }
 }
 

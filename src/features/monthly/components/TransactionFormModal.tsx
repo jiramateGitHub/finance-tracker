@@ -92,7 +92,7 @@ export function TransactionFormModal({
             <ComboboxField
               value={values.category}
               options={categoryOptions}
-              placeholder="อาหาร, เงินเดือน, บ้าน"
+              placeholder="ของกิน, เงินเดือน, บ้าน/เช่า"
               onChange={(category) => updateField('category', category)}
             />
           </FormField>
@@ -134,3 +134,5 @@ export function TransactionFormModal({
     </div>
   )
 }
+
+

@@ -1,3 +1,4 @@
+import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { FinanceData, TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { th } from '../../../i18n/th'
 import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
@@ -52,7 +53,7 @@ export function createTransactionFormValues(transaction?: TransactionEntry, defa
     id: transaction?.id,
     type: transaction?.type ?? defaults?.type ?? 'expense',
     date: transaction?.date ?? defaults?.date ?? currentDateInputValue(),
-    category: transaction?.category ?? defaults?.category ?? '',
+    category: normalizeCategoryId(transaction?.categoryId || transaction?.category || defaults?.category || '', ''),
     title: transaction?.title ?? defaults?.title ?? '',
     amount: transaction?.amount ? String(transaction.amount) : defaults?.amount ?? '',
     status: transaction?.status ?? defaults?.status ?? 'cleared',
@@ -145,17 +146,12 @@ export function groupTransactionsByMonth(transactions: TransactionEntry[]): Mont
 }
 
 export function getCategoryOptions(data: FinanceData): string[] {
-  return Array.from(
-    new Set([
-      ...data.masters.categories.map((category) => category.label || category.id),
-      ...data.transactions.map((transaction) => transaction.category),
-    ].filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b))
+  return getCanonicalCategoryOptions(data)
 }
 
 export function buildTransactionFromForm(values: TransactionFormValues, existing?: TransactionEntry): TransactionEntry {
   const now = currentIsoTimestamp()
-  const category = values.category.trim() || 'อื่น ๆ'
+  const category = normalizeCategoryId(values.category, 'อื่นๆ')
   const amount = Math.max(0, Number(values.amount || 0))
   const status: TransactionStatus = values.type === 'income' ? 'cleared' : values.status
   return {
@@ -189,3 +185,5 @@ export function validateTransactionForm(values: TransactionFormValues): string |
   if (!Number.isFinite(Number(values.amount)) || Number(values.amount) <= 0) return 'กรอกจำนวนเงินมากกว่า 0'
   return null
 }
+
+

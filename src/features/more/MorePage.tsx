@@ -93,6 +93,27 @@ export function MorePage({
             <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-bold ${statusTone}`}>
               {dataStatus.message}
             </div>
+            {dataStatus.lastImportDiagnostics ? (
+              <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                <div className="font-extrabold">สรุปการนำเข้า: {dataStatus.lastImportDiagnostics.fileName ?? 'ไฟล์ JSON'}</div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <ImportDiagnosticItem label="Schema" value={dataStatus.lastImportDiagnostics.schemaVersion ? `v${dataStatus.lastImportDiagnostics.schemaVersion}` : 'Legacy / ไม่ระบุ'} />
+                  <ImportDiagnosticItem label="รายการ" value={`${dataStatus.lastImportDiagnostics.counts.transactions || dataStatus.lastImportDiagnostics.counts.entries} รายการ`} />
+                  <ImportDiagnosticItem label="รายการประจำ" value={`${dataStatus.lastImportDiagnostics.counts.recurringRules} รายการ`} />
+                  <ImportDiagnosticItem label="ยอดผ่อน" value={`${dataStatus.lastImportDiagnostics.counts.installmentPlans} แผน`} />
+                  <ImportDiagnosticItem label="ทริป / รายการทริป" value={`${dataStatus.lastImportDiagnostics.counts.trips} / ${dataStatus.lastImportDiagnostics.counts.tripItems}`} />
+                  <ImportDiagnosticItem label="งบ / เป้าหมาย" value={`${dataStatus.lastImportDiagnostics.counts.budgets} / ${dataStatus.lastImportDiagnostics.counts.goals}`} />
+                </div>
+                <div className="mt-2 text-xs font-bold text-blue-800">
+                  Alias หมวดหมู่ที่แปลง: {dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.length
+                    ? dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.map((item) => `${item.from} → ${item.to} (${item.count})`).join(', ')
+                    : 'ไม่มี'}
+                </div>
+                <ul className="mt-2 grid gap-1 text-xs font-semibold leading-5 text-blue-800">
+                  {dataStatus.lastImportDiagnostics.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
+                </ul>
+              </div>
+            ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               <Button variant="primary" onClick={onExportJson}>{th.file.exportJson}</Button>
               <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-blue-700 hover:bg-blue-50">
@@ -130,6 +151,18 @@ function DebugItem({ label, value }: { label: string; value: string }) {
     <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
       <div className="text-xs font-bold text-slate-400">{label}</div>
       <div className="truncate font-extrabold text-slate-700" title={value}>{value}</div>
+    </div>
+  )
+}
+
+
+
+
+function ImportDiagnosticItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-blue-100 bg-white/80 px-3 py-2">
+      <div className="text-[11px] font-bold text-blue-500">{label}</div>
+      <div className="font-extrabold text-blue-900">{value}</div>
     </div>
   )
 }

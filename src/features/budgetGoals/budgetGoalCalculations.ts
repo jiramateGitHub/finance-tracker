@@ -1,3 +1,4 @@
+import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../data/categories'
 import type { Budget, FinanceData, Goal, GoalStatus, TransactionEntry } from '../../types/finance'
 import { clampPercent, currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../utils/formatters'
 
@@ -45,15 +46,15 @@ export type BudgetGoalInsight = {
 }
 
 function normalizeKey(value: string | null | undefined): string {
-  return String(value ?? '').trim().toLocaleLowerCase()
+  return normalizeCategoryId(value ?? '', 'อื่นๆ').toLocaleLowerCase('th-TH')
 }
 
 export function getBudgetCategoryKey(budget: Budget): string {
-  return budget.categoryId || budget.category || budget.lines?.[0]?.categoryId || 'อื่น ๆ'
+  return normalizeCategoryId(budget.categoryId || budget.category || budget.lines?.[0]?.categoryId, 'อื่นๆ')
 }
 
 export function getTransactionCategoryKey(transaction: TransactionEntry): string {
-  return transaction.categoryId || transaction.category || 'อื่น ๆ'
+  return normalizeCategoryId(transaction.categoryId || transaction.category, 'อื่นๆ')
 }
 
 export function getMonthlyBudgets(budgets: Budget[], month: string): Budget[] {
@@ -120,7 +121,7 @@ export function validateBudgetForm(values: BudgetFormValues, budgets: Budget[], 
 
 export function buildBudgetFromForm(values: BudgetFormValues, existing?: Budget): Budget {
   const now = currentIsoTimestamp()
-  const category = values.category.trim() || 'อื่น ๆ'
+  const category = normalizeCategoryId(values.category, 'อื่นๆ')
   const amount = Math.max(0, Number(values.amount || 0))
   const lineId = existing?.lines?.[0]?.id ?? crypto.randomUUID()
   return {
@@ -170,7 +171,7 @@ export function buildGoalFromForm(values: GoalFormValues, existing?: Goal): Goal
     targetAmount,
     currentAmount,
     targetDate: values.targetDate || undefined,
-    linkedCategoryId: existing?.linkedCategoryId ?? null,
+    linkedCategoryId: existing?.linkedCategoryId ? normalizeCategoryId(existing.linkedCategoryId) : null,
     status: values.status,
     note: values.note.trim() || undefined,
     createdAt: existing?.createdAt ?? now,
@@ -193,13 +194,7 @@ export function calculateGoalProgress(goal: Goal): GoalProgress {
 }
 
 export function getBudgetGoalCategoryOptions(data: FinanceData): string[] {
-  return Array.from(
-    new Set([
-      ...data.masters.categories.map((category) => category.label || category.id),
-      ...data.transactions.map((transaction) => transaction.categoryId || transaction.category),
-      ...data.budgets.map((budget) => getBudgetCategoryKey(budget)),
-    ].filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b))
+  return getCanonicalCategoryOptions(data)
 }
 
 export function buildBudgetGoalInsights(
@@ -247,3 +242,5 @@ export function buildBudgetGoalInsights(
 
   return insights.slice(0, 5)
 }
+
+
