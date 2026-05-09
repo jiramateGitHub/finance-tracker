@@ -9,12 +9,15 @@ import { getPaymentLabel, getSourceLabel, isInstallmentTransaction, isManualTran
 
 type TransactionListProps = {
   groups: MonthlyGroup[]
+  highlightedIds?: string[]
   onEdit: (transaction: TransactionEntry) => void
   onDelete: (transactionId: string) => void
+  onDuplicate: (transaction: TransactionEntry) => void
+  onUseTemplate: (transaction: TransactionEntry) => void
   onTogglePaid: (transaction: TransactionEntry) => void
 }
 
-export function TransactionList({ groups, onEdit, onDelete, onTogglePaid }: TransactionListProps) {
+export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete, onDuplicate, onUseTemplate, onTogglePaid }: TransactionListProps) {
   if (!groups.length) {
     return (
       <EmptyState
@@ -46,10 +49,11 @@ export function TransactionList({ groups, onEdit, onDelete, onTogglePaid }: Tran
               const linkedTrip = Boolean(transaction.tripId || transaction.sourceModule === 'trip')
               const manual = isManualTransaction(transaction)
               const isIncome = transaction.type === 'income'
+              const highlighted = highlightedIds.includes(transaction.id)
               return (
                 <article
                   key={transaction.id}
-                  className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-[112px_minmax(0,1fr)_auto] md:items-center"
+                  className={`grid gap-3 rounded-2xl border p-3 transition md:grid-cols-[112px_minmax(0,1fr)_auto] md:items-center ${highlighted ? 'border-amber-300 bg-amber-50 shadow-finance-sm' : 'border-slate-200 bg-white'}`}
                 >
                   <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500">{formatDate(transaction.date)}</div>
 
@@ -74,12 +78,14 @@ export function TransactionList({ groups, onEdit, onDelete, onTogglePaid }: Tran
                     </div>
                     <div className="flex flex-wrap justify-end gap-2">
                       {!isIncome && manual && (
-                        <Button size="sm" onClick={() => onTogglePaid(transaction)}>
-                          {transaction.status === 'pending' ? th.transaction.markPaid : th.transaction.markUnpaid}
-                        </Button>
+                          <Button size="sm" onClick={() => onTogglePaid(transaction)}>
+                            {transaction.status === 'pending' ? th.transaction.markPaid : th.transaction.markUnpaid}
+                          </Button>
                       )}
                       {manual ? (
                         <>
+                          <Button size="sm" onClick={() => onDuplicate(transaction)}>ทำซ้ำ</Button>
+                          <Button size="sm" onClick={() => onUseTemplate(transaction)}>ต้นแบบ</Button>
                           <Button size="sm" onClick={() => onEdit(transaction)}>{th.common.edit}</Button>
                           <Button size="sm" variant="danger" onClick={() => onDelete(transaction.id)}>{th.common.delete}</Button>
                         </>

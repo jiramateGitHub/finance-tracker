@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
@@ -21,6 +21,7 @@ import {
   createEmptyMonthlyFilters,
   filterMonthlyTransactions,
   getCategoryOptions,
+  getMonthKeysInRange,
   groupTransactionsByMonth,
   isInstallmentTransaction,
   type MonthlyFilters as MonthlyFiltersState,
@@ -67,13 +68,18 @@ export function MonthlyPage({
   const [filters, setFilters] = useState<MonthlyFiltersState>(() => createEmptyMonthlyFilters(selectedMonth))
   const [modalState, setModalState] = useState<ModalState>({ open: false, transaction: null })
   const [deleteTransactionId, setDeleteTransactionId] = useState<string | null>(null)
+  const [highlightedIds, setHighlightedIds] = useState<string[]>([])
 
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
+  const rangeMonths = useMemo(
+    () => getMonthKeysInRange(filters.rangeStartMonth, filters.rangeEndMonth),
+    [filters.rangeEndMonth, filters.rangeStartMonth],
+  )
   const ledgerTransactions = useMemo(() => [
     ...data.transactions.filter((transaction) => !isInstallmentTransaction(transaction) && !transaction.tripId && transaction.sourceModule !== 'trip'),
-    ...deriveInstallmentTransactions(data.installmentPlans, filters.month),
-    ...deriveTripTransactions(data.trips, filters.month),
-  ], [data.transactions, data.installmentPlans, data.trips, filters.month])
+    ...rangeMonths.flatMap((month) => deriveInstallmentTransactions(data.installmentPlans, month)),
+    ...rangeMonths.flatMap((month) => deriveTripTransactions(data.trips, month)),
+  ], [data.transactions, data.installmentPlans, data.trips, rangeMonths])
   const monthlyData = useMemo(() => ({
     ...data,
     transactions: ledgerTransactions,
@@ -82,11 +88,23 @@ export function MonthlyPage({
   const filteredTransactions = useMemo(() => filterMonthlyTransactions(ledgerTransactions, filters), [ledgerTransactions, filters])
   const transactionGroups = useMemo(() => groupTransactionsByMonth(filteredTransactions), [filteredTransactions])
   const filteredTotals = useMemo(() => calculateMonthlyTotals(filteredTransactions), [filteredTransactions])
-  const monthTotals = useMemo(() => calculateMonthlyTotals(ledgerTransactions.filter((transaction) => transaction.date.startsWith(filters.month))), [ledgerTransactions, filters.month])
+  const monthTotals = useMemo(
+    () => calculateMonthlyTotals(ledgerTransactions.filter((transaction) => rangeMonths.includes(transaction.date.slice(0, 7)))),
+    [ledgerTransactions, rangeMonths],
+  )
+  const rangeLabel = filters.rangeStartMonth === filters.rangeEndMonth
+    ? formatMonth(filters.rangeStartMonth)
+    : `${formatMonth(filters.rangeStartMonth)} - ${formatMonth(filters.rangeEndMonth)}`
+
+  useEffect(() => {
+    if (!highlightedIds.length) return undefined
+    const timeoutId = window.setTimeout(() => setHighlightedIds([]), 4000)
+    return () => window.clearTimeout(timeoutId)
+  }, [highlightedIds])
 
   function handleFiltersChange(nextFilters: MonthlyFiltersState): void {
     setFilters(nextFilters)
-    if (nextFilters.month !== selectedMonth) onMonthChange(nextFilters.month)
+    if (nextFilters.rangeStartMonth !== selectedMonth) onMonthChange(nextFilters.rangeStartMonth)
   }
 
   function openAddModal(type: TransactionFormValues['type']): void {
@@ -95,7 +113,7 @@ export function MonthlyPage({
       transaction: null,
       defaults: {
         type,
-        date: `${filters.month}-01`,
+        date: `${filters.rangeStartMonth || selectedMonth}-01`,
         status: type === 'income' ? 'cleared' : 'pending',
         sourceModule: 'manual',
       },
@@ -110,15 +128,56 @@ export function MonthlyPage({
     setModalState({ open: false, transaction: null })
   }
 
-  function handleSubmit(transaction: TransactionEntry): void {
+  function handleSubmit(transactions: TransactionEntry[]): void {
+    const [transaction] = transactions
+    if (!transaction) return
     if (modalState.transaction) {
       onUpdateTransaction(transaction.id, transaction)
     } else {
-      onAddTransaction(transaction)
+      transactions.forEach(onAddTransaction)
     }
     const transactionMonth = transaction.date.slice(0, 7)
-    handleFiltersChange({ ...filters, month: transactionMonth })
+    setHighlightedIds(transactions.map((item) => item.id))
+    handleFiltersChange({ ...filters, rangeStartMonth: transactionMonth, rangeEndMonth: transactionMonth })
     closeModal()
+  }
+
+  function handleDuplicate(transaction: TransactionEntry): void {
+    const now = new Date().toISOString()
+    const duplicated: TransactionEntry = {
+      ...transaction,
+      id: crypto.randomUUID(),
+      source: 'manual',
+      sourceModule: 'manual',
+      sourceRefId: null,
+      tripId: null,
+      installmentId: undefined,
+      installmentPlanId: null,
+      recurringRuleId: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+    onAddTransaction(duplicated)
+    setHighlightedIds([duplicated.id])
+    const month = duplicated.date.slice(0, 7)
+    handleFiltersChange({ ...filters, rangeStartMonth: month, rangeEndMonth: month })
+  }
+
+  function handleUseTemplate(transaction: TransactionEntry): void {
+    setModalState({
+      open: true,
+      transaction: null,
+      defaults: {
+        type: transaction.type,
+        date: `${filters.rangeStartMonth || selectedMonth}-${transaction.date.slice(8, 10) || '01'}`,
+        category: transaction.categoryId || transaction.category,
+        title: transaction.title,
+        amount: String(transaction.amount),
+        status: transaction.status,
+        note: transaction.note ?? '',
+        sourceModule: 'manual',
+      },
+    })
   }
 
   function handleDelete(transactionId: string): void {
@@ -136,17 +195,22 @@ export function MonthlyPage({
     <div className="grid gap-4">
       <Card
         title={th.monthly.title}
-        description={`กำลังแสดง ${formatMonth(filters.month)} พร้อมตัวกรอง ค้นหา และรายการที่แก้ไขได้`}
+        description={`กำลังแสดง ${rangeLabel} พร้อมตัวกรอง ค้นหา และรายการที่แก้ไขได้`}
       >
-        <QuickAddBar selectedMonth={filters.month} onAddTransaction={onAddTransaction} />
+        <QuickAddBar selectedMonth={filters.rangeStartMonth || selectedMonth} onAddTransaction={(transaction) => {
+          onAddTransaction(transaction)
+          setHighlightedIds([transaction.id])
+        }} />
         <div className="mt-4">
-        <MonthlyFilters
-          filters={filters}
-          resultCount={filteredTransactions.length}
-          onChange={handleFiltersChange}
-          onAddIncome={() => openAddModal('income')}
-          onAddExpense={() => openAddModal('expense')}
-        />
+          <MonthlyFilters
+            filters={filters}
+            resultCount={filteredTransactions.length}
+            categoryOptions={categoryOptions}
+            selectedMonth={selectedMonth}
+            onChange={handleFiltersChange}
+            onAddIncome={() => openAddModal('income')}
+            onAddExpense={() => openAddModal('expense')}
+          />
         </div>
       </Card>
 
@@ -163,14 +227,14 @@ export function MonthlyPage({
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <div className="text-xs font-bold text-slate-500">{th.monthly.selectedMonth}</div>
-            <div className="mt-1 text-lg font-extrabold">{formatMonth(filters.month)}</div>
+            <div className="mt-1 text-lg font-extrabold">{rangeLabel}</div>
           </div>
         </div>
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <ActionNeededPanel
-          month={filters.month}
+          month={filters.rangeStartMonth || selectedMonth}
           transactions={ledgerTransactions}
           budgets={data.budgets}
           goals={data.goals}
@@ -178,13 +242,16 @@ export function MonthlyPage({
         />
         <div className="grid gap-4">
           <RecentTransactionPanel transactions={data.transactions} />
-          <FrequentTransactionShortcuts transactions={data.transactions} selectedMonth={filters.month} onAddTransaction={onAddTransaction} />
+          <FrequentTransactionShortcuts transactions={data.transactions} selectedMonth={filters.rangeStartMonth || selectedMonth} onAddTransaction={(transaction) => {
+            onAddTransaction(transaction)
+            setHighlightedIds([transaction.id])
+          }} />
         </div>
       </div>
 
       <BudgetGoalSection
         data={monthlyData}
-        selectedMonth={filters.month}
+        selectedMonth={filters.rangeStartMonth || selectedMonth}
         onAddBudget={onAddBudget}
         onUpdateBudget={onUpdateBudget}
         onDeleteBudget={onDeleteBudget}
@@ -196,15 +263,18 @@ export function MonthlyPage({
       <Card title={th.monthly.grouped}>
         <TransactionList
           groups={transactionGroups}
+          highlightedIds={highlightedIds}
           onEdit={openEditModal}
           onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+          onUseTemplate={handleUseTemplate}
           onTogglePaid={handleTogglePaid}
         />
       </Card>
 
       {modalState.open && (
         <TransactionFormModal
-          key={modalState.transaction?.id ?? `${modalState.defaults?.type ?? 'expense'}-${filters.month}`}
+          key={modalState.transaction?.id ?? `${modalState.defaults?.type ?? 'expense'}-${filters.rangeStartMonth}`}
           open={modalState.open}
           transaction={modalState.transaction}
           defaultValues={modalState.defaults}
