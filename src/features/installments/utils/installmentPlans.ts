@@ -1,6 +1,6 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
-import { currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
+import { currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../../utils/formatters'
 
 export type InstallmentViewMode = 'list' | 'calendar'
 export type InstallmentStatusFilter = 'all' | 'active' | 'paid'
@@ -66,7 +66,7 @@ export function addMonths(monthKey: string, count: number): string {
 }
 
 export function currentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7)
+  return currentMonthInputValue()
 }
 
 export function getInstallmentScheduleMonths(plan: InstallmentPlan): string[] {
@@ -359,4 +359,3 @@ export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey
       })
   })
 }
-

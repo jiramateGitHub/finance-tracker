@@ -1,7 +1,7 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { FinanceData, TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { th } from '../../../i18n/th'
-import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../../utils/formatters'
 import { parseMonthlySmartKeyword } from './monthlySmartFilter'
 
 export type MonthlySortOrder = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'title-asc'
@@ -49,7 +49,7 @@ export type MonthlyTotals = {
   count: number
 }
 
-export function createEmptyMonthlyFilters(month = currentDateInputValue().slice(0, 7)): MonthlyFilters {
+export function createEmptyMonthlyFilters(month = currentMonthInputValue()): MonthlyFilters {
   return {
     rangeStartMonth: month,
     rangeEndMonth: month,
@@ -64,7 +64,7 @@ export function createEmptyMonthlyFilters(month = currentDateInputValue().slice(
 }
 
 export function normalizeMonthlyFilters(filters: MonthlyFilters): Required<MonthlyFilters> {
-  const fallbackMonth = filters.month || currentDateInputValue().slice(0, 7)
+  const fallbackMonth = filters.month || currentMonthInputValue()
   return {
     ...filters,
     month: fallbackMonth,
@@ -168,8 +168,8 @@ export function filterMonthlyTransactions(transactions: TransactionEntry[], filt
   const keyword = smartFilter.text.trim().toLocaleLowerCase('th-TH')
   const category = normalizeCategoryId(normalizedFilters.category, '')
   const [rangeStart, rangeEnd] = normalizeMonthRange(
-    smartFilter.monthOffset === undefined ? normalizedFilters.rangeStartMonth : addMonthsToMonthKey(currentDateInputValue().slice(0, 7), smartFilter.monthOffset),
-    smartFilter.monthOffset === undefined ? normalizedFilters.rangeEndMonth : addMonthsToMonthKey(currentDateInputValue().slice(0, 7), smartFilter.monthOffset),
+    smartFilter.monthOffset === undefined ? normalizedFilters.rangeStartMonth : addMonthsToMonthKey(currentMonthInputValue(), smartFilter.monthOffset),
+    smartFilter.monthOffset === undefined ? normalizedFilters.rangeEndMonth : addMonthsToMonthKey(currentMonthInputValue(), smartFilter.monthOffset),
   )
   const minAmount = smartFilter.minAmount ?? Number(normalizedFilters.minAmount || Number.NaN)
   const maxAmount = smartFilter.maxAmount ?? Number(normalizedFilters.maxAmount || Number.NaN)

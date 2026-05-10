@@ -1,6 +1,6 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../data/categories'
 import type { Budget, FinanceData, Goal, GoalStatus, TransactionEntry } from '../../types/finance'
-import { clampPercent, currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../utils/formatters'
+import { clampPercent, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../utils/formatters'
 
 export type BudgetStatus = 'safe' | 'near-limit' | 'over-budget'
 export type InsightTone = 'neutral' | 'income' | 'expense' | 'warning' | 'active'
@@ -91,7 +91,7 @@ export function calculateBudgetProgress(budget: Budget, transactions: Transactio
   }
 }
 
-export function createBudgetFormValues(budget?: Budget, selectedMonth = currentDateInputValue().slice(0, 7)): BudgetFormValues {
+export function createBudgetFormValues(budget?: Budget, selectedMonth = currentMonthInputValue()): BudgetFormValues {
   return {
     month: budget?.month ?? selectedMonth,
     category: budget ? getBudgetCategoryKey(budget) : '',
@@ -242,5 +242,4 @@ export function buildBudgetGoalInsights(
 
   return insights.slice(0, 5)
 }
-
 

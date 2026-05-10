@@ -6,6 +6,7 @@ import { analyzeImportedFinanceData, type ImportDiagnostics } from '../lib/impor
 import { createJsonDownload } from '../lib/storage'
 import { loadFinanceDataFromCloud } from '../services/firebase/firestoreFinanceRepository'
 import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
+import { currentIsoTimestamp } from '../utils/formatters'
 
 export type FinanceDataLoadState = 'loading' | 'ready' | 'error'
 
@@ -208,7 +209,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   function updateTransaction(transactionId: string, patch: Partial<TransactionEntry>): void {
     updateData((current) => {
       const transactions = current.transactions.map((transaction) => (
-        transaction.id === transactionId ? { ...transaction, ...patch, updatedAt: new Date().toISOString() } : transaction
+        transaction.id === transactionId ? { ...transaction, ...patch, updatedAt: currentIsoTimestamp() } : transaction
       ))
       return { ...current, transactions, entries: transactions }
     }, 'แก้ไขรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
@@ -232,7 +233,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   function updateInstallmentPlan(planId: string, patch: Partial<InstallmentPlan>): void {
     updateData((current) => {
       const installmentPlans = current.installmentPlans.map((plan) => (
-        plan.id === planId ? { ...plan, ...patch, updatedAt: new Date().toISOString() } : plan
+        plan.id === planId ? { ...plan, ...patch, updatedAt: currentIsoTimestamp() } : plan
       ))
       return { ...current, installmentPlans, installments: installmentPlans }
     }, 'แก้ไขแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
@@ -252,7 +253,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   function updateTrip(tripId: string, patch: Partial<Trip>): void {
     updateData((current) => ({
       ...current,
-      trips: current.trips.map((trip) => trip.id === tripId ? { ...trip, ...patch, updatedAt: new Date().toISOString() } : trip),
+      trips: current.trips.map((trip) => trip.id === tripId ? { ...trip, ...patch, updatedAt: currentIsoTimestamp() } : trip),
     }), 'แก้ไขทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
@@ -265,7 +266,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   }
 
   function addOrUpdateTripBudgetLine(tripId: string, categoryId: string, amount: number, note?: string): void {
-    const now = new Date().toISOString()
+    const now = currentIsoTimestamp()
     updateData((current) => {
       const existingBudget = current.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId)
       const existingLines = existingBudget?.lines?.length
@@ -303,7 +304,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   }
 
   function deleteTripBudgetLine(tripId: string, categoryId: string): void {
-    const now = new Date().toISOString()
+    const now = currentIsoTimestamp()
     updateData((current) => {
       const existingBudget = current.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId)
       if (!existingBudget) return current
@@ -329,7 +330,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   function updateBudget(budgetId: string, patch: Partial<Budget>): void {
     updateData((current) => ({
       ...current,
-      budgets: current.budgets.map((budget) => budget.id === budgetId ? { ...budget, ...patch, updatedAt: new Date().toISOString() } : budget),
+      budgets: current.budgets.map((budget) => budget.id === budgetId ? { ...budget, ...patch, updatedAt: currentIsoTimestamp() } : budget),
     }), 'แก้ไขงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
@@ -344,7 +345,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   function updateGoal(goalId: string, patch: Partial<Goal>): void {
     updateData((current) => ({
       ...current,
-      goals: current.goals.map((goal) => goal.id === goalId ? { ...goal, ...patch, updatedAt: new Date().toISOString() } : goal),
+      goals: current.goals.map((goal) => goal.id === goalId ? { ...goal, ...patch, updatedAt: currentIsoTimestamp() } : goal),
     }), 'แก้ไขเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
@@ -410,5 +411,4 @@ export function useFinanceData(): FinanceDataContextValue {
   if (!context) throw new Error('useFinanceData must be used within FinanceDataProvider')
   return context
 }
-
 

@@ -3,6 +3,7 @@ import { createExportableFinanceData, normalizeFinanceData } from '../../lib/dat
 import { th } from '../../i18n/th'
 import { loadFinanceDataFromCloud, saveFinanceDataToCloud } from '../../services/firebase/firestoreFinanceRepository'
 import type { FinanceData } from '../../types/finance'
+import { currentIsoTimestamp } from '../../utils/formatters'
 import { createFinanceDataFingerprint } from './syncData'
 import type { SyncStatus } from './syncTypes'
 
@@ -62,7 +63,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
       try {
         const normalized = validateNormalizedData(sourceData)
         await saveFinanceDataToCloud(userId, normalized)
-        const syncedAt = new Date().toISOString()
+        const syncedAt = currentIsoTimestamp()
         lastSavedFingerprintRef.current = createFinanceDataFingerprint(normalized)
         setStatus({
           state: 'saved',
@@ -110,7 +111,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
       setStatus({
         state: 'saved',
         message: th.sync.loadManual,
-        lastSyncedAt: new Date().toISOString(),
+        lastSyncedAt: currentIsoTimestamp(),
         errorMessage: null,
       })
       return true

@@ -33,7 +33,7 @@ import {
   DEFAULT_TIMEZONE,
   FINANCE_SCHEMA_VERSION,
 } from '../types/finance'
-import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../utils/formatters'
 
 const validTransactionTypes = new Set<TransactionType>(['income', 'expense'])
 const validTransactionStatuses = new Set<TransactionStatus>(['cleared', 'pending'])
@@ -100,7 +100,7 @@ function normalizeDate(value: unknown, fallback = currentDateInputValue()): stri
   return isValidDate(text) ? text : fallback
 }
 
-function normalizeMonth(value: unknown, fallback = currentDateInputValue().slice(0, 7)): string {
+function normalizeMonth(value: unknown, fallback = currentMonthInputValue()): string {
   const text = typeof value === 'string' ? value.trim().slice(0, 7) : ''
   return isValidMonth(text) ? text : fallback
 }

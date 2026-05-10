@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { calculateEntryTotals } from '../lib/finance-calculations'
 import { useFinanceData, type FinanceDataStatus, type FinanceImportPreview } from '../state/FinanceDataProvider'
 import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
-import { currentDateInputValue, currentIsoTimestamp } from '../utils/formatters'
+import { currentMonthInputValue } from '../utils/formatters'
 
 export interface FinanceStore {
   activeView: ViewId
@@ -12,7 +12,6 @@ export interface FinanceStore {
   totals: ReturnType<typeof calculateEntryTotals>
   setActiveView: (viewId: ViewId) => void
   setSelectedMonth: (monthKey: string) => void
-  addDraftExpense: () => void
   addTransaction: (transaction: TransactionEntry) => void
   updateTransaction: (transactionId: string, patch: Partial<TransactionEntry>) => void
   deleteTransaction: (transactionId: string) => void
@@ -36,38 +35,13 @@ export interface FinanceStore {
   replaceData: (data: AppData, message?: string) => FinanceData
 }
 
-function createExpenseDraft(): TransactionEntry {
-  const now = currentIsoTimestamp()
-  return {
-    id: crypto.randomUUID(),
-    type: 'expense',
-    date: currentDateInputValue(),
-    monthKey: currentDateInputValue().slice(0, 7),
-    category: 'อื่นๆ',
-    categoryId: 'อื่นๆ',
-    title: 'Draft expense from React scaffold',
-    amount: 100,
-    currency: 'THB',
-    note: 'Real add/edit transaction logic belongs in a later phase.',
-    status: 'pending',
-    source: 'manual',
-    sourceModule: 'manual',
-    createdAt: now,
-    updatedAt: now,
-  }
-}
-
 export function useFinanceStore(): FinanceStore {
   const financeData = useFinanceData()
   const [activeView, setActiveView] = useState<ViewId>('monthly')
-  const [selectedMonth, setSelectedMonth] = useState(() => currentDateInputValue().slice(0, 7))
+  const [selectedMonth, setSelectedMonth] = useState(() => currentMonthInputValue())
   const { data } = financeData
 
   const totals = useMemo(() => calculateEntryTotals(data.entries), [data.entries])
-
-  function addDraftExpense(): void {
-    financeData.addTransaction(createExpenseDraft())
-  }
 
   async function previewImportJson(file: File): Promise<FinanceImportPreview | null> {
     return financeData.previewImportDataFromJson(file)
@@ -89,7 +63,6 @@ export function useFinanceStore(): FinanceStore {
     totals,
     setActiveView,
     setSelectedMonth,
-    addDraftExpense,
     addTransaction: financeData.addTransaction,
     updateTransaction: financeData.updateTransaction,
     deleteTransaction: financeData.deleteTransaction,
@@ -113,5 +86,3 @@ export function useFinanceStore(): FinanceStore {
     replaceData: financeData.replaceData,
   }
 }
-
-

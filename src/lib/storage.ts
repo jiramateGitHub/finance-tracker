@@ -1,27 +1,19 @@
-import { createExportableFinanceData, normalizeFinanceData } from './dataMigration'
+import { createExportableFinanceData } from './dataMigration'
 import type { FinanceData } from '../types/finance'
 
-export const FINANCE_STORAGE_KEY = 'finance-tracker-data-v2'
-
-export function createFinanceStorageKey(userId = 'anonymous'): string {
-  return `${FINANCE_STORAGE_KEY}:${userId}`
-}
-
-export function loadStoredFinanceData(storageKey = FINANCE_STORAGE_KEY): FinanceData | null {
-  try {
-    const raw = window.localStorage.getItem(storageKey)
-    return raw ? normalizeFinanceData(JSON.parse(raw)) : null
-  } catch {
-    return null
-  }
-}
-
-export function saveStoredFinanceData(data: FinanceData, storageKey = FINANCE_STORAGE_KEY): void {
-  window.localStorage.setItem(storageKey, JSON.stringify(createExportableFinanceData(data)))
-}
-
-export function clearStoredFinanceData(storageKey = FINANCE_STORAGE_KEY): void {
-  window.localStorage.removeItem(storageKey)
+function createLocalTimestampForFileName(): string {
+  const now = new Date()
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-')
+  const time = [
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+  ].join('-')
+  return `${date}T${time}`
 }
 
 export function createJsonDownload(data: FinanceData): void {
@@ -29,9 +21,8 @@ export function createJsonDownload(data: FinanceData): void {
   const blob = new Blob([JSON.stringify(exportableData, null, 2)], { type: 'application/json;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   anchor.href = url
-  anchor.download = `finance-data-${timestamp}.json`
+  anchor.download = `finance-data-${createLocalTimestampForFileName()}.json`
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()

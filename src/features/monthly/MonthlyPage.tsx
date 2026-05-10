@@ -3,7 +3,7 @@ import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
 import type { AppData, Budget, Goal, TransactionEntry } from '../../types/finance'
-import { formatMonth } from '../../utils/formatters'
+import { currentIsoTimestamp, formatMonth } from '../../utils/formatters'
 import { BudgetGoalSection } from '../budgetGoals/BudgetGoalSection'
 import { deriveInstallmentTransactions } from '../installments/utils/installmentPlans'
 import type { SyncStatus } from '../sync/syncTypes'
@@ -143,7 +143,7 @@ export function MonthlyPage({
   }
 
   function handleDuplicate(transaction: TransactionEntry): void {
-    const now = new Date().toISOString()
+    const now = currentIsoTimestamp()
     const duplicated: TransactionEntry = {
       ...transaction,
       id: crypto.randomUUID(),

@@ -26,8 +26,23 @@ export function currentIsoTimestamp(): string {
   return new Date().toISOString()
 }
 
+function formatLocalDatePart(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
 export function currentDateInputValue(): string {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = formatLocalDatePart(now.getMonth() + 1)
+  const day = formatLocalDatePart(now.getDate())
+  return `${year}-${month}-${day}`
+}
+
+export function currentMonthInputValue(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = formatLocalDatePart(now.getMonth() + 1)
+  return `${year}-${month}`
 }
 
 export function getMonthKey(dateValue: string): string {
