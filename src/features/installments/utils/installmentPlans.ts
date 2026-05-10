@@ -315,14 +315,25 @@ export function getInstallmentCalendarMonths(plans: InstallmentPlan[], filters?:
   return Array.from(monthSet).sort().slice(0, 12)
 }
 
+export function getSafeDateInMonth(monthKey: string, dayText: string): string {
+  const [yearText, monthText] = monthKey.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const requestedDay = Number(dayText)
+  const day = Number.isFinite(requestedDay) && requestedDay >= 1 ? Math.floor(requestedDay) : 1
+  const lastDay = Number.isFinite(year) && Number.isFinite(month)
+    ? new Date(year, month, 0).getDate()
+    : 1
+  return `${monthKey}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
+}
+
 export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey?: string): TransactionEntry[] {
   return plans.flatMap((plan) => {
     const paidMonthKeys = new Set(getPaidMonthKeys(plan))
     return getInstallmentScheduleMonths(plan)
       .filter((scheduleMonth) => !monthKey || scheduleMonth === monthKey)
       .map((scheduleMonth) => {
-        const dueDay = Math.min(31, Math.max(1, Number(plan.dueDay ?? plan.paymentDay ?? 1)))
-        const date = `${scheduleMonth}-${String(dueDay).padStart(2, '0')}`
+        const date = getSafeDateInMonth(scheduleMonth, String(plan.dueDay ?? plan.paymentDay ?? 1))
         return {
           id: `installment-${plan.id}-${scheduleMonth}`,
           type: 'expense',
@@ -348,5 +359,4 @@ export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey
       })
   })
 }
-
 

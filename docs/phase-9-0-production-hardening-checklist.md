@@ -78,6 +78,41 @@ users/{uid} read/write ได้เฉพาะเมื่อ request.auth != n
 - [ ] User B ไม่เห็นข้อมูลของ User A
 - [ ] Logout แล้ว login อีกบัญชี ต้องไม่เห็นข้อมูลผู้ใช้เดิม
 
+## 6) Import/export Regression Checklist
+
+- [ ] Export JSON จากข้อมูล production test ได้ schema v2
+- [ ] Import JSON แบบ legacy จาก `income_expense_tracker.html` normalize ได้
+- [ ] Import JSON แบบ schema v2 แล้วรายการ ธุรกรรม งบ เป้าหมาย ยอดผ่อน และทริปกลับมาครบ
+- [ ] Import JSON ต้องแสดง preview/diagnostic ก่อนแทนที่ข้อมูล Cloud
+- [ ] Cancel import แล้วข้อมูลเดิมไม่เปลี่ยน
+- [ ] Confirm import แล้วบันทึกขึ้น Cloud สำเร็จ
+
+## 7) Repeat Entry Regression Checklist
+
+- [ ] เพิ่มรายการรายเดือนแบบไม่เปิดสร้างซ้ำ ได้ 1 รายการ
+- [ ] เปิดสร้างซ้ำ 3 เดือน ได้รายการ 3 เดือนติดต่อกัน
+- [ ] สร้างซ้ำมากกว่า 60 เดือน ถูกจำกัดไม่เกิน 60 เดือน
+- [ ] รายการซ้ำแต่ละเดือนมี id ไม่ซ้ำกัน
+- [ ] Export JSON มีรายการซ้ำที่สร้างไว้ครบ
+- [ ] Refresh หรือ login อีกเครื่องแล้วรายการซ้ำยังอยู่ครบหลัง sync
+
+## 8) Installment dueDay 31 Regression Checklist
+
+- [ ] แผนผ่อน dueDay 31 ในเดือนกุมภาพันธ์ 2026 สร้างรายการวันที่ `2026-02-28`
+- [ ] แผนผ่อน dueDay 31 ในเดือนกุมภาพันธ์ 2028 สร้างรายการวันที่ `2028-02-29`
+- [ ] แผนผ่อน dueDay 31 ในเดือนเมษายน สร้างรายการวันที่ 30
+- [ ] dueDay/paymentDay ที่ไม่ถูกต้อง fallback เป็นวันที่ 1
+- [ ] Monthly ledger แสดงรายการยอดผ่อนโดยไม่มีวันที่ invalid เช่น `2026-02-31`
+
+## 9) Responsive Regression Checklist
+
+- [ ] Desktop 1920x1080 อ่านง่ายและการ์ดไม่ยืดเกินไป
+- [ ] Mobile 402x874 ไม่มี horizontal scroll
+- [ ] Bottom nav ไม่บังปุ่มสำคัญหรือ modal footer
+- [ ] Modal เปิดบนมือถือแล้ว footer กดได้
+- [ ] Combobox ใช้ได้ใน modal และไม่ถูก footer บัง
+- [ ] Trip list/calendar/detail ใช้งานบนมือถือได้โดยกลับไปดูรายการทริปได้ง่าย
+
 ## 6) Final Import / Export Regression
 
 - [ ] Export current data

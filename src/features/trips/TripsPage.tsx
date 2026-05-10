@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
@@ -83,13 +83,6 @@ export function TripsPage({
   const activeTrip = filteredTrips.find((trip) => trip.id === effectiveActiveTripId) ?? null
   const summary = useMemo(() => summarizeTrips(data, filteredTrips), [data, filteredTrips])
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
-
-  useEffect(() => {
-    if (activeTripId && !filteredTrips.some((trip) => trip.id === activeTripId)) {
-      setActiveTripId(null)
-      setActiveTab('overview')
-    }
-  }, [activeTripId, filteredTrips])
 
   function selectTrip(tripId: string): void {
     setActiveTripId(tripId)

@@ -46,6 +46,14 @@ const goalStatusOrder: Record<Goal['status'], number> = {
   completed: 2,
 }
 
+const insightToneLabel = {
+  income: 'ดี',
+  expense: 'เกินงบ',
+  warning: 'เตือน',
+  active: 'กำลังทำ',
+  neutral: 'ทั่วไป',
+} as const
+
 export function BudgetGoalSection({
   data,
   selectedMonth,
@@ -158,7 +166,7 @@ export function BudgetGoalSection({
           {insights.length ? (
             insights.map((insight) => (
               <div key={insight.id} className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <Badge tone={insight.tone}>{insight.tone}</Badge>
+                <Badge tone={insight.tone}>{insightToneLabel[insight.tone]}</Badge>
                 <p className="text-sm font-semibold leading-6 text-slate-700">{insight.text}</p>
               </div>
             ))
