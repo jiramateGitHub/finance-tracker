@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { calculateEntryTotals } from '../lib/finance-calculations'
-import { useFinanceData, type FinanceDataStatus } from '../state/FinanceDataProvider'
+import { useFinanceData, type FinanceDataStatus, type FinanceImportPreview } from '../state/FinanceDataProvider'
 import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
 import { currentDateInputValue, currentIsoTimestamp } from '../utils/formatters'
 
@@ -31,8 +31,8 @@ export interface FinanceStore {
   updateGoal: (goalId: string, patch: Partial<Goal>) => void
   deleteGoal: (goalId: string) => void
   exportJson: () => void
-  importJson: (file: File) => Promise<FinanceData | null>
-  resetDemoData: () => void
+  previewImportJson: (file: File) => Promise<FinanceImportPreview | null>
+  applyImportedJson: (preview: FinanceImportPreview) => FinanceData
   replaceData: (data: AppData, message?: string) => FinanceData
 }
 
@@ -69,12 +69,12 @@ export function useFinanceStore(): FinanceStore {
     financeData.addTransaction(createExpenseDraft())
   }
 
-  async function importJson(file: File): Promise<FinanceData | null> {
-    return financeData.importDataFromJson(file)
+  async function previewImportJson(file: File): Promise<FinanceImportPreview | null> {
+    return financeData.previewImportDataFromJson(file)
   }
 
-  function resetDemoData(): void {
-    financeData.resetData()
+  function applyImportedJson(preview: FinanceImportPreview): FinanceData {
+    return financeData.applyImportedData(preview)
   }
 
   function exportJson(): void {
@@ -108,8 +108,8 @@ export function useFinanceStore(): FinanceStore {
     updateGoal: financeData.updateGoal,
     deleteGoal: financeData.deleteGoal,
     exportJson,
-    importJson,
-    resetDemoData,
+    previewImportJson,
+    applyImportedJson,
     replaceData: financeData.replaceData,
   }
 }

@@ -1,9 +1,10 @@
-import type { ChangeEvent } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { SyncStatusBadge } from '../sync/SyncStatusBadge'
-import type { FinanceDataStatus } from '../../state/FinanceDataProvider'
-import type { AppData } from '../../types/finance'
+import type { FinanceDataStatus, FinanceImportPreview } from '../../state/FinanceDataProvider'
+import type { AppData, FinanceData } from '../../types/finance'
 import type { SyncStatus } from '../sync/syncTypes'
 import { th } from '../../i18n/th'
 
@@ -11,7 +12,8 @@ type MorePageProps = {
   data: AppData
   dataStatus: FinanceDataStatus
   onExportJson: () => void
-  onImportJson: (file: File) => Promise<void>
+  onPreviewImportJson: (file: File) => Promise<FinanceImportPreview | null>
+  onConfirmImportJson: (preview: FinanceImportPreview) => Promise<void>
   currentUserId: string
   currentUserEmail: string
   onLogout: () => Promise<void>
@@ -20,11 +22,46 @@ type MorePageProps = {
   onSaveToCloud: () => Promise<void>
 }
 
+type CountKey = 'transactions' | 'installmentPlans' | 'trips' | 'budgets' | 'goals'
+
+type DataCounts = Record<CountKey, number>
+
+const countLabels: Record<CountKey, string> = {
+  transactions: 'รายการรายรับรายจ่าย',
+  installmentPlans: 'แผนผ่อน',
+  trips: 'ทริป',
+  budgets: 'งบประมาณ',
+  goals: 'เป้าหมาย',
+}
+
+function getDataCounts(data: Pick<FinanceData, CountKey>): DataCounts {
+  return {
+    transactions: data.transactions.length,
+    installmentPlans: data.installmentPlans.length,
+    trips: data.trips.length,
+    budgets: data.budgets.length,
+    goals: data.goals.length,
+  }
+}
+
+function getLargeDropWarnings(currentCounts: DataCounts, importedCounts: DataCounts): string[] {
+  return (Object.keys(countLabels) as CountKey[])
+    .filter((key) => {
+      const currentCount = currentCounts[key]
+      const importedCount = importedCounts[key]
+      if (currentCount < 5) return false
+      if (importedCount === 0 && currentCount > 0) return true
+      return importedCount <= Math.floor(currentCount * 0.5)
+    })
+    .map((key) => `${countLabels[key]}: ปัจจุบัน ${currentCounts[key].toLocaleString('th-TH')} → ไฟล์นำเข้า ${importedCounts[key].toLocaleString('th-TH')}`)
+}
+
 export function MorePage({
   data,
   dataStatus,
   onExportJson,
-  onImportJson,
+  onPreviewImportJson,
+  onConfirmImportJson,
   currentUserId,
   currentUserEmail,
   onLogout,
@@ -32,10 +69,35 @@ export function MorePage({
   onLoadFromCloud,
   onSaveToCloud,
 }: MorePageProps) {
+  const [pendingImport, setPendingImport] = useState<FinanceImportPreview | null>(null)
+  const [confirmingImport, setConfirmingImport] = useState(false)
+
+  const currentCounts = useMemo(() => getDataCounts(data), [data])
+  const pendingCounts = useMemo(() => (pendingImport ? getDataCounts(pendingImport.data) : null), [pendingImport])
+  const dropWarnings = useMemo(
+    () => (pendingCounts ? getLargeDropWarnings(currentCounts, pendingCounts) : []),
+    [currentCounts, pendingCounts],
+  )
+  const hasLargeDropWarning = dropWarnings.length > 0
+
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0]
-    if (file) await onImportJson(file)
     event.target.value = ''
+    if (!file) return
+    const preview = await onPreviewImportJson(file)
+    if (preview) setPendingImport(preview)
+  }
+
+  async function confirmPendingImport(): Promise<void> {
+    if (!pendingImport || confirmingImport) return
+    const preview = pendingImport
+    setConfirmingImport(true)
+    setPendingImport(null)
+    try {
+      await onConfirmImportJson(preview)
+    } finally {
+      setConfirmingImport(false)
+    }
   }
 
   const statusTone = dataStatus.saveState === 'error' || dataStatus.importState === 'error'
@@ -46,8 +108,9 @@ export function MorePage({
     : syncStatus.state === 'saved'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
       : 'border-blue-200 bg-blue-50 text-blue-700'
-  const isCloudBusy = syncStatus.state === 'loading' || syncStatus.state === 'saving'
+  const isCloudBusy = syncStatus.state === 'loading' || syncStatus.state === 'saving' || confirmingImport
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'ไม่ได้ตั้งค่า'
+  const importPreviewDiagnostics = pendingImport?.diagnostics ?? dataStatus.lastImportDiagnostics
 
   return (
     <div className="grid gap-4">
@@ -60,6 +123,9 @@ export function MorePage({
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-500">
               ระบบโหลดข้อมูลจาก Cloud หลังเข้าสู่ระบบทุกครั้ง และบันทึกการแก้ไขกลับขึ้น Cloud อัตโนมัติ
+            </p>
+            <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+              ปุ่มบันทึกขึ้น Cloud จะบันทึกข้อมูลที่เห็นในเครื่องนี้ขึ้น Cloud ตามบัญชีปัจจุบัน
             </p>
             <div className="mt-3 truncate rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600">
               {currentUserEmail}
@@ -79,7 +145,7 @@ export function MorePage({
               <Button type="button" onClick={onLoadFromCloud} disabled={isCloudBusy}>
                 {th.sync.loadFromCloud}
               </Button>
-              <Button type="button" onClick={onLogout}>
+              <Button type="button" onClick={onLogout} disabled={isCloudBusy}>
                 {th.auth.logout}
               </Button>
             </div>
@@ -88,37 +154,30 @@ export function MorePage({
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <h3 className="font-extrabold">นำเข้า/ส่งออก JSON</h3>
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              นำเข้า JSON แล้วระบบจะบันทึกชุดข้อมูลนั้นขึ้น Cloud ให้บัญชีนี้ทันที
+              ก่อนนำเข้าไฟล์ใหม่ แนะนำให้กดส่งออก JSON เพื่อสำรองข้อมูลปัจจุบัน
+            </p>
+            <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+              หลังเลือกไฟล์ ระบบจะแสดงตัวอย่างและให้ยืนยันก่อนแทนที่ข้อมูลบน Cloud
             </p>
             <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-bold ${statusTone}`}>
               {dataStatus.message}
             </div>
-            {dataStatus.lastImportDiagnostics ? (
-              <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                <div className="font-extrabold">สรุปการนำเข้า: {dataStatus.lastImportDiagnostics.fileName ?? 'ไฟล์ JSON'}</div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <ImportDiagnosticItem label="เวอร์ชันข้อมูล" value={dataStatus.lastImportDiagnostics.schemaVersion ? `v${dataStatus.lastImportDiagnostics.schemaVersion}` : 'เดิม / ไม่ระบุ'} />
-                  <ImportDiagnosticItem label="รายการ" value={`${dataStatus.lastImportDiagnostics.counts.transactions || dataStatus.lastImportDiagnostics.counts.entries} รายการ`} />
-                  <ImportDiagnosticItem label="รายการประจำ" value={`${dataStatus.lastImportDiagnostics.counts.recurringRules} รายการ`} />
-                  <ImportDiagnosticItem label="ยอดผ่อน" value={`${dataStatus.lastImportDiagnostics.counts.installmentPlans} แผน`} />
-                  <ImportDiagnosticItem label="ทริป / รายการทริป" value={`${dataStatus.lastImportDiagnostics.counts.trips} / ${dataStatus.lastImportDiagnostics.counts.tripItems}`} />
-                  <ImportDiagnosticItem label="งบ / เป้าหมาย" value={`${dataStatus.lastImportDiagnostics.counts.budgets} / ${dataStatus.lastImportDiagnostics.counts.goals}`} />
-                </div>
-                <div className="mt-2 text-xs font-bold text-blue-800">
-                  หมวดหมู่ที่แปลง: {dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.length
-                    ? dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.map((item) => `${item.from} → ${item.to} (${item.count})`).join(', ')
-                    : 'ไม่มี'}
-                </div>
-                <ul className="mt-2 grid gap-1 text-xs font-semibold leading-5 text-blue-800">
-                  {dataStatus.lastImportDiagnostics.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
-                </ul>
-              </div>
+
+            {importPreviewDiagnostics ? (
+              <ImportDiagnosticsPanel
+                diagnostics={importPreviewDiagnostics}
+                title={pendingImport ? 'ตัวอย่างไฟล์ก่อนนำเข้า' : 'สรุปการนำเข้าล่าสุด'}
+                dropWarnings={pendingImport ? dropWarnings : []}
+              />
             ) : null}
+
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="primary" onClick={onExportJson}>{th.file.exportJson}</Button>
-              <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-blue-700 hover:bg-blue-50">
-                นำเข้า JSON และบันทึกขึ้น Cloud
-                <input className="sr-only" type="file" accept="application/json,.json" onChange={handleFileChange} />
+              <Button type="button" variant="primary" onClick={onExportJson} disabled={isCloudBusy}>
+                {th.file.exportJson}
+              </Button>
+              <label className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-blue-700 hover:bg-blue-50 ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
+                เลือกไฟล์ JSON เพื่อตรวจสอบก่อนนำเข้า
+                <input className="sr-only" type="file" accept="application/json,.json" onChange={handleFileChange} disabled={isCloudBusy} />
               </label>
             </div>
           </div>
@@ -131,26 +190,83 @@ export function MorePage({
           <span className="ml-2 text-xs font-bold text-slate-400">ใช้ดูบัญชี โปรเจกต์ และจำนวนข้อมูล</span>
         </summary>
         <div className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-          <DebugItem label="รหัสผู้ใช้" value={currentUserId} />
-          <DebugItem label="โปรเจกต์ Firebase" value={projectId} />
-          <DebugItem label="สถานะซิงก์" value={syncStatus.message} />
-          <DebugItem
+          <TechnicalItem label="รหัสผู้ใช้" value={currentUserId} />
+          <TechnicalItem label="โปรเจกต์ Firebase" value={projectId} />
+          <TechnicalItem label="สถานะซิงก์" value={syncStatus.message} />
+          <TechnicalItem
             label="ซิงก์ล่าสุด"
             value={syncStatus.lastSyncedAt ? new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH') : 'ยังไม่มี'}
           />
-          <DebugItem label="รายการ" value={data.transactions.length.toString()} />
-          <DebugItem label="รายการประจำ" value={data.recurringRules.length.toString()} />
-          <DebugItem label="ยอดผ่อน" value={data.installmentPlans.length.toString()} />
-          <DebugItem label="ทริป" value={data.trips.length.toString()} />
-          <DebugItem label="งบประมาณ" value={data.budgets.length.toString()} />
-          <DebugItem label="เป้าหมาย" value={data.goals.length.toString()} />
+          <TechnicalItem label="รายการ" value={data.transactions.length.toString()} />
+          <TechnicalItem label="รายการประจำ" value={data.recurringRules.length.toString()} />
+          <TechnicalItem label="ยอดผ่อน" value={data.installmentPlans.length.toString()} />
+          <TechnicalItem label="ทริป" value={data.trips.length.toString()} />
+          <TechnicalItem label="งบประมาณ" value={data.budgets.length.toString()} />
+          <TechnicalItem label="เป้าหมาย" value={data.goals.length.toString()} />
         </div>
       </details>
+
+      <ConfirmModal
+        open={pendingImport !== null}
+        title="ยืนยันนำเข้าและแทนที่ข้อมูลบน Cloud?"
+        description={hasLargeDropWarning
+          ? `การนำเข้า JSON จะนำข้อมูลในไฟล์นี้มาใช้กับบัญชีนี้ และบันทึกขึ้น Cloud ทันที แนะนำให้ส่งออก JSON สำรองข้อมูลปัจจุบันก่อน ไฟล์นี้มีจำนวนข้อมูลน้อยกว่าข้อมูลปัจจุบันมาก อาจทำให้ข้อมูลบน Cloud ถูกลบตาม (${dropWarnings.join(' · ')})`
+          : 'การนำเข้า JSON จะนำข้อมูลในไฟล์นี้มาใช้กับบัญชีนี้ และบันทึกขึ้น Cloud ทันที แนะนำให้ส่งออก JSON สำรองข้อมูลปัจจุบันก่อน'}
+        confirmLabel="ยืนยันนำเข้า"
+        cancelLabel="ยกเลิก"
+        destructive={hasLargeDropWarning}
+        onConfirm={() => {
+          void confirmPendingImport()
+        }}
+        onClose={() => setPendingImport(null)}
+      />
     </div>
   )
 }
 
-function DebugItem({ label, value }: { label: string; value: string }) {
+function ImportDiagnosticsPanel({
+  diagnostics,
+  title,
+  dropWarnings,
+}: {
+  diagnostics: FinanceDataStatus['lastImportDiagnostics']
+  title: string
+  dropWarnings: string[]
+}) {
+  if (!diagnostics) return null
+
+  return (
+    <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+      <div className="font-extrabold">{title}: {diagnostics.fileName ?? 'ไฟล์ JSON'}</div>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <ImportDiagnosticItem label="เวอร์ชันข้อมูล" value={diagnostics.schemaVersion ? `v${diagnostics.schemaVersion}` : 'เดิม / ไม่ระบุ'} />
+        <ImportDiagnosticItem label="รายการ" value={`${diagnostics.counts.transactions || diagnostics.counts.entries} รายการ`} />
+        <ImportDiagnosticItem label="รายการประจำ" value={`${diagnostics.counts.recurringRules} รายการ`} />
+        <ImportDiagnosticItem label="ยอดผ่อน" value={`${diagnostics.counts.installmentPlans} แผน`} />
+        <ImportDiagnosticItem label="ทริป / รายการทริป" value={`${diagnostics.counts.trips} / ${diagnostics.counts.tripItems}`} />
+        <ImportDiagnosticItem label="งบ / เป้าหมาย" value={`${diagnostics.counts.budgets} / ${diagnostics.counts.goals}`} />
+      </div>
+      <div className="mt-2 text-xs font-bold text-blue-800">
+        หมวดหมู่ที่แปลง: {diagnostics.categorySummary.aliasMappingsApplied.length
+          ? diagnostics.categorySummary.aliasMappingsApplied.map((item) => `${item.from} → ${item.to} (${item.count})`).join(', ')
+          : 'ไม่มี'}
+      </div>
+      {dropWarnings.length ? (
+        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-extrabold leading-5 text-amber-800">
+          ไฟล์นี้มีจำนวนข้อมูลน้อยกว่าข้อมูลปัจจุบันมาก อาจทำให้ข้อมูลบน Cloud ถูกลบตาม
+          <ul className="mt-1 grid gap-1">
+            {dropWarnings.map((warning) => <li key={warning}>• {warning}</li>)}
+          </ul>
+        </div>
+      ) : null}
+      <ul className="mt-2 grid gap-1 text-xs font-semibold leading-5 text-blue-800">
+        {diagnostics.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
+      </ul>
+    </div>
+  )
+}
+
+function TechnicalItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
       <div className="text-xs font-bold text-slate-400">{label}</div>
@@ -158,9 +274,6 @@ function DebugItem({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
-
-
-
 
 function ImportDiagnosticItem({ label, value }: { label: string; value: string }) {
   return (
@@ -170,5 +283,3 @@ function ImportDiagnosticItem({ label, value }: { label: string; value: string }
     </div>
   )
 }
-
-

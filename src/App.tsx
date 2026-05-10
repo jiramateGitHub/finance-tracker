@@ -7,6 +7,7 @@ import { TripsPage } from './features/trips/TripsPage'
 import { YearlyPage } from './features/yearly/YearlyPage'
 import { useFinanceStore } from './hooks/useFinanceStore'
 import { th } from './i18n/th'
+import type { FinanceImportPreview } from './state/FinanceDataProvider'
 
 type AppProps = {
   currentUserId: string
@@ -30,9 +31,13 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
     await sync.loadNow()
   }
 
-  async function handleImportJson(file: File): Promise<void> {
-    const importedData = await store.importJson(file)
-    if (importedData) await sync.saveNow(importedData, th.sync.cloudImport)
+  async function handlePreviewImportJson(file: File): Promise<FinanceImportPreview | null> {
+    return store.previewImportJson(file)
+  }
+
+  async function handleConfirmImportJson(preview: FinanceImportPreview): Promise<void> {
+    const importedData = store.applyImportedJson(preview)
+    await sync.saveNow(importedData, th.sync.cloudImport)
   }
 
   function renderActiveView() {
@@ -65,7 +70,8 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
           data={store.data}
           dataStatus={store.dataStatus}
           onExportJson={store.exportJson}
-          onImportJson={handleImportJson}
+          onPreviewImportJson={handlePreviewImportJson}
+          onConfirmImportJson={handleConfirmImportJson}
           currentUserId={currentUserId}
           currentUserEmail={currentUserEmail}
           onLogout={onLogout}

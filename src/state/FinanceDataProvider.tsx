@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useState, type Dispatch, type PropsWithChildren, type SetStateAction } from 'react'
 import { Button } from '../components/ui/Button'
-import { seedData } from '../data/seedData'
 import { createEmptyFinanceData, getDataSchemaVersion, normalizeFinanceData, withUpdatedMeta } from '../lib/dataMigration'
 import { analyzeImportedFinanceData, type ImportDiagnostics } from '../lib/importDiagnostics'
 import { createJsonDownload } from '../lib/storage'
@@ -19,13 +18,20 @@ export type FinanceDataStatus = {
   lastImportDiagnostics: ImportDiagnostics | null
 }
 
+export type FinanceImportPreview = {
+  fileName: string
+  schemaVersion: number | null
+  data: FinanceData
+  diagnostics: ImportDiagnostics
+}
+
 export type FinanceDataContextValue = {
   data: FinanceData
   status: FinanceDataStatus
   setData: Dispatch<SetStateAction<FinanceData>>
   replaceData: (nextData: FinanceData, message?: string) => FinanceData
-  resetData: () => void
-  importDataFromJson: (file: File) => Promise<FinanceData | null>
+  previewImportDataFromJson: (file: File) => Promise<FinanceImportPreview | null>
+  applyImportedData: (preview: FinanceImportPreview) => FinanceData
   exportDataAsJson: () => void
   addTransaction: (transaction: TransactionEntry) => void
   updateTransaction: (transactionId: string, patch: Partial<TransactionEntry>) => void
@@ -110,23 +116,28 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
 
   const retryLoad = useCallback(() => setReloadToken((current) => current + 1), [])
 
-  async function importDataFromJson(file: File): Promise<FinanceData | null> {
+  async function previewImportDataFromJson(file: File): Promise<FinanceImportPreview | null> {
     try {
       const rawText = await file.text()
       const parsed = JSON.parse(rawText) as unknown
       const schemaVersion = getDataSchemaVersion(parsed)
       const importedData = withUpdatedMeta(normalizeFinanceData(parsed))
       const diagnostics = analyzeImportedFinanceData(parsed, importedData, file.name)
-      setData(importedData)
-      setStatus({
+      const preview: FinanceImportPreview = {
+        fileName: file.name,
+        schemaVersion,
+        data: importedData,
+        diagnostics,
+      }
+      setStatus((current) => ({
+        ...current,
         loadState: 'ready',
-        saveState: 'saved',
-        importState: 'success',
-        message: `นำเข้า ${file.name} เป็น schema v${schemaVersion || importedData.schemaVersion} แล้ว`,
+        importState: 'idle',
+        message: `ตรวจสอบไฟล์ ${file.name} แล้ว โปรดยืนยันก่อนนำเข้าและบันทึกขึ้น Cloud`,
         errorMessage: null,
         lastImportDiagnostics: diagnostics,
-      })
-      return importedData
+      }))
+      return preview
     } catch {
       setStatus((current) => ({
         ...current,
@@ -139,24 +150,25 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     }
   }
 
+  function applyImportedData(preview: FinanceImportPreview): FinanceData {
+    setData(preview.data)
+    setStatus({
+      loadState: 'ready',
+      saveState: 'saved',
+      importState: 'success',
+      message: `นำเข้า ${preview.fileName} เป็น schema v${preview.schemaVersion || preview.data.schemaVersion} แล้ว`,
+      errorMessage: null,
+      lastImportDiagnostics: preview.diagnostics,
+    })
+    return preview.data
+  }
+
   function exportDataAsJson(): void {
     createJsonDownload(data)
     setStatus((current) => ({
       ...current,
       message: 'ส่งออก JSON แล้ว',
     }))
-  }
-
-  function resetData(): void {
-    setData(withUpdatedMeta(seedData))
-    setStatus({
-      loadState: 'ready',
-      saveState: 'saved',
-      importState: 'idle',
-      message: 'โหลดข้อมูลตัวอย่างสำหรับพัฒนาแล้ว กดบันทึกขึ้น Cloud หากต้องการใช้ชุดนี้',
-      errorMessage: null,
-      lastImportDiagnostics: null,
-    })
   }
 
   function replaceData(nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud แล้ว'): FinanceData {
@@ -368,8 +380,8 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     status,
     setData,
     replaceData,
-    resetData,
-    importDataFromJson,
+    previewImportDataFromJson,
+    applyImportedData,
     exportDataAsJson,
     addTransaction,
     updateTransaction,

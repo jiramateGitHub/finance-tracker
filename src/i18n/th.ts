@@ -37,7 +37,6 @@ export const th = {
     saved: 'บันทึกขึ้น Cloud แล้ว',
     conflict: 'ต้องเลือกข้อมูลซิงก์',
     error: 'ซิงก์ไม่สำเร็จ',
-    cachePreview: 'ดูตัวอย่างใน cache',
     checking: 'กำลังตรวจสอบข้อมูลบน Cloud...',
     noCloud: 'ยังไม่มีข้อมูลบน Cloud ระบบจะบันทึกอัตโนมัติหลังมีการแก้ไข',
     sameData: 'ข้อมูลในเครื่องตรงกับ Cloud พร้อมซิงก์ต่อ',
@@ -49,9 +48,7 @@ export const th = {
     usingCloud: 'ใช้ข้อมูลบน Cloud แล้ว การแก้ไขถัดไปจะบันทึกอัตโนมัติ',
     keptLocal: 'ใช้ข้อมูลในเครื่องและอัปโหลดขึ้น Cloud แล้ว',
     merged: 'รวมข้อมูลและบันทึกขึ้น Cloud แล้ว',
-    localImport: 'นำเข้า JSON เพื่อดูตัวอย่างใน cache เครื่องนี้ชั่วคราว ปิด autosave จนกว่าจะบันทึกขึ้น Cloud หรือโหลดจาก Cloud',
-    cloudImport: 'นำเข้า JSON แล้วจะบันทึกขึ้น Cloud หลังครบเวลาหน่วง',
-    localPaused: 'หยุดซิงก์ Cloud ชั่วคราว ข้อมูลเปลี่ยนเฉพาะ cache เครื่องนี้',
+    cloudImport: 'นำเข้า JSON และบันทึกขึ้น Cloud แล้ว',
     enabled: 'เปิดซิงก์ Cloud แล้ว',
     conflictTitle: 'พบข้อมูลบน Cloud',
     conflictDescription: 'เลือกว่าอุปกรณ์นี้ควรใช้ข้อมูลชุดใด ระบบหยุด autosave ไว้จนกว่าจะเลือก',
@@ -126,9 +123,6 @@ export const th = {
   file: {
     importJson: 'นำเข้า JSON',
     exportJson: 'ส่งออก JSON',
-    resetLocal: 'รีเซ็ตข้อมูลตัวอย่าง/ข้อมูลในเครื่อง',
-    importMode: 'โหมดนำเข้า',
-    importLocalOnly: 'นำเข้าเพื่อดูตัวอย่างใน cache เครื่องนี้',
-    importAndCloud: 'นำเข้าและบันทึกขึ้น Cloud',
   },
 }
+

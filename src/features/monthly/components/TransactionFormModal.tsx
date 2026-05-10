@@ -9,7 +9,6 @@ import { TextInput } from '../../../components/ui/TextInput'
 import { th } from '../../../i18n/th'
 import type { TransactionEntry } from '../../../types/finance'
 import {
-  buildRepeatedTransactionsFromForm,
   buildTransactionFromForm,
   createTransactionFormValues,
   type TransactionFormValues,
@@ -22,7 +21,7 @@ type TransactionFormModalProps = {
   defaultValues?: Partial<TransactionFormValues>
   categoryOptions: string[]
   onClose: () => void
-  onSubmit: (transactions: TransactionEntry[]) => void
+  onSubmit: (transaction: TransactionEntry) => void
 }
 
 export function TransactionFormModal({
@@ -52,7 +51,7 @@ export function TransactionFormModal({
       setError(validationError)
       return
     }
-    onSubmit(transaction ? [buildTransactionFromForm(values, transaction)] : buildRepeatedTransactionsFromForm(values))
+    onSubmit(buildTransactionFromForm(values, transaction ?? undefined))
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
@@ -66,7 +65,7 @@ export function TransactionFormModal({
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-lg font-extrabold">{transaction ? th.transaction.edit : th.transaction.add}</h2>
-            <p className="mt-1 text-sm text-slate-500">รายการรายเดือนจะบันทึกลง Cloud และเก็บ cache ในเครื่องตามบัญชีนี้</p>
+            <p className="mt-1 text-sm text-slate-500">รายการรายเดือนจะบันทึกลง Cloud และเก็บข้อมูลชั่วคราวในเครื่องตามบัญชีนี้</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
@@ -125,29 +124,6 @@ export function TransactionFormModal({
           <FormField label={th.transaction.note} fullWidth>
             <TextareaField value={values.note} placeholder="รายละเอียดเพิ่มเติม" onChange={(event) => updateField('note', event.target.value)} />
           </FormField>
-
-          {!transaction && (
-            <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <input
-                id="repeat-enabled"
-                type="checkbox"
-                checked={values.repeatEnabled}
-                onChange={(event) => updateField('repeatEnabled', event.target.checked)}
-              />
-              <label htmlFor="repeat-enabled" className="text-sm font-extrabold text-slate-700">สร้างซ้ำรายเดือน</label>
-            </div>
-          )}
-
-          {!transaction && values.repeatEnabled && (
-            <FormField label="จำนวนเดือนที่สร้าง">
-              <TextInput
-                inputMode="numeric"
-                value={values.repeatCount}
-                placeholder="1-60"
-                onChange={(event) => updateField('repeatCount', event.target.value)}
-              />
-            </FormField>
-          )}
         </div>
 
         <footer className="finance-modal-footer">
@@ -158,3 +134,5 @@ export function TransactionFormModal({
     </div>
   )
 }
+
+
