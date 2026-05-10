@@ -13,20 +13,18 @@ type TripFiltersProps = {
   resultCount: number
   categoryOptions: string[]
   onChange: (filters: TripFiltersState) => void
-  onAddTrip: () => void
   onAddItem: () => void
   canAddItem: boolean
 }
 
-export function TripFilters({ filters, resultCount, categoryOptions, onChange, onAddTrip, onAddItem, canAddItem }: TripFiltersProps) {
+export function TripFilters({ filters, resultCount, categoryOptions, onChange, onAddItem, canAddItem }: TripFiltersProps) {
   return (
     <FilterBar
       resultText={`พบ ${resultCount} ทริปตามตัวกรอง`}
       actions={(
         <>
-          <Button onClick={() => onChange({ keyword: '', year: '', month: '', category: '', status: 'all' })}>{th.common.clearFilters}</Button>
-          <Button variant="primary" onClick={onAddTrip}>เพิ่มทริป</Button>
-          <Button disabled={!canAddItem} onClick={onAddItem}>เพิ่มรายการทริป</Button>
+          <Button type="button" onClick={() => onChange({ keyword: '', year: '', month: '', category: '', status: 'all' })}>{th.common.clearFilters}</Button>
+          <Button type="button" disabled={!canAddItem} onClick={onAddItem}>เพิ่มรายการทริป</Button>
         </>
       )}
     >

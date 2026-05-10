@@ -10,12 +10,12 @@ type TripSummaryCardsProps = {
 
 export function TripSummaryCards({ summary }: TripSummaryCardsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      <SummaryCard label="ทริป" value={summary.tripCount} icon="#" tone="violet" />
-      <SummaryCard label="วางแผน" value={formatMoney(summary.plannedBudget)} icon="P" tone="balance" />
-      <SummaryCard label="ใช้จริง" value={formatMoney(summary.actualSpending)} icon="A" tone="expense" />
-      <SummaryCard label="จ่ายแล้ว" value={formatMoney(summary.paidTotal)} icon="+" tone="income" />
-      <SummaryCard label="ยังไม่จ่าย" value={formatMoney(summary.unpaidTotal)} icon="!" tone="due" />
+    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+      <SummaryCard compact label="จำนวนทริป" value={summary.tripCount} icon="#" tone="violet" />
+      <SummaryCard compact label="งบที่วางไว้" value={formatMoney(summary.plannedBudget)} icon="P" tone="balance" />
+      <SummaryCard compact label="ใช้จริง" value={formatMoney(summary.actualSpending)} icon="A" tone="expense" />
+      <SummaryCard compact label="จ่ายแล้ว" value={formatMoney(summary.paidTotal)} icon="+" tone="income" />
+      <SummaryCard compact label="ยังไม่จ่าย" value={formatMoney(summary.unpaidTotal)} icon="!" tone="due" />
     </div>
   )
 }

@@ -282,7 +282,7 @@ export function createTripItemFormValues(item?: TripItem, trip?: Trip): TripItem
     title: item?.title ?? '',
     amount: item?.amount ? String(item.amount) : '',
     date: item?.date ?? trip?.startDate ?? currentDateInputValue(),
-    category: normalizeCategoryId(item?.category || '', ''),
+    category: normalizeCategoryId(item?.category || '', 'ท่องเที่ยว'),
     destination: item?.destination ?? trip?.destination ?? '',
     country: item?.country ?? '',
     installmentId: item?.installmentId ?? '',
@@ -343,7 +343,7 @@ export function toggleTripItemPaid(trip: Trip, itemId: string): Trip {
 
 export function createTripBudgetLineFormValues(line?: BudgetLine): TripBudgetLineFormValues {
   return {
-    categoryId: normalizeCategoryId(line?.categoryId || '', ''),
+    categoryId: normalizeCategoryId(line?.categoryId || '', 'ท่องเที่ยว'),
     amount: line ? String(line.amount) : '',
     note: line?.note ?? '',
   }
@@ -396,4 +396,6 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       updatedAt: trip.updatedAt,
     } satisfies TransactionEntry)))
 }
+
+
 

@@ -1,6 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
-import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
 import type { AppData, BudgetLine, Trip, TripItem } from '../../types/finance'
@@ -84,6 +83,13 @@ export function TripsPage({
   const activeTrip = filteredTrips.find((trip) => trip.id === effectiveActiveTripId) ?? null
   const summary = useMemo(() => summarizeTrips(data, filteredTrips), [data, filteredTrips])
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
+
+  useEffect(() => {
+    if (activeTripId && !filteredTrips.some((trip) => trip.id === activeTripId)) {
+      setActiveTripId(null)
+      setActiveTab('overview')
+    }
+  }, [activeTripId, filteredTrips])
 
   function selectTrip(tripId: string): void {
     setActiveTripId(tripId)
@@ -209,62 +215,85 @@ export function TripsPage({
   }
 
   return (
-    <div className="grid gap-4">
-      <Card title="จัดการทริป" description="วางแผนทริป ติดตามรายจ่ายจริง และเทียบกับงบประมาณ">
-        <TripFilters
-          filters={filters}
-          resultCount={filteredTrips.length}
-          categoryOptions={categoryOptions}
-          onChange={setFilters}
-          onAddTrip={openAddTrip}
-          onAddItem={() => openAddItem()}
-          canAddItem={Boolean(activeTrip)}
-        />
-      </Card>
-
-      <Card title="สรุปทริป" description="คำนวณจากทริปที่กำลังแสดง">
-        <TripSummaryCards summary={summary} />
-      </Card>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)]">
-        <Card title={viewMode === 'list' ? 'รายการทริป' : 'ปฏิทินทริป'}>
-          <div ref={listRef} className="grid gap-3">
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant={viewMode === 'list' ? 'primary' : 'light'} onClick={() => setViewMode('list')}>
-                รายการ
-              </Button>
-              <Button size="sm" variant={viewMode === 'calendar' ? 'primary' : 'light'} onClick={() => setViewMode('calendar')}>
-                ปฏิทิน
-              </Button>
-            </div>
-            {viewMode === 'list' ? (
-              <TripList data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
-            ) : (
-              <TripCalendar data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
-            )}
+    <div className="finance-page-shell">
+      <section className="finance-command-panel">
+        <div className="finance-toolbar border-b border-blue-100 pb-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold text-finance-text">จัดการทริป</h2>
+            <p className="mt-1 text-sm leading-6 text-finance-muted">วางแผนงบทริป บันทึกรายการจริง และดูภาพรวมแบบกระชับ</p>
           </div>
-        </Card>
-
-        <div ref={detailRef}>
-          <Card title="รายละเอียดทริป">
-            <TripDetail
-              data={data}
-              trip={activeTrip}
-              activeTab={activeTab}
-              onChangeTab={setActiveTab}
-              onEditTrip={openEditTrip}
-              onDeleteTrip={handleDeleteTrip}
-              onAddItem={openAddItem}
-              onEditItem={openEditItem}
-              onDeleteItem={handleDeleteItem}
-              onToggleItemPaid={handleToggleItemPaid}
-              onAddBudgetLine={openAddBudgetLine}
-              onEditBudgetLine={openEditBudgetLine}
-              onDeleteBudgetLine={handleDeleteBudgetLine}
-              onBackToList={backToList}
-            />
-          </Card>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="finance-segmented" aria-label="เลือกมุมมองทริป">
+              <button
+                type="button"
+                className={`finance-segmented-button ${viewMode === 'list' ? 'is-active' : ''}`}
+                aria-pressed={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+              >
+                รายการ
+              </button>
+              <button
+                type="button"
+                className={`finance-segmented-button ${viewMode === 'calendar' ? 'is-active' : ''}`}
+                aria-pressed={viewMode === 'calendar'}
+                onClick={() => setViewMode('calendar')}
+              >
+                ปฏิทิน
+              </button>
+            </div>
+            <Button type="button" variant="primary" onClick={openAddTrip}>เพิ่มทริป</Button>
+          </div>
         </div>
+
+        <div className="mt-3 grid gap-3">
+          <TripSummaryCards summary={summary} />
+          <TripFilters
+            filters={filters}
+            resultCount={filteredTrips.length}
+            categoryOptions={categoryOptions}
+            onChange={setFilters}
+            onAddItem={() => openAddItem()}
+            canAddItem={Boolean(activeTrip)}
+          />
+        </div>
+      </section>
+
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)] xl:grid-cols-[minmax(340px,0.75fr)_minmax(0,1.25fr)]">
+        <section ref={listRef} className="finance-panel-compact grid gap-3 self-start">
+          <div className="finance-toolbar">
+            <div className="min-w-0">
+              <h2 className="text-base font-extrabold text-finance-text">{viewMode === 'list' ? 'รายการทริป' : 'ปฏิทินทริป'}</h2>
+              <p className="text-xs font-bold text-finance-muted">พบ {filteredTrips.length} ทริปตามตัวกรอง</p>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-500">
+              {viewMode === 'list' ? 'รายการ' : 'ปฏิทิน'}
+            </span>
+          </div>
+          {viewMode === 'list' ? (
+            <TripList data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+          ) : (
+            <TripCalendar data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+          )}
+        </section>
+
+        <section ref={detailRef} className="finance-detail-panel min-w-0 self-start">
+          <TripDetail
+            data={data}
+            trip={activeTrip}
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onEditTrip={openEditTrip}
+            onDeleteTrip={handleDeleteTrip}
+            onAddItem={openAddItem}
+            onEditItem={openEditItem}
+            onDeleteItem={handleDeleteItem}
+            onToggleItemPaid={handleToggleItemPaid}
+            onAddBudgetLine={openAddBudgetLine}
+            onEditBudgetLine={openEditBudgetLine}
+            onDeleteBudgetLine={handleDeleteBudgetLine}
+            onBackToList={backToList}
+          />
+        </section>
       </div>
 
       {tripModal.open && (

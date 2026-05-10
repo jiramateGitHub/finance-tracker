@@ -76,6 +76,66 @@
     @apply grid min-w-0 gap-3 sm:grid-cols-2;
   }
 
+  .finance-page-shell {
+    @apply grid min-w-0 gap-3 sm:gap-4;
+  }
+
+  .finance-command-panel {
+    @apply rounded-[18px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3 shadow-finance-sm sm:p-4;
+  }
+
+  .finance-panel-compact {
+    @apply rounded-[18px] border border-finance-line bg-white p-3 shadow-finance-sm sm:p-4;
+  }
+
+  .finance-detail-panel {
+    @apply rounded-[18px] border border-finance-line bg-white p-3 shadow-finance-sm sm:p-4;
+  }
+
+  .finance-card-compact {
+    @apply rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition;
+  }
+
+  .finance-toolbar {
+    @apply flex min-w-0 flex-wrap items-center justify-between gap-2;
+  }
+
+  .finance-segmented {
+    @apply inline-flex min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-1;
+  }
+
+  .finance-segmented-button {
+    @apply min-h-9 min-w-0 rounded-lg px-3 py-1.5 text-sm font-extrabold text-slate-600 transition hover:bg-white hover:text-blue-700;
+  }
+
+  .finance-segmented-button.is-active {
+    @apply bg-blue-600 text-white shadow-sm hover:bg-blue-600 hover:text-white;
+  }
+
+  .finance-mini-summary-grid {
+    @apply grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .finance-mini-summary-card {
+    @apply min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5;
+  }
+
+  .finance-metric-label {
+    @apply truncate text-xs font-extrabold text-slate-500;
+  }
+
+  .finance-metric-value {
+    @apply mt-0.5 min-w-0 break-words text-base font-extrabold leading-tight text-slate-900 sm:text-lg;
+  }
+
+  .finance-progress-track {
+    @apply h-2 overflow-hidden rounded-full bg-slate-100;
+  }
+
+  .finance-progress-bar {
+    @apply h-full rounded-full bg-blue-600;
+  }
+
   .finance-filter-grid {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     @apply grid min-w-0 gap-3;
@@ -102,8 +162,9 @@
   }
 
   .finance-combobox-panel {
-    max-height: min(16rem, 42dvh);
-    @apply absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[120] grid overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl;
+    max-height: min(17rem, 48dvh);
+    @apply absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[140] grid overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl;
+    overscroll-behavior: contain;
   }
 
   .finance-combobox-search {
@@ -111,7 +172,8 @@
   }
 
   .finance-combobox-option {
-    @apply min-h-10 rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700;
+    @apply min-h-10 rounded-xl px-3 py-2 text-left text-sm font-bold leading-5 text-slate-700 transition hover:bg-blue-50 hover:text-blue-700;
+    overflow-wrap: anywhere;
   }
 
   .finance-combobox-option.is-active {
@@ -127,8 +189,12 @@
     @apply relative w-full;
   }
 
+  .finance-calendar-input > input {
+    @apply pr-16 sm:pr-20;
+  }
+
   .finance-calendar-input > span {
-    @apply pointer-events-none absolute inset-y-1 right-2 grid min-w-12 place-items-center rounded-lg bg-slate-50 px-2 text-[11px] font-extrabold text-slate-400;
+    @apply pointer-events-none absolute inset-y-1 right-2 hidden min-w-12 place-items-center rounded-lg bg-slate-50 px-2 text-[11px] font-extrabold text-slate-400 sm:grid;
   }
 
   .finance-modal-backdrop {
@@ -137,11 +203,36 @@
 
   .finance-modal-panel {
     max-height: 92dvh;
-    @apply grid w-full gap-4 overflow-auto rounded-t-[22px] border border-slate-200 bg-white p-4 shadow-2xl sm:rounded-[18px];
+    @apply grid w-full gap-3 overflow-auto rounded-t-[22px] border border-slate-200 bg-white p-4 shadow-2xl sm:gap-4 sm:rounded-[18px];
+  }
+
+  .finance-modal-body {
+    @apply grid gap-3 overflow-y-auto overflow-x-visible pr-1;
+    max-height: min(64dvh, 620px);
   }
 
   .finance-modal-footer {
     @apply sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white pt-3;
     padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
   }
+
+  @media (max-width: 640px) {
+    .finance-segmented {
+      @apply flex w-full;
+    }
+
+    .finance-segmented-button {
+      @apply flex-1;
+    }
+
+    .finance-combobox-panel {
+      max-height: min(18rem, 54dvh);
+    }
+
+    .finance-modal-body {
+      max-height: 68dvh;
+    }
+  }
 }
+
+

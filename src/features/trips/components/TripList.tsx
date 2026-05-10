@@ -13,50 +13,63 @@ type TripListProps = {
 
 export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListProps) {
   if (!trips.length) {
-    return <EmptyState title="ไม่พบทริป" description="เพิ่มทริปใหม่เพื่อเริ่มติดตามงบและค่าใช้จ่ายจริง" />
+    return <EmptyState title="ไม่พบทริป" description="ปรับตัวกรองหรือเพิ่มทริปใหม่เพื่อเริ่มติดตามงบและค่าใช้จ่ายจริง" />
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {trips.map((trip) => {
         const totals = calculateTripTotals(data, trip)
+        const status = getTripStatus(trip)
         const isActive = trip.id === activeTripId
+        const percent = clampPercent(totals.usagePercent)
         return (
           <button
             key={trip.id}
-            className={`grid gap-3 rounded-2xl border p-4 text-left transition ${
-              isActive ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/50'
+            className={`finance-card-compact grid gap-3 text-left ${
+              isActive ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100' : 'hover:border-blue-200 hover:bg-blue-50/50'
             }`}
             type="button"
             onClick={() => onSelectTrip(trip.id)}
           >
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate font-extrabold">{trip.name}</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {trip.destination || '-'} · {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h3 className="min-w-0 truncate text-base font-extrabold text-slate-900">{trip.name}</h3>
+                  {isActive ? <Badge tone="active">กำลังดู</Badge> : null}
+                </div>
+                <p className="mt-1 break-words text-sm font-semibold leading-5 text-slate-500">
+                  {trip.destination || 'ยังไม่ระบุจุดหมาย'}
                 </p>
               </div>
-              <Badge tone={getTripStatus(trip) === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[getTripStatus(trip)]}</Badge>
+              <Badge tone={status === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[status]}</Badge>
             </div>
 
-            <div className="rounded-xl border border-blue-100 bg-white p-3">
-              <div className="mb-2 flex justify-between gap-3 text-xs font-bold text-slate-500">
-                <span>ใช้จริง / แผน</span>
-                <span>{clampPercent(totals.usagePercent)}%</span>
+            <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">{formatDate(trip.startDate)} - {formatDate(trip.endDate)}</span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">{totals.itemCount} รายการ</span>
+            </div>
+
+            <div className="grid gap-2 rounded-xl border border-blue-100 bg-white/90 p-3">
+              <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-500">
+                <span>ใช้จริงเทียบงบ</span>
+                <span>{percent}%</span>
               </div>
-              <div className="h-2 rounded-full bg-slate-100">
-                <div className="h-2 rounded-full bg-blue-600" style={{ width: `${clampPercent(totals.usagePercent)}%` }} />
+              <div className="finance-progress-track">
+                <div className="finance-progress-bar" style={{ width: `${percent}%` }} />
               </div>
-              <div className="mt-2 text-sm font-extrabold text-blue-700">
-                {formatMoney(totals.actualSpending)} / {formatMoney(totals.plannedBudget)}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="font-extrabold text-rose-700">ใช้จริง {formatMoney(totals.actualSpending)}</span>
+                <span className="font-bold text-blue-700">งบ {formatMoney(totals.plannedBudget)}</span>
               </div>
             </div>
 
-            <div className="grid gap-2 text-xs font-bold text-slate-500 sm:grid-cols-3">
-              <span>{trip.items.length} รายการ</span>
-              <span className="text-emerald-700">{formatMoney(totals.paidTotal)} จ่ายแล้ว</span>
-              <span className="text-amber-700">{formatMoney(totals.unpaidTotal)} ยังไม่จ่าย</span>
+            <div className="grid gap-2 text-xs font-bold sm:grid-cols-3">
+              <span className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-700">จ่ายแล้ว {formatMoney(totals.paidTotal)}</span>
+              <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700">ยังไม่จ่าย {formatMoney(totals.unpaidTotal)}</span>
+              <span className={`rounded-xl px-3 py-2 ${totals.remaining >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'}`}>
+                {totals.remaining >= 0 ? 'คงเหลือ' : 'เกินงบ'} {formatMoney(Math.abs(totals.remaining))}
+              </span>
             </div>
           </button>
         )

@@ -16,10 +16,10 @@ const variantClassName: Record<ButtonVariant, string> = {
 }
 
 export function Button({ variant = 'light', size = 'md', className = '', children, ...buttonProps }: ButtonProps) {
-  const sizeClassName = size === 'sm' ? 'min-h-9 px-3 text-xs' : 'min-h-11 px-4 text-sm'
+  const sizeClassName = size === 'sm' ? 'min-h-9 px-3 py-1.5 text-xs' : 'min-h-11 px-4 py-2 text-sm'
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border font-extrabold transition ${sizeClassName} ${variantClassName[variant]} ${className}`}
+      className={`inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-xl border text-center font-extrabold leading-5 transition disabled:cursor-not-allowed disabled:opacity-60 ${sizeClassName} ${variantClassName[variant]} ${className}`}
       {...buttonProps}
     >
       {children}

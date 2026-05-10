@@ -26,6 +26,7 @@ export function ComboboxField({
   const id = useId()
   const rootRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const ignoreBlurRef = useRef(false)
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -58,7 +59,9 @@ export function ComboboxField({
   }
 
   function commitFreeText(): void {
-    onChange(search)
+    const nextValue = search.trim()
+    onChange(nextValue)
+    setDraft(nextValue)
     setOpen(false)
   }
 
@@ -75,7 +78,10 @@ export function ComboboxField({
         placeholder={placeholder}
         role="combobox"
         value={search}
-        onBlur={() => onChange(search)}
+        onBlur={() => {
+          if (ignoreBlurRef.current) return
+          commitFreeText()
+        }}
         onChange={(event) => {
           setDraft(event.target.value)
           setActiveIndex(0)
@@ -113,6 +119,7 @@ export function ComboboxField({
         aria-label="เปิดรายการตัวเลือก"
         className="absolute inset-y-1 right-1 grid w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
         type="button"
+        onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
           setOpen((current) => !current)
           inputRef.current?.focus()
@@ -132,14 +139,23 @@ export function ComboboxField({
                 type="button"
                 role="option"
                 aria-selected={option === value}
-                onMouseDown={(event) => event.preventDefault()}
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  ignoreBlurRef.current = true
+                }}
+                onMouseUp={() => {
+                  ignoreBlurRef.current = false
+                }}
+                onMouseLeave={() => {
+                  ignoreBlurRef.current = false
+                }}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectOption(option)}
               >
                 {option}
               </button>
             )) : (
-              <div className="px-3 py-3 text-sm font-bold text-slate-400">{emptyLabel}</div>
+              <div className="px-3 py-3 text-sm font-bold leading-6 text-slate-400">{emptyLabel}</div>
             )}
           </div>
         </div>

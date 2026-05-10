@@ -7,6 +7,7 @@ type SummaryCardProps = {
   value: ReactNode
   icon: string
   tone: SummaryTone
+  compact?: boolean
 }
 
 const toneClassName: Record<SummaryTone, string> = {
@@ -17,12 +18,12 @@ const toneClassName: Record<SummaryTone, string> = {
   violet: 'border-violet-200 bg-violet-50 text-violet-700',
 }
 
-export function SummaryCard({ label, value, icon, tone }: SummaryCardProps) {
+export function SummaryCard({ label, value, icon, tone, compact = false }: SummaryCardProps) {
   return (
-    <div className={`relative min-h-28 rounded-2xl border p-4 ${toneClassName[tone]}`}>
-      <div className="absolute right-3 top-3 grid size-10 place-items-center rounded-xl bg-white/65 text-xl">{icon}</div>
-      <div className="pr-12 text-xs font-extrabold uppercase tracking-wide opacity-85">{label}</div>
-      <div className="mt-2 pr-12 text-2xl font-extrabold leading-tight">{value}</div>
+    <div className={`relative min-w-0 rounded-2xl border ${compact ? 'min-h-24 p-3' : 'min-h-28 p-4'} ${toneClassName[tone]}`}>
+      <div className={`absolute right-3 top-3 grid place-items-center rounded-xl bg-white/65 ${compact ? 'size-8 text-base' : 'size-10 text-xl'}`}>{icon}</div>
+      <div className="min-w-0 break-words pr-10 text-xs font-extrabold uppercase leading-5 tracking-wide opacity-85">{label}</div>
+      <div className={`mt-2 min-w-0 break-words pr-10 font-extrabold leading-tight ${compact ? 'text-xl' : 'text-2xl'}`}>{value}</div>
     </div>
   )
 }

@@ -23,6 +23,7 @@ export function TripModal({ open, trip, onClose, onSubmit }: TripModalProps) {
 
   function updateField<K extends keyof TripFormValues>(field: K, value: TripFormValues[K]): void {
     setValues((current) => ({ ...current, [field]: value }))
+    if (error) setError(null)
   }
 
   function saveTrip(): void {
@@ -43,34 +44,36 @@ export function TripModal({ open, trip, onClose, onSubmit }: TripModalProps) {
     <div className="finance-modal-backdrop">
       <form className="finance-modal-panel max-w-2xl" onSubmit={handleSubmit}>
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-lg font-extrabold">{trip ? 'แก้ไขทริป' : 'เพิ่มทริป'}</h2>
-            <p className="mt-1 text-sm text-slate-500">ตั้งค่าจุดหมาย วันที่ และงบที่วางแผนไว้</p>
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold text-finance-text">{trip ? 'แก้ไขทริป' : 'สร้างทริปใหม่'}</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">กรอกชื่อ จุดหมาย วันที่ และงบรวม เพื่อเริ่มจัดการรายการทริป</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
 
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div>}
+        {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div> : null}
 
-        <div className="finance-form-grid">
-          <FormField label="ชื่อทริป" fullWidth>
-            <TextInput value={values.name} placeholder="เซี่ยงไฮ้ 2026" onChange={(event) => updateField('name', event.target.value)} />
-          </FormField>
-          <FormField label="จุดหมาย / ประเทศ">
-            <TextInput value={values.destination} placeholder="เซี่ยงไฮ้, จีน" onChange={(event) => updateField('destination', event.target.value)} />
-          </FormField>
-          <FormField label="งบที่วางแผนไว้">
-            <TextInput inputMode="decimal" value={values.budget} placeholder="60000" onChange={(event) => updateField('budget', event.target.value)} />
-          </FormField>
-          <FormField label="วันที่เริ่ม">
-            <DateInput value={values.startDate} onChange={(event) => updateField('startDate', event.target.value)} />
-          </FormField>
-          <FormField label="วันที่จบ">
-            <DateInput value={values.endDate} onChange={(event) => updateField('endDate', event.target.value)} />
-          </FormField>
-          <FormField label="หมายเหตุ" fullWidth>
-            <TextareaField value={values.note} placeholder="รายละเอียดเพิ่มเติม" onChange={(event) => updateField('note', event.target.value)} />
-          </FormField>
+        <div className="finance-modal-body">
+          <div className="finance-form-grid">
+            <FormField label="ชื่อทริป" fullWidth>
+              <TextInput value={values.name} placeholder="เช่น เซี่ยงไฮ้ 2026" onChange={(event) => updateField('name', event.target.value)} />
+            </FormField>
+            <FormField label="จุดหมาย / ประเทศ">
+              <TextInput value={values.destination} placeholder="เช่น เซี่ยงไฮ้, จีน" onChange={(event) => updateField('destination', event.target.value)} />
+            </FormField>
+            <FormField label="งบที่วางแผนไว้">
+              <TextInput inputMode="decimal" value={values.budget} placeholder="เช่น 60000" onChange={(event) => updateField('budget', event.target.value)} />
+            </FormField>
+            <FormField label="วันที่เริ่ม">
+              <DateInput value={values.startDate} onChange={(event) => updateField('startDate', event.target.value)} />
+            </FormField>
+            <FormField label="วันที่จบ">
+              <DateInput value={values.endDate} onChange={(event) => updateField('endDate', event.target.value)} />
+            </FormField>
+            <FormField label="หมายเหตุ" fullWidth>
+              <TextareaField value={values.note} placeholder="แผนคร่าว ๆ รายละเอียดการจอง หรือสิ่งที่ต้องเตรียม" onChange={(event) => updateField('note', event.target.value)} />
+            </FormField>
+          </div>
         </div>
 
         <footer className="finance-modal-footer">

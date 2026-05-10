@@ -51,7 +51,7 @@ export function MorePage({
 
   return (
     <div className="grid gap-4">
-      <Card title="Cloud Sync และไฟล์สำรอง" description="หลังเข้าสู่ระบบ Firestore คือแหล่งข้อมูลหลัก JSON ใช้สำหรับสำรองและย้ายข้อมูลเท่านั้น">
+      <Card title="ซิงก์ Cloud และไฟล์สำรอง" description="หลังเข้าสู่ระบบ Firestore คือแหล่งข้อมูลหลัก JSON ใช้สำหรับสำรองและย้ายข้อมูลเท่านั้น">
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -97,7 +97,7 @@ export function MorePage({
               <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
                 <div className="font-extrabold">สรุปการนำเข้า: {dataStatus.lastImportDiagnostics.fileName ?? 'ไฟล์ JSON'}</div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <ImportDiagnosticItem label="Schema" value={dataStatus.lastImportDiagnostics.schemaVersion ? `v${dataStatus.lastImportDiagnostics.schemaVersion}` : 'Legacy / ไม่ระบุ'} />
+                  <ImportDiagnosticItem label="เวอร์ชันข้อมูล" value={dataStatus.lastImportDiagnostics.schemaVersion ? `v${dataStatus.lastImportDiagnostics.schemaVersion}` : 'เดิม / ไม่ระบุ'} />
                   <ImportDiagnosticItem label="รายการ" value={`${dataStatus.lastImportDiagnostics.counts.transactions || dataStatus.lastImportDiagnostics.counts.entries} รายการ`} />
                   <ImportDiagnosticItem label="รายการประจำ" value={`${dataStatus.lastImportDiagnostics.counts.recurringRules} รายการ`} />
                   <ImportDiagnosticItem label="ยอดผ่อน" value={`${dataStatus.lastImportDiagnostics.counts.installmentPlans} แผน`} />
@@ -105,7 +105,7 @@ export function MorePage({
                   <ImportDiagnosticItem label="งบ / เป้าหมาย" value={`${dataStatus.lastImportDiagnostics.counts.budgets} / ${dataStatus.lastImportDiagnostics.counts.goals}`} />
                 </div>
                 <div className="mt-2 text-xs font-bold text-blue-800">
-                  Alias หมวดหมู่ที่แปลง: {dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.length
+                  หมวดหมู่ที่แปลง: {dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.length
                     ? dataStatus.lastImportDiagnostics.categorySummary.aliasMappingsApplied.map((item) => `${item.from} → ${item.to} (${item.count})`).join(', ')
                     : 'ไม่มี'}
                 </div>
@@ -125,11 +125,15 @@ export function MorePage({
         </div>
       </Card>
 
-      <Card title="ข้อมูลสำหรับตรวจสอบ Sync" description="ใช้เช็กบัญชีและจำนวนข้อมูลระหว่างทดสอบข้ามอุปกรณ์">
-        <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-          <DebugItem label="UID" value={currentUserId} />
-          <DebugItem label="Firebase Project" value={projectId} />
-          <DebugItem label="สถานะ Sync" value={syncStatus.message} />
+      <details className="rounded-[18px] border border-slate-200 bg-white p-3 text-sm shadow-finance-sm sm:p-4">
+        <summary className="cursor-pointer list-none font-extrabold text-slate-700 marker:hidden">
+          ข้อมูลทางเทคนิคสำหรับตรวจสอบ
+          <span className="ml-2 text-xs font-bold text-slate-400">ใช้ดูบัญชี โปรเจกต์ และจำนวนข้อมูล</span>
+        </summary>
+        <div className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+          <DebugItem label="รหัสผู้ใช้" value={currentUserId} />
+          <DebugItem label="โปรเจกต์ Firebase" value={projectId} />
+          <DebugItem label="สถานะซิงก์" value={syncStatus.message} />
           <DebugItem
             label="ซิงก์ล่าสุด"
             value={syncStatus.lastSyncedAt ? new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH') : 'ยังไม่มี'}
@@ -141,7 +145,7 @@ export function MorePage({
           <DebugItem label="งบประมาณ" value={data.budgets.length.toString()} />
           <DebugItem label="เป้าหมาย" value={data.goals.length.toString()} />
         </div>
-      </Card>
+      </details>
     </div>
   )
 }
@@ -166,3 +170,5 @@ function ImportDiagnosticItem({ label, value }: { label: string; value: string }
     </div>
   )
 }
+
+
