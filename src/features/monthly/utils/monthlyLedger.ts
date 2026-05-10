@@ -127,7 +127,7 @@ export function isInstallmentTransaction(transaction: TransactionEntry): boolean
 }
 
 export function isManualTransaction(transaction: TransactionEntry): boolean {
-  return !isInstallmentTransaction(transaction) && !transaction.tripId
+  return !isInstallmentTransaction(transaction) && !isTripTransaction(transaction)
 }
 
 export function isTripTransaction(transaction: TransactionEntry): boolean {
@@ -231,14 +231,33 @@ export function groupTransactionsByMonth(transactions: TransactionEntry[]): Mont
     }))
 }
 
+export function getSafeDateInMonth(monthKey: string, dayText: string): string {
+  const [yearText, monthText] = monthKey.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return `${monthKey}-01`
+
+  const parsedDay = Math.floor(Number(dayText))
+  const lastDay = new Date(year, month, 0).getDate()
+  const safeDay = Number.isFinite(parsedDay) ? Math.min(lastDay, Math.max(1, parsedDay)) : 1
+  return `${monthKey}-${String(safeDay).padStart(2, '0')}`
+}
+
+function getSafeRepeatCount(repeatCountText: string): number {
+  const parsedRepeatCount = Math.floor(Number(repeatCountText || 1))
+  if (!Number.isFinite(parsedRepeatCount)) return 1
+  return Math.min(60, Math.max(1, parsedRepeatCount))
+}
+
 export function buildRepeatedTransactionsFromForm(values: TransactionFormValues, existing?: TransactionEntry): TransactionEntry[] {
   const baseTransaction = buildTransactionFromForm(values, existing)
   if (existing || !values.repeatEnabled) return [baseTransaction]
-  const repeatCount = Math.min(60, Math.max(1, Number(values.repeatCount || 1)))
+  const repeatCount = getSafeRepeatCount(values.repeatCount)
+  const originalDay = baseTransaction.date.slice(8, 10) || '01'
+
   return Array.from({ length: repeatCount }, (_, index) => {
     const monthKey = addMonthsToMonthKey(getMonthKey(baseTransaction.date), index)
-    const day = baseTransaction.date.slice(8, 10) || '01'
-    const date = `${monthKey}-${day}`
+    const date = getSafeDateInMonth(monthKey, originalDay)
     return {
       ...baseTransaction,
       id: index === 0 ? baseTransaction.id : crypto.randomUUID(),
@@ -272,7 +291,7 @@ export function buildTransactionFromForm(values: TransactionFormValues, existing
     note: values.note.trim() || undefined,
     status,
     source: existing?.source ?? 'manual',
-    sourceModule: values.sourceModule.trim() || 'manual',
+    sourceModule: 'manual',
     sourceRefId: existing?.sourceRefId ?? null,
     tripId: existing?.tripId ?? null,
     installmentId: existing?.installmentId,
@@ -288,6 +307,12 @@ export function validateTransactionForm(values: TransactionFormValues): string |
   if (!values.date) return 'เลือกวันที่'
   if (!values.title.trim()) return 'กรอกชื่อรายการ'
   if (!Number.isFinite(Number(values.amount)) || Number(values.amount) <= 0) return 'กรอกจำนวนเงินมากกว่า 0'
+  if (values.repeatEnabled) {
+    const repeatCountText = values.repeatCount.trim()
+    const repeatCount = Number(repeatCountText)
+    if (!repeatCountText || !Number.isFinite(repeatCount) || !Number.isInteger(repeatCount) || repeatCount < 1 || repeatCount > 60) {
+      return 'จำนวนเดือนที่สร้างต้องอยู่ระหว่าง 1 ถึง 60'
+    }
+  }
   return null
 }
-

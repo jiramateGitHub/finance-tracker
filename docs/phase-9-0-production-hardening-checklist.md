@@ -1,6 +1,6 @@
 # Phase 9.0 Production Hardening Checklist
 
-เอกสารนี้ใช้ตรวจรอบสุดท้ายก่อนใช้งานจริงของ Finance Tracker หลัง Phase 8.9
+เอกสารนี้ใช้ตรวจรอบสุดท้ายก่อนใช้งานจริงของ Finance Tracker หลัง Phase 9.0.2
 
 ## 1) Import JSON Safety
 
@@ -78,7 +78,7 @@ users/{uid} read/write ได้เฉพาะเมื่อ request.auth != n
 - [ ] User B ไม่เห็นข้อมูลของ User A
 - [ ] Logout แล้ว login อีกบัญชี ต้องไม่เห็นข้อมูลผู้ใช้เดิม
 
-## 6) Final Import Regression
+## 6) Final Import / Export Regression
 
 - [ ] Export current data
 - [ ] Import ไฟล์ที่ export จากระบบปัจจุบัน
@@ -92,7 +92,19 @@ users/{uid} read/write ได้เฉพาะเมื่อ request.auth != n
 - [ ] Confirm import แล้ว save ขึ้น Cloud สำเร็จ
 - [ ] เปิดอีก device แล้วเห็นข้อมูลที่ import แล้ว
 
-## 7) Responsive Regression
+## 7) Repeat Entry Regression
+
+- [ ] เพิ่มรายการปกติ 1 รายการ แล้วยอด/เดือนถูกต้อง
+- [ ] เพิ่มรายการแบบ `สร้างซ้ำรายเดือน` จำนวน 3 เดือน แล้วสร้าง 3 รายการ
+- [ ] เพิ่มรายการวันที่ 31 เช่น `2026-01-31` ซ้ำ 2 เดือน ต้องได้ `2026-01-31` และ `2026-02-28`
+- [ ] เพิ่มรายการวันที่ 31 ในปีอธิกสุรทิน เช่น `2028-01-31` ซ้ำ 2 เดือน ต้องได้ `2028-01-31` และ `2028-02-29`
+- [ ] ใส่จำนวนเดือนว่าง / 0 / 61 / 1.5 / ตัวอักษร ต้องขึ้น error `จำนวนเดือนที่สร้างต้องอยู่ระหว่าง 1 ถึง 60`
+- [ ] แก้ไขรายการเดิม ต้องไม่แสดงตัวเลือกสร้างซ้ำ และต้องอัปเดตเฉพาะรายการเดียว
+- [ ] Modal รายการรายเดือนต้องไม่แสดงช่องเทคนิค `sourceModule`
+- [ ] รายการ manual ที่สร้างจาก form ต้องมี `sourceModule = manual`
+- [ ] รายการทริป/ยอดผ่อนที่ derive มา ต้องยังเป็น readonly ในหน้า Monthly
+
+## 8) Responsive Regression
 
 ตรวจขนาดหน้าจอเหล่านี้:
 
@@ -112,7 +124,7 @@ users/{uid} read/write ได้เฉพาะเมื่อ request.auth != n
 - [ ] Trip detail บน mobile มีปุ่มกลับไปดูรายการทริปและใช้งานได้
 - [ ] รายการในหน้า Monthly / Installments / Trips ไม่ล้นจอ
 
-## 8) Production UI Cleanup
+## 9) Production UI Cleanup
 
 - [ ] ไม่มีปุ่ม reset demo data บน production UI
 - [ ] ไม่มี local-only import mode บน production UI
@@ -122,7 +134,7 @@ users/{uid} read/write ได้เฉพาะเมื่อ request.auth != n
 - [ ] ไม่มีข้อความ TODO ที่ผู้ใช้เห็น
 - [ ] ข้อความหลักเป็นภาษาไทย
 
-## 9) Build Quality
+## 10) Build Quality
 
 รันคำสั่งก่อนส่งขึ้น production:
 
