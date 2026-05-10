@@ -17,6 +17,14 @@
     box-sizing: border-box;
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     margin: 0;
     min-width: 320px;
@@ -60,7 +68,7 @@
   .finance-control,
   .finance-select {
     min-width: 0;
-    @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-finance-text shadow-sm transition placeholder:text-slate-400 hover:border-blue-300 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400;
+    @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold leading-5 text-finance-text shadow-sm transition placeholder:text-slate-400 hover:border-blue-300 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400;
   }
 
   .finance-select {
@@ -73,7 +81,7 @@
   }
 
   .finance-form-grid {
-    @apply grid min-w-0 gap-3 sm:grid-cols-2;
+    @apply grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-4;
   }
 
   .finance-page-shell {
@@ -137,7 +145,7 @@
   }
 
   .finance-filter-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
     @apply grid min-w-0 gap-3;
   }
 
@@ -148,7 +156,7 @@
   }
 
   .finance-filter-actions {
-    @apply flex min-w-0 flex-wrap items-center justify-between gap-3;
+    @apply flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50/70 px-3 py-2;
   }
 
   .finance-combobox {
@@ -162,8 +170,8 @@
   }
 
   .finance-combobox-panel {
-    max-height: min(17rem, 48dvh);
-    @apply absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[140] grid overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl;
+    max-height: min(18rem, 50dvh);
+    @apply absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[140] grid min-w-0 overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl;
     overscroll-behavior: contain;
   }
 
@@ -190,20 +198,21 @@
   }
 
   .finance-calendar-input > input {
-    @apply pr-16 sm:pr-20;
+    @apply pr-14 sm:pr-20;
   }
 
   .finance-calendar-input > span {
-    @apply pointer-events-none absolute inset-y-1 right-2 hidden min-w-12 place-items-center rounded-lg bg-slate-50 px-2 text-[11px] font-extrabold text-slate-400 sm:grid;
+    @apply pointer-events-none absolute inset-y-1 right-1.5 hidden min-w-12 place-items-center rounded-lg border border-slate-100 bg-slate-50 px-2 text-[11px] font-extrabold text-slate-400 sm:grid;
   }
 
   .finance-modal-backdrop {
-    @apply fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/45 px-3 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:items-center sm:py-6;
+    @apply fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-slate-950/45 px-3 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:items-center sm:py-6;
   }
 
   .finance-modal-panel {
-    max-height: 92dvh;
-    @apply grid w-full gap-3 overflow-auto rounded-t-[22px] border border-slate-200 bg-white p-4 shadow-2xl sm:gap-4 sm:rounded-[18px];
+    max-height: min(92dvh, 820px);
+    @apply grid w-full min-w-0 gap-3 overflow-y-auto overflow-x-hidden rounded-t-[22px] border border-slate-200 bg-white p-4 shadow-2xl sm:gap-4 sm:rounded-[18px] sm:p-5;
+    overscroll-behavior: contain;
   }
 
   .finance-modal-body {
@@ -212,8 +221,8 @@
   }
 
   .finance-modal-footer {
-    @apply sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white pt-3;
-    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+    @apply sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white/95 pt-3 backdrop-blur;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 
   @media (max-width: 640px) {
@@ -226,13 +235,16 @@
     }
 
     .finance-combobox-panel {
-      max-height: min(18rem, 54dvh);
+      max-height: min(16rem, 48dvh);
     }
 
     .finance-modal-body {
       max-height: 68dvh;
     }
+
+    .finance-filter-actions {
+      @apply items-stretch;
+    }
   }
 }
-
 

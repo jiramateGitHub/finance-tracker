@@ -26,8 +26,8 @@ export function ConfirmModal({
 
   return (
     <div className="finance-modal-backdrop z-[90]">
-      <section className="finance-modal-panel max-w-md">
-        <h2 className="text-lg font-extrabold text-finance-text">{title}</h2>
+      <section className="finance-modal-panel max-w-md" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+        <h2 id="confirm-modal-title" className="text-lg font-extrabold text-finance-text">{title}</h2>
         {description ? <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p> : null}
         <div className="finance-modal-footer mt-1">
           <Button type="button" onClick={onClose}>

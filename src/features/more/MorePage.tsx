@@ -125,7 +125,7 @@ export function MorePage({
               ระบบโหลดข้อมูลจาก Cloud หลังเข้าสู่ระบบทุกครั้ง และบันทึกการแก้ไขกลับขึ้น Cloud อัตโนมัติ
             </p>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
-              ปุ่มบันทึกขึ้น Cloud จะบันทึกข้อมูลที่เห็นในเครื่องนี้ขึ้น Cloud ตามบัญชีปัจจุบัน
+              ปุ่มบันทึกขึ้น Cloud จะบันทึกชุดข้อมูลปัจจุบันขึ้น Cloud ตามบัญชีที่เข้าสู่ระบบ
             </p>
             <div className="mt-3 truncate rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600">
               {currentUserEmail}

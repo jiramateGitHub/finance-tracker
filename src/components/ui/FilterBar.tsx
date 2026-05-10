@@ -13,7 +13,7 @@ export function FilterBar({ children, actions, resultText, className = '' }: Fil
       <div className="finance-filter-grid">{children}</div>
       {(resultText || actions) && (
         <div className="finance-filter-actions">
-          <div className="min-w-0 text-sm font-bold text-slate-500">{resultText}</div>
+          <div className="min-w-0 break-words text-sm font-bold text-slate-500">{resultText}</div>
           {actions && <div className="flex min-w-0 flex-wrap gap-2">{actions}</div>}
         </div>
       )}
