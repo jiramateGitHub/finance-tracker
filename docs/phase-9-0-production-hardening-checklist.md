@@ -1,5 +1,23 @@
 # Phase 9.0 Production Hardening Checklist
 
+## Phase 9.0.5 Final QA Gate
+
+- [ ] `npm run lint` passes.
+- [ ] `npm run build` passes.
+- [ ] GitHub Pages deployment completes and the deployed page opens.
+- [ ] Firebase Auth login/register/reset/logout all work.
+- [ ] Cross-device sync works with the same Firebase account.
+- [ ] Firestore rules block unauthenticated and cross-user access.
+- [ ] Export JSON downloads a valid schema v2 file.
+- [ ] Import JSON shows preview/diagnostics before replacing Cloud data.
+- [ ] Large data drop warning appears when importing a much smaller file over larger Cloud data.
+- [ ] Desktop 1920x1080 layout is readable.
+- [ ] Mobile 390-430px layout has no horizontal scroll.
+- [ ] Bottom nav does not cover page content or modal footer.
+- [ ] Combobox works inside modal.
+- [ ] Date/month inputs work inside modal.
+- [ ] All CRUD flows still work: monthly transactions, repeat entries, installments, trips, trip items, trip budgets, budgets, and goals.
+
 เอกสารนี้ใช้ตรวจรอบสุดท้ายก่อนใช้งานจริงของ Finance Tracker หลัง Phase 9.0.2
 
 ## 1) Import JSON Safety

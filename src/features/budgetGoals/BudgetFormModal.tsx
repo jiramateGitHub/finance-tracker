@@ -67,9 +67,10 @@ export function BudgetFormModal({
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
 
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div>}
+        {error && <div className="finance-error">{error}</div>}
 
-        <div className="finance-form-grid">
+        <div className="finance-modal-body">
+          <div className="finance-form-grid">
           <FormField label="เดือน">
             <MonthInput value={values.month} onChange={(event) => updateField('month', event.target.value)} />
           </FormField>
@@ -95,6 +96,7 @@ export function BudgetFormModal({
           <FormField label="หมายเหตุ" fullWidth>
             <TextareaField value={values.note} placeholder="หมายเหตุงบประมาณ" onChange={(event) => updateField('note', event.target.value)} />
           </FormField>
+          </div>
         </div>
 
         <footer className="finance-modal-footer">

@@ -51,7 +51,7 @@ export function TripModal({ open, trip, onClose, onSubmit }: TripModalProps) {
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
 
-        {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div> : null}
+        {error ? <div className="finance-error">{error}</div> : null}
 
         <div className="finance-modal-body">
           <div className="finance-form-grid">

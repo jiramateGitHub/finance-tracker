@@ -80,6 +80,10 @@
     @apply min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-finance-text shadow-sm transition placeholder:text-slate-400 hover:border-blue-300 focus:border-blue-500;
   }
 
+  .finance-error {
+    @apply rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold leading-6 text-rose-700;
+  }
+
   .finance-form-grid {
     @apply grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-4;
   }
@@ -247,4 +251,3 @@
     }
   }
 }
-

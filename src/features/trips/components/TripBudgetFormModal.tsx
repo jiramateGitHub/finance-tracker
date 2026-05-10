@@ -60,7 +60,7 @@ export function TripBudgetFormModal({ open, trip, line, categoryOptions, onClose
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
 
-        {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div> : null}
+        {error ? <div className="finance-error">{error}</div> : null}
 
         <div className="finance-modal-body">
           <div className="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">

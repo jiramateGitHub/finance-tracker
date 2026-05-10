@@ -56,9 +56,10 @@ export function GoalFormModal({ open, goal, onClose, onSubmit }: GoalFormModalPr
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
 
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div>}
+        {error && <div className="finance-error">{error}</div>}
 
-        <div className="finance-form-grid">
+        <div className="finance-modal-body">
+          <div className="finance-form-grid">
           <FormField label="ชื่อเป้าหมาย" fullWidth>
             <TextInput value={values.name} placeholder="เงินสำรอง, ทริปหน้า, โน้ตบุ๊ก" onChange={(event) => updateField('name', event.target.value)} />
           </FormField>
@@ -90,6 +91,7 @@ export function GoalFormModal({ open, goal, onClose, onSubmit }: GoalFormModalPr
           <FormField label="หมายเหตุ" fullWidth>
             <TextareaField value={values.note} placeholder="หมายเหตุเป้าหมาย" onChange={(event) => updateField('note', event.target.value)} />
           </FormField>
+          </div>
         </div>
 
         <footer className="finance-modal-footer">

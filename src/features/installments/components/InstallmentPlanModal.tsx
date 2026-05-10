@@ -58,9 +58,10 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
 
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">{error}</div>}
+        {error && <div className="finance-error">{error}</div>}
 
-        <div className="finance-form-grid">
+        <div className="finance-modal-body">
+          <div className="finance-form-grid">
           <FormField label="ชื่อแผน" fullWidth>
             <TextInput value={values.name} placeholder="มือถือ, โน้ตบุ๊ก, ผ่อนรถ" onChange={(event) => updateField('name', event.target.value)} />
           </FormField>
@@ -111,6 +112,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
           <FormField label="หมายเหตุ" fullWidth>
             <TextareaField value={values.note} placeholder="รายละเอียดเพิ่มเติม" onChange={(event) => updateField('note', event.target.value)} />
           </FormField>
+          </div>
         </div>
 
         <footer className="finance-modal-footer">
