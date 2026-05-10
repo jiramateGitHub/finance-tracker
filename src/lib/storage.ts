@@ -13,16 +13,16 @@ function createLocalTimestampForFileName(): string {
     String(now.getMinutes()).padStart(2, '0'),
     String(now.getSeconds()).padStart(2, '0'),
   ].join('-')
-  return `${date}T${time}`
+  return `${date}-${time}`
 }
 
-export function createJsonDownload(data: FinanceData): void {
+export function createJsonDownload(data: FinanceData, filenamePrefix = 'finance-data'): void {
   const exportableData = createExportableFinanceData(data)
   const blob = new Blob([JSON.stringify(exportableData, null, 2)], { type: 'application/json;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = `finance-data-${createLocalTimestampForFileName()}.json`
+  anchor.download = `${filenamePrefix}-${createLocalTimestampForFileName()}.json`
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()

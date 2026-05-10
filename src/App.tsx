@@ -7,6 +7,7 @@ import { TripsPage } from './features/trips/TripsPage'
 import { YearlyPage } from './features/yearly/YearlyPage'
 import { useFinanceStore } from './hooks/useFinanceStore'
 import { th } from './i18n/th'
+import { createJsonDownload } from './lib/storage'
 import type { FinanceImportPreview } from './state/FinanceDataProvider'
 
 type AppProps = {
@@ -36,6 +37,7 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
   }
 
   async function handleConfirmImportJson(preview: FinanceImportPreview): Promise<void> {
+    createJsonDownload(store.data, 'finance-backup-before-import')
     const importedData = store.applyImportedJson(preview)
     await sync.saveNow(importedData, th.sync.cloudImport)
   }

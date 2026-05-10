@@ -154,10 +154,10 @@ export function MorePage({
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <h3 className="font-extrabold">นำเข้า/ส่งออก JSON</h3>
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              ก่อนนำเข้าไฟล์ใหม่ แนะนำให้กดส่งออก JSON เพื่อสำรองข้อมูลปัจจุบัน
+              ก่อนแทนที่ข้อมูล ระบบจะดาวน์โหลดไฟล์สำรองของข้อมูลปัจจุบันให้อัตโนมัติ กรุณาเก็บไฟล์นี้ไว้
             </p>
             <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
-              หลังเลือกไฟล์ ระบบจะแสดงตัวอย่างและให้ยืนยันก่อนแทนที่ข้อมูลบน Cloud
+              หลังยืนยัน ข้อมูลในไฟล์ JSON จะเข้ามาแทนที่ข้อมูลบน Cloud ของบัญชีนี้
             </p>
             <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-bold ${statusTone}`}>
               {dataStatus.message}
@@ -210,8 +210,8 @@ export function MorePage({
         open={pendingImport !== null}
         title="ยืนยันนำเข้าและแทนที่ข้อมูลบน Cloud?"
         description={hasLargeDropWarning
-          ? `การนำเข้า JSON จะนำข้อมูลในไฟล์นี้มาใช้กับบัญชีนี้ และบันทึกขึ้น Cloud ทันที แนะนำให้ส่งออก JSON สำรองข้อมูลปัจจุบันก่อน ไฟล์นี้มีจำนวนข้อมูลน้อยกว่าข้อมูลปัจจุบันมาก อาจทำให้ข้อมูลบน Cloud ถูกลบตาม (${dropWarnings.join(' · ')})`
-          : 'การนำเข้า JSON จะนำข้อมูลในไฟล์นี้มาใช้กับบัญชีนี้ และบันทึกขึ้น Cloud ทันที แนะนำให้ส่งออก JSON สำรองข้อมูลปัจจุบันก่อน'}
+          ? `ก่อนแทนที่ข้อมูล ระบบจะดาวน์โหลดไฟล์สำรองของข้อมูลปัจจุบันให้ก่อน จากนั้นจะนำข้อมูลในไฟล์นี้มาใช้กับบัญชีนี้และบันทึกขึ้น Cloud ทันที ไฟล์นี้มีจำนวนข้อมูลน้อยกว่าข้อมูลปัจจุบันมาก อาจทำให้ข้อมูลบน Cloud ถูกลบตาม (${dropWarnings.join(' · ')})`
+          : 'ก่อนแทนที่ข้อมูล ระบบจะดาวน์โหลดไฟล์สำรองของข้อมูลปัจจุบันให้ก่อน จากนั้นจะนำข้อมูลในไฟล์นี้มาใช้กับบัญชีนี้และบันทึกขึ้น Cloud ทันที'}
         confirmLabel="ยืนยันนำเข้า"
         cancelLabel="ยกเลิก"
         destructive={hasLargeDropWarning}
