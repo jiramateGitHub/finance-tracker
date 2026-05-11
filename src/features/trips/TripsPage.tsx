@@ -210,11 +210,11 @@ export function TripsPage({
   return (
     <div className="finance-page-shell">
       <section className="finance-command-panel">
-        <div className="finance-toolbar border-b border-blue-100 pb-3">
+        <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold text-finance-text">จัดการทริป</h2>
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="finance-command-actions">
             <div className="finance-segmented" aria-label="เลือกมุมมองทริป">
               <button
                 type="button"

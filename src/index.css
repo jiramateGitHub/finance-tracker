@@ -112,6 +112,10 @@
     @apply flex min-w-0 flex-wrap items-center justify-between gap-2;
   }
 
+  .finance-command-actions {
+    @apply flex min-w-0 flex-wrap items-center gap-2;
+  }
+
   .finance-segmented {
     @apply inline-flex min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-1;
   }
@@ -234,6 +238,18 @@
   }
 
   @media (max-width: 640px) {
+    .finance-command-header {
+      @apply flex-col items-stretch gap-3;
+    }
+
+    .finance-command-actions {
+      @apply w-full items-stretch;
+    }
+
+    .finance-command-actions > button {
+      @apply flex-1;
+    }
+
     .finance-segmented {
       @apply flex w-full;
     }

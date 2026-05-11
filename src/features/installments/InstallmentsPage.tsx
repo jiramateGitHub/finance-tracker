@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
@@ -68,21 +69,44 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
   }
 
   return (
-    <div className="grid gap-4">
-      <Card title="ยอดผ่อน">
-        <InstallmentFilters
-          filters={filters}
-          viewMode={viewMode}
-          resultCount={filteredPlans.length}
-          onFiltersChange={setFilters}
-          onViewModeChange={setViewMode}
-          onAddPlan={openAddModal}
-        />
-      </Card>
+    <div className="finance-page-shell">
+      <section className="finance-command-panel">
+        <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold text-finance-text">ยอดผ่อน</h2>
+          </div>
+          <div className="finance-command-actions">
+            <div className="finance-segmented" aria-label="เลือกมุมมองยอดผ่อน">
+              <button
+                type="button"
+                className={`finance-segmented-button ${viewMode === 'list' ? 'is-active' : ''}`}
+                aria-pressed={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+              >
+                รายการ
+              </button>
+              <button
+                type="button"
+                className={`finance-segmented-button ${viewMode === 'calendar' ? 'is-active' : ''}`}
+                aria-pressed={viewMode === 'calendar'}
+                onClick={() => setViewMode('calendar')}
+              >
+                ปฏิทิน
+              </button>
+            </div>
+            <Button type="button" variant="primary" onClick={openAddModal}>เพิ่มแผนผ่อน</Button>
+          </div>
+        </div>
 
-      <Card title="สรุปยอดผ่อน">
-        <InstallmentSummaryCards summary={summary} />
-      </Card>
+        <div className="mt-3 grid gap-3">
+          <InstallmentSummaryCards summary={summary} />
+          <InstallmentFilters
+            filters={filters}
+            resultCount={filteredPlans.length}
+            onFiltersChange={setFilters}
+          />
+        </div>
+      </section>
 
       <Card title={viewMode === 'list' ? 'รายการแผนผ่อน' : 'ปฏิทินรายเดือน'}>
         {viewMode === 'list' ? (
