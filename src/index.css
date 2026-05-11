@@ -246,12 +246,43 @@
       max-height: min(16rem, 48dvh);
     }
 
+    .finance-modal-backdrop {
+      @apply items-stretch px-0 py-0;
+    }
+
+    .finance-modal-panel {
+      width: 100vw;
+      max-width: none !important;
+      height: 100dvh;
+      max-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 0;
+      border-width: 0;
+      padding-top: max(1rem, env(safe-area-inset-top));
+      padding-bottom: 0;
+    }
+
     .finance-modal-body {
-      max-height: 68dvh;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+      overflow-y: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .finance-modal-footer {
+      flex: 0 0 auto;
+      margin-right: -1rem;
+      margin-left: -1rem;
+      padding-right: 1rem;
+      padding-left: 1rem;
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
 
     .trip-detail-modal-body {
-      max-height: 74dvh;
+      max-height: none;
     }
 
     .finance-filter-actions {
