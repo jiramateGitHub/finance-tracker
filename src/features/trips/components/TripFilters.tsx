@@ -1,5 +1,4 @@
 import { Button } from '../../../components/ui/Button'
-import { ComboboxField } from '../../../components/ui/ComboboxField'
 import { FilterBar } from '../../../components/ui/FilterBar'
 import { FormField } from '../../../components/ui/FormField'
 import { MonthInput } from '../../../components/ui/MonthInput'
@@ -11,13 +10,12 @@ import { createEmptyTripFilters, tripStatusLabel, type TripFilters as TripFilter
 type TripFiltersProps = {
   filters: TripFiltersState
   resultCount: number
-  categoryOptions: string[]
   onChange: (filters: TripFiltersState) => void
   onAddItem: () => void
   canAddItem: boolean
 }
 
-export function TripFilters({ filters, resultCount, categoryOptions, onChange, onAddItem, canAddItem }: TripFiltersProps) {
+export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddItem }: TripFiltersProps) {
   return (
     <FilterBar
       resultText={`พบ ${resultCount} ทริปตามตัวกรอง`}
@@ -47,15 +45,6 @@ export function TripFilters({ filters, resultCount, categoryOptions, onChange, o
         <MonthInput
           value={filters.rangeEndMonth}
           onChange={(event) => onChange({ ...filters, rangeEndMonth: event.target.value })}
-        />
-      </FormField>
-
-      <FormField label="หมวดหมู่">
-        <ComboboxField
-          value={filters.category}
-          options={categoryOptions}
-          placeholder="ทั้งหมด"
-          onChange={(category) => onChange({ ...filters, category })}
         />
       </FormField>
 

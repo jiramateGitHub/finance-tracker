@@ -193,10 +193,7 @@ export function MonthlyPage({
 
   return (
     <div className="grid gap-4">
-      <Card
-        title={th.monthly.title}
-        description={`กำลังแสดง ${rangeLabel} พร้อมตัวกรอง ค้นหา และรายการที่แก้ไขได้`}
-      >
+      <Card title={th.monthly.title}>
         <QuickAddBar selectedMonth={filters.rangeStartMonth || selectedMonth} onAddTransaction={(transaction) => {
           onAddTransaction(transaction)
           setHighlightedIds([transaction.id])
@@ -214,7 +211,7 @@ export function MonthlyPage({
         </div>
       </Card>
 
-      <Card title={th.monthly.totals} description="สรุปนี้คำนวณจากรายการที่กำลังแสดง">
+      <Card title={th.monthly.totals}>
         <MonthlySummaryCards totals={filteredTotals} />
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">

@@ -114,18 +114,18 @@ export function MorePage({
 
   return (
     <div className="grid gap-4">
-      <Card title="ซิงก์ Cloud และไฟล์สำรอง" description="หลังเข้าสู่ระบบ Firestore คือแหล่งข้อมูลหลัก JSON ใช้สำหรับสำรองและย้ายข้อมูลเท่านั้น">
+      <Card title="ซิงก์ Cloud และไฟล์สำรอง">
+        <p className="-mt-2 mb-4 text-sm font-semibold leading-6 text-finance-muted">
+          Tip: Cloud เป็นข้อมูลหลัก ส่วน JSON ใช้สำรองก่อนนำเข้า
+        </p>
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-extrabold">บัญชี Firebase</h3>
               <SyncStatusBadge status={syncStatus} />
             </div>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              ระบบโหลดข้อมูลจาก Cloud หลังเข้าสู่ระบบทุกครั้ง และบันทึกการแก้ไขกลับขึ้น Cloud อัตโนมัติ
-            </p>
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
-              ปุ่มบันทึกขึ้น Cloud จะบันทึกชุดข้อมูลปัจจุบันขึ้น Cloud ตามบัญชีที่เข้าสู่ระบบ
+            <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+              โหลดและบันทึกข้อมูลผ่านบัญชีนี้
             </p>
             <div className="mt-3 truncate rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600">
               {currentUserEmail}
@@ -153,11 +153,8 @@ export function MorePage({
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <h3 className="font-extrabold">นำเข้า/ส่งออก JSON</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              ก่อนแทนที่ข้อมูล ระบบจะดาวน์โหลดไฟล์สำรองของข้อมูลปัจจุบันให้อัตโนมัติ กรุณาเก็บไฟล์นี้ไว้
-            </p>
             <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
-              หลังยืนยัน ข้อมูลในไฟล์ JSON จะเข้ามาแทนที่ข้อมูลบน Cloud ของบัญชีนี้
+              ก่อนนำเข้า ระบบจะดาวน์โหลดไฟล์สำรองให้อัตโนมัติ
             </p>
             <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-bold ${statusTone}`}>
               {dataStatus.message}

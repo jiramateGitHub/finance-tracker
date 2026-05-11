@@ -62,7 +62,6 @@ export function BudgetFormModal({
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-lg font-extrabold">{budget ? 'แก้ไขงบประมาณรายเดือน' : 'เพิ่มงบประมาณรายเดือน'}</h2>
-            <p className="mt-1 text-sm text-slate-500">งบประมาณใช้กับหนึ่งเดือนและหนึ่งหมวดหมู่</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
@@ -107,5 +106,4 @@ export function BudgetFormModal({
     </div>
   )
 }
-
 

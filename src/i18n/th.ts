@@ -25,7 +25,6 @@ export const th = {
     password: 'รหัสผ่าน',
     wait: 'กรุณารอสักครู่...',
     resetSent: 'ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว',
-    intro: 'เข้าสู่ระบบด้วย Firebase Auth เพื่อโหลดและบันทึกข้อมูลการเงินผ่าน Cloud Firestore',
     notConfigured: 'ยังไม่ได้ตั้งค่า Firebase ให้คัดลอก .env.example เป็น .env.local แล้วกรอกค่า VITE_FIREBASE_*',
     checking: 'กำลังตรวจสอบบัญชี...',
     logout: 'ออกจากระบบ',

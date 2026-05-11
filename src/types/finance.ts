@@ -228,7 +228,5 @@ export interface NavItem {
   label: string
   icon: string
   title: string
-  subtitle: string
 }
-
 

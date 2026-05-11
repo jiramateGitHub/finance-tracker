@@ -23,7 +23,6 @@ export type TripFilters = {
   keyword: string
   rangeStartMonth: string
   rangeEndMonth: string
-  category: string
   status: TripStatusFilter
   sortOrder: TripSortOrder
 }
@@ -83,7 +82,6 @@ export function createEmptyTripFilters(): TripFilters {
     keyword: '',
     rangeStartMonth: `${currentYear}-01`,
     rangeEndMonth: `${currentYear}-12`,
-    category: '',
     status: 'all',
     sortOrder: 'start-desc',
   }
@@ -222,7 +220,6 @@ export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
   return trips
     .filter((trip) => filters.status === 'all' || getTripStatus(trip) === filters.status)
     .filter((trip) => tripMatchesMonthRange(trip, filters.rangeStartMonth, filters.rangeEndMonth))
-    .filter((trip) => !filters.category || trip.items.some((item) => normalizeCategoryId(item.category, 'ท่องเที่ยว') === normalizeCategoryId(filters.category, 'ท่องเที่ยว')))
     .filter((trip) => {
       if (!keyword) return true
       return [
@@ -415,4 +412,3 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       updatedAt: trip.updatedAt,
     } satisfies TransactionEntry)))
 }
-

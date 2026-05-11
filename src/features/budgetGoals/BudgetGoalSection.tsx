@@ -151,10 +151,7 @@ export function BudgetGoalSection({
 
   return (
     <div className="grid gap-4">
-      <Card
-        title="งบประมาณและเป้าหมาย"
-        description={`สัญญาณประจำ ${formatMonth(selectedMonth)} จากงบ เป้าหมาย และรายการรายเดือน`}
-      >
+      <Card title="งบประมาณและเป้าหมาย">
         <div className="grid gap-3 lg:grid-cols-4">
           <SummaryCard label="งบเดือนนี้" value={formatMoney(totalBudget)} icon="B" tone="balance" />
           <SummaryCard label="ใช้ไปแล้ว" value={formatMoney(totalUsed)} icon="U" tone="expense" />
@@ -181,7 +178,6 @@ export function BudgetGoalSection({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <Card
           title="งบประมาณรายเดือน"
-          description="หนึ่งหมวดมีงบได้หนึ่งรายการต่อเดือน ใช้ยอดจากรายจ่ายของเดือนที่เลือก"
           actions={<Button type="button" variant="primary" onClick={openAddBudget}>เพิ่มงบประมาณ</Button>}
         >
           {monthlyBudgets.length ? (
@@ -205,7 +201,6 @@ export function BudgetGoalSection({
 
         <Card
           title="เป้าหมาย"
-          description="ติดตามความคืบหน้าและอัปเดตยอดปัจจุบันได้จากหน้ารายเดือน"
           actions={<Button type="button" variant="primary" onClick={openAddGoal}>เพิ่มเป้าหมาย</Button>}
         >
           {goals.length ? (

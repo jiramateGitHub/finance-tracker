@@ -51,7 +51,6 @@ export function GoalFormModal({ open, goal, onClose, onSubmit }: GoalFormModalPr
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-lg font-extrabold">{goal ? 'แก้ไขเป้าหมาย' : 'เพิ่มเป้าหมาย'}</h2>
-            <p className="mt-1 text-sm text-slate-500">ติดตามความคืบหน้าของเป้าหมายการออม</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>

@@ -53,7 +53,6 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-lg font-extrabold">{plan ? 'แก้ไขแผนผ่อน' : 'เพิ่มแผนผ่อน'}</h2>
-            <p className="mt-1 text-sm text-slate-500">ติดตามยอดรวม รอบรายเดือน และความคืบหน้าการจ่าย</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>
@@ -123,5 +122,4 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
     </div>
   )
 }
-
 

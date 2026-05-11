@@ -55,7 +55,6 @@ export function TripBudgetFormModal({ open, trip, line, categoryOptions, onClose
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold text-finance-text">{line ? 'แก้ไขงบทริปแยกหมวด' : 'เพิ่มงบทริปแยกหมวด'}</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">กำหนดงบรายหมวดเพื่อเทียบกับรายการจริงของทริป</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>

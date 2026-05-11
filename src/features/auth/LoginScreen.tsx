@@ -48,9 +48,6 @@ export function LoginScreen({ configured, loading, error, onLogin, onRegister, o
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600">{th.app.name}</p>
             <h1 className="mt-2 text-2xl font-extrabold">{title}</h1>
-            <p className="mt-2 text-sm leading-6 text-finance-muted">
-              {th.auth.intro}
-            </p>
           </div>
 
           {!configured ? (

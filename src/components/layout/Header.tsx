@@ -17,7 +17,6 @@ export function Header({ activeItem, currentUserEmail, syncStatus, onLogout }: H
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-xl font-extrabold leading-tight text-finance-text sm:text-2xl">{activeItem.title}</h1>
-          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-finance-muted sm:mt-1 sm:text-sm sm:leading-6">{activeItem.subtitle}</p>
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
           <SyncStatusBadge status={syncStatus} />

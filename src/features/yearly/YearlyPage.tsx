@@ -34,7 +34,7 @@ export function YearlyPage({ data }: YearlyPageProps) {
 
   return (
     <div className="grid gap-4">
-      <Card title="ภาพรวมทั้งปี" description="สรุปรายรับรายจ่ายทั้งปีและการ์ดรายเดือน 12 เดือน">
+      <Card title="ภาพรวมทั้งปี">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryCard label="รายรับทั้งปี" value={formatMoney(totals.income)} icon="+" tone="income" />
           <SummaryCard label="รายจ่ายทั้งปี" value={formatMoney(totals.expense)} icon="-" tone="expense" />

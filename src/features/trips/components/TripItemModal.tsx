@@ -67,7 +67,6 @@ export function TripItemModal({ open, trip, item, categoryOptions, installmentPl
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold text-finance-text">{item ? 'แก้ไขรายการทริป' : 'เพิ่มรายการทริป'}</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">บันทึกรายการใช้จ่ายของ {trip.name} พร้อมสถานะจ่ายแล้ว/ยังไม่จ่าย</p>
           </div>
           <Button type="button" onClick={onClose}>{th.common.close}</Button>
         </header>

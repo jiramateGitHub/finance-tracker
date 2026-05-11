@@ -213,7 +213,6 @@ export function TripsPage({
         <div className="finance-toolbar border-b border-blue-100 pb-3">
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold text-finance-text">จัดการทริป</h2>
-            <p className="mt-1 text-sm leading-6 text-finance-muted">วางแผนงบทริป บันทึกรายการจริง และดูภาพรวมแบบกระชับ</p>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="finance-segmented" aria-label="เลือกมุมมองทริป">
@@ -243,7 +242,6 @@ export function TripsPage({
           <TripFilters
             filters={filters}
             resultCount={filteredTrips.length}
-            categoryOptions={categoryOptions}
             onChange={setFilters}
             onAddItem={() => openAddItem()}
             canAddItem={Boolean(activeTrip)}
@@ -255,7 +253,6 @@ export function TripsPage({
         <div className="finance-toolbar">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold text-finance-text">{viewMode === 'list' ? 'รายการทริป' : 'ปฏิทินทริป'}</h2>
-            <p className="text-xs font-bold text-finance-muted">พบ {filteredTrips.length} ทริปตามตัวกรอง</p>
           </div>
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-500">
             {viewMode === 'list' ? 'รายการ' : 'ปฏิทิน'}

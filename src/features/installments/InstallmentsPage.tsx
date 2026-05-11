@@ -69,10 +69,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
 
   return (
     <div className="grid gap-4">
-      <Card
-        title="ยอดผ่อน"
-        description="ติดตามแผนผ่อน รอบที่จ่ายแล้ว ยอดคงเหลือ และตารางรายเดือน"
-      >
+      <Card title="ยอดผ่อน">
         <InstallmentFilters
           filters={filters}
           viewMode={viewMode}
@@ -83,7 +80,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
         />
       </Card>
 
-      <Card title="สรุปยอดผ่อน" description="สรุปจากแผนผ่อนที่กำลังแสดง">
+      <Card title="สรุปยอดผ่อน">
         <InstallmentSummaryCards summary={summary} />
       </Card>
 
