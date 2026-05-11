@@ -17,7 +17,7 @@ export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListPr
   }
 
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
       {trips.map((trip) => {
         const totals = calculateTripTotals(data, trip)
         const status = getTripStatus(trip)

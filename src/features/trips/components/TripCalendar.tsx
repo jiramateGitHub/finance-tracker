@@ -28,22 +28,26 @@ export function TripCalendar({ data, trips, activeTripId, onSelectTrip }: TripCa
   }, new Map())
 
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from(grouped.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([monthKey, monthTrips]) => {
           const monthActual = monthTrips.reduce((total, trip) => total + calculateTripTotals(data, trip).actualSpending, 0)
           const monthPlanned = monthTrips.reduce((total, trip) => total + calculateTripTotals(data, trip).plannedBudget, 0)
           return (
-            <section key={monthKey} className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <div className="finance-toolbar">
+            <section key={monthKey} className="grid min-w-0 content-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="font-extrabold text-slate-800">{monthKey === 'ไม่ระบุเดือน' ? monthKey : formatMonth(monthKey)}</h3>
-                  <p className="text-xs font-bold text-slate-500">{monthTrips.length} ทริป · ใช้จริง {formatMoney(monthActual)} / งบ {formatMoney(monthPlanned)}</p>
+                  <p className="mt-1 text-sm font-bold text-slate-500">{monthTrips.length} ทริป</p>
+                </div>
+                <div className="min-w-0 text-right text-xs font-extrabold leading-5">
+                  <div className="break-words text-rose-700">{formatMoney(monthActual)}</div>
+                  <div className="break-words text-blue-700">งบ {formatMoney(monthPlanned)}</div>
                 </div>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid min-w-0 gap-2">
                 {monthTrips
                   .slice()
                   .sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name), 'th-TH'))

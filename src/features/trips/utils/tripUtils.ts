@@ -1,8 +1,9 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { AppData, Budget, BudgetLine, InstallmentPlan, TransactionEntry, Trip, TripItem, TripStatus } from '../../../types/finance'
-import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../../utils/formatters'
 
 export type TripStatusFilter = 'all' | TripStatus
+export type TripSortOrder = 'start-desc' | 'start-asc' | 'name-asc' | 'actual-desc' | 'budget-desc'
 export type TripDetailTab = 'overview' | 'actual' | 'plan'
 export type TripBudgetStatus = 'safe' | 'near-limit' | 'over-budget'
 
@@ -20,10 +21,11 @@ export const tripBudgetStatusLabel: Record<TripBudgetStatus, string> = {
 
 export type TripFilters = {
   keyword: string
-  year: string
-  month: string
+  rangeStartMonth: string
+  rangeEndMonth: string
   category: string
   status: TripStatusFilter
+  sortOrder: TripSortOrder
 }
 
 export type TripFormValues = {
@@ -76,12 +78,14 @@ export type TripBudgetLineFormValues = {
 }
 
 export function createEmptyTripFilters(): TripFilters {
+  const currentYear = currentMonthInputValue().slice(0, 4)
   return {
     keyword: '',
-    year: '',
-    month: '',
+    rangeStartMonth: `${currentYear}-01`,
+    rangeEndMonth: `${currentYear}-12`,
     category: '',
     status: 'all',
+    sortOrder: 'start-desc',
   }
 }
 
@@ -198,23 +202,26 @@ export function summarizeTrips(data: AppData, trips: Trip[]): TripTotals & { tri
   )
 }
 
-function tripMatchesMonth(trip: Trip, month: string): boolean {
-  if (!month) return true
-  const itemMatches = trip.items.some((item) => getMonthKey(item.date) === month)
-  return itemMatches || getMonthKey(trip.startDate) === month || getMonthKey(trip.endDate) === month
+function tripMatchesMonthRange(trip: Trip, rangeStartMonth: string, rangeEndMonth: string): boolean {
+  if (!rangeStartMonth && !rangeEndMonth) return true
+  const start = rangeStartMonth || rangeEndMonth
+  const end = rangeEndMonth || rangeStartMonth
+  const [fromMonth, toMonth] = start <= end ? [start, end] : [end, start]
+  const tripStartMonth = getMonthKey(trip.startDate)
+  const tripEndMonth = getMonthKey(trip.endDate)
+  const tripOverlapsRange = Boolean(tripStartMonth && tripEndMonth && tripStartMonth <= toMonth && tripEndMonth >= fromMonth)
+  const itemMatches = trip.items.some((item) => {
+    const itemMonth = getMonthKey(item.date)
+    return itemMonth >= fromMonth && itemMonth <= toMonth
+  })
+  return tripOverlapsRange || itemMatches
 }
 
 export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
   const keyword = filters.keyword.trim().toLocaleLowerCase()
   return trips
     .filter((trip) => filters.status === 'all' || getTripStatus(trip) === filters.status)
-    .filter((trip) => {
-      if (!filters.year) return true
-      return trip.startDate.startsWith(filters.year)
-        || trip.endDate.startsWith(filters.year)
-        || trip.items.some((item) => item.date.startsWith(filters.year))
-    })
-    .filter((trip) => tripMatchesMonth(trip, filters.month))
+    .filter((trip) => tripMatchesMonthRange(trip, filters.rangeStartMonth, filters.rangeEndMonth))
     .filter((trip) => !filters.category || trip.items.some((item) => normalizeCategoryId(item.category, 'ท่องเที่ยว') === normalizeCategoryId(filters.category, 'ท่องเที่ยว')))
     .filter((trip) => {
       if (!keyword) return true
@@ -225,7 +232,19 @@ export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
         ...trip.items.flatMap((item) => [item.title, item.category, item.destination, item.country, item.note]),
       ].some((value) => String(value ?? '').toLocaleLowerCase().includes(keyword))
     })
-    .sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name)))
+    .sort((a, b) => compareTrips(a, b, filters.sortOrder))
+}
+
+function compareTrips(a: Trip, b: Trip, sortOrder: TripSortOrder): number {
+  if (sortOrder === 'start-asc') return String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name), 'th-TH')
+  if (sortOrder === 'name-asc') return String(a.name).localeCompare(String(b.name), 'th-TH') || String(b.startDate).localeCompare(String(a.startDate))
+  if (sortOrder === 'actual-desc') {
+    const aActual = a.items.reduce((total, item) => total + Number(item.amount || 0), 0)
+    const bActual = b.items.reduce((total, item) => total + Number(item.amount || 0), 0)
+    return bActual - aActual || String(b.startDate).localeCompare(String(a.startDate))
+  }
+  if (sortOrder === 'budget-desc') return Number(b.budget || 0) - Number(a.budget || 0) || String(b.startDate).localeCompare(String(a.startDate))
+  return String(b.startDate).localeCompare(String(a.startDate)) || String(a.name).localeCompare(String(b.name), 'th-TH')
 }
 
 export function getCategoryOptions(data: AppData): string[] {
@@ -396,6 +415,4 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       updatedAt: trip.updatedAt,
     } satisfies TransactionEntry)))
 }
-
-
 

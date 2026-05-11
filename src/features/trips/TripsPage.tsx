@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
@@ -73,8 +73,7 @@ export function TripsPage({
   const [itemModal, setItemModal] = useState<TripItemModalState>({ open: false, trip: null, item: null })
   const [budgetModal, setBudgetModal] = useState<TripBudgetModalState>({ open: false, trip: null, line: null })
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
-  const listRef = useRef<HTMLDivElement | null>(null)
-  const detailRef = useRef<HTMLDivElement | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
 
   const filteredTrips = useMemo(() => filterTrips(data.trips, filters), [data.trips, filters])
   const effectiveActiveTripId = filteredTrips.some((trip) => trip.id === activeTripId)
@@ -87,11 +86,11 @@ export function TripsPage({
   function selectTrip(tripId: string): void {
     setActiveTripId(tripId)
     setActiveTab('overview')
-    window.setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+    setDetailModalOpen(true)
   }
 
-  function backToList(): void {
-    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  function closeDetailModal(): void {
+    setDetailModalOpen(false)
   }
 
   function openAddTrip(): void {
@@ -186,6 +185,7 @@ export function TripsPage({
       const nextTrip = data.trips.find((trip) => trip.id !== deleteTarget.tripId)
       setActiveTripId(nextTrip?.id ?? null)
       setActiveTab('overview')
+      setDetailModalOpen(false)
       setDeleteTarget(null)
       return
     }
@@ -251,43 +251,60 @@ export function TripsPage({
         </div>
       </section>
 
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)] xl:grid-cols-[minmax(340px,0.75fr)_minmax(0,1.25fr)]">
-        <section ref={listRef} className="finance-panel-compact grid gap-3 self-start">
-          <div className="finance-toolbar">
-            <div className="min-w-0">
-              <h2 className="text-base font-extrabold text-finance-text">{viewMode === 'list' ? 'รายการทริป' : 'ปฏิทินทริป'}</h2>
-              <p className="text-xs font-bold text-finance-muted">พบ {filteredTrips.length} ทริปตามตัวกรอง</p>
-            </div>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-500">
-              {viewMode === 'list' ? 'รายการ' : 'ปฏิทิน'}
-            </span>
+      <section className="finance-panel-compact grid min-w-0 gap-3 self-start">
+        <div className="finance-toolbar">
+          <div className="min-w-0">
+            <h2 className="text-base font-extrabold text-finance-text">{viewMode === 'list' ? 'รายการทริป' : 'ปฏิทินทริป'}</h2>
+            <p className="text-xs font-bold text-finance-muted">พบ {filteredTrips.length} ทริปตามตัวกรอง</p>
           </div>
-          {viewMode === 'list' ? (
-            <TripList data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
-          ) : (
-            <TripCalendar data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
-          )}
-        </section>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-500">
+            {viewMode === 'list' ? 'รายการ' : 'ปฏิทิน'}
+          </span>
+        </div>
+        {viewMode === 'list' ? (
+          <TripList data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+        ) : (
+          <TripCalendar data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+        )}
+      </section>
 
-        <section ref={detailRef} className="finance-detail-panel min-w-0 self-start">
-          <TripDetail
-            data={data}
-            trip={activeTrip}
-            activeTab={activeTab}
-            onChangeTab={setActiveTab}
-            onEditTrip={openEditTrip}
-            onDeleteTrip={handleDeleteTrip}
-            onAddItem={openAddItem}
-            onEditItem={openEditItem}
-            onDeleteItem={handleDeleteItem}
-            onToggleItemPaid={handleToggleItemPaid}
-            onAddBudgetLine={openAddBudgetLine}
-            onEditBudgetLine={openEditBudgetLine}
-            onDeleteBudgetLine={handleDeleteBudgetLine}
-            onBackToList={backToList}
-          />
-        </section>
-      </div>
+      {detailModalOpen && activeTrip && (
+        <div className="finance-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trip-detail-title">
+          <div className="finance-modal-panel max-w-6xl">
+            <div className="finance-toolbar border-b border-slate-100 pb-3">
+              <div className="min-w-0">
+                <h2 id="trip-detail-title" className="break-words text-lg font-extrabold text-finance-text">
+                  {activeTrip.name}
+                </h2>
+                <p className="mt-1 text-sm font-bold leading-6 text-finance-muted">
+                  {activeTrip.destination || 'ยังไม่ระบุจุดหมาย'}
+                </p>
+              </div>
+              <Button type="button" variant="light" onClick={closeDetailModal}>
+                {th.common.close}
+              </Button>
+            </div>
+            <div className="finance-modal-body trip-detail-modal-body">
+              <TripDetail
+                data={data}
+                trip={activeTrip}
+                activeTab={activeTab}
+                onChangeTab={setActiveTab}
+                onEditTrip={openEditTrip}
+                onDeleteTrip={handleDeleteTrip}
+                onAddItem={openAddItem}
+                onEditItem={openEditItem}
+                onDeleteItem={handleDeleteItem}
+                onToggleItemPaid={handleToggleItemPaid}
+                onAddBudgetLine={openAddBudgetLine}
+                onEditBudgetLine={openEditBudgetLine}
+                onDeleteBudgetLine={handleDeleteBudgetLine}
+                onBackToList={closeDetailModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {tripModal.open && (
         <TripModal
