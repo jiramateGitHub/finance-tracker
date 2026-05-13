@@ -30,7 +30,6 @@ type TripDetailProps = {
   onAddBudgetLine: (trip: Trip) => void
   onEditBudgetLine: (trip: Trip, line: BudgetLine) => void
   onDeleteBudgetLine: (trip: Trip, categoryId: string) => void
-  onBackToList?: () => void
 }
 
 const budgetStatusTone: Record<TripBudgetStatus, 'income' | 'warning' | 'expense'> = {
@@ -65,7 +64,6 @@ export function TripDetail({
   onAddBudgetLine,
   onEditBudgetLine,
   onDeleteBudgetLine,
-  onBackToList,
 }: TripDetailProps) {
   if (!trip) {
     return <EmptyState title="ยังไม่ได้เลือกทริป" description="เลือกทริปจากรายการหรือสร้างทริปใหม่เพื่อดูรายละเอียด" />
@@ -93,7 +91,6 @@ export function TripDetail({
             {trip.note ? <p className="mt-1 text-sm leading-6 text-blue-800">{trip.note}</p> : null}
           </div>
           <div className="flex min-w-0 flex-wrap justify-end gap-2">
-            {onBackToList ? <Button type="button" size="sm" onClick={onBackToList}>กลับไปดูรายการทริป</Button> : null}
             <Button type="button" size="sm" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>
             <Button type="button" size="sm" onClick={() => onEditTrip(trip)}>แก้ไขทริป</Button>
             <Button type="button" size="sm" variant="danger" onClick={() => onDeleteTrip(trip.id)}>{th.common.delete}</Button>

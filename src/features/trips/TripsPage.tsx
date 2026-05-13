@@ -296,7 +296,6 @@ export function TripsPage({
                 onAddBudgetLine={openAddBudgetLine}
                 onEditBudgetLine={openEditBudgetLine}
                 onDeleteBudgetLine={handleDeleteBudgetLine}
-                onBackToList={closeDetailModal}
               />
             </div>
           </div>

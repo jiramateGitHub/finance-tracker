@@ -107,9 +107,7 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
     <AppShell
       activeView={store.activeView}
       onChangeView={store.setActiveView}
-      currentUserEmail={currentUserEmail}
       syncStatus={sync.status}
-      onLogout={onLogout}
     >
       {renderActiveView()}
     </AppShell>
