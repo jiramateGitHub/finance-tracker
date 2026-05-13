@@ -35,7 +35,7 @@ export function InstallmentCalendar({ plans, filters }: InstallmentCalendarProps
         const monthPlans = monthMap.get(monthKey) ?? []
         const monthTotal = monthPlans.reduce((total, plan) => total + Number(plan.monthlyAmount || 0), 0)
         return (
-          <section key={monthKey} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <section key={monthKey} className="grid content-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="font-extrabold">{formatMonth(monthKey)}</h3>
@@ -44,7 +44,7 @@ export function InstallmentCalendar({ plans, filters }: InstallmentCalendarProps
               <div className="font-extrabold text-blue-700">{formatMoney(monthTotal)}</div>
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid content-start gap-2">
               {monthPlans.map((plan) => {
                 const isPaid = getPaidMonthKeys(plan).includes(monthKey)
                 const progress = calculateInstallmentProgress(plan)
@@ -52,11 +52,11 @@ export function InstallmentCalendar({ plans, filters }: InstallmentCalendarProps
                   <div key={`${plan.id}-${monthKey}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                     <div className="flex justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="truncate font-extrabold">{plan.name}</div>
+                        <div className="truncate text-xs font-extrabold text-slate-700">{plan.name}</div>
                         <div className="text-xs text-slate-500">จ่ายแล้ว {progress.monthsPaid}/{progress.scheduleMonths.length}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-extrabold text-rose-700">{formatMoney(plan.monthlyAmount)}</div>
+                        <div className="text-xs font-extrabold text-rose-700">{formatMoney(plan.monthlyAmount)}</div>
                         <div className={`text-xs font-bold ${isPaid ? 'text-emerald-700' : 'text-amber-700'}`}>
                           {isPaid ? th.transaction.paid : th.transaction.unpaid}
                         </div>

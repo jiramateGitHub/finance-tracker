@@ -36,7 +36,7 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
               <h3 className="font-extrabold">{formatMonth(group.monthKey)}</h3>
               <p className="text-sm text-slate-500">{group.transactions.length} รายการ</p>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs font-bold">
+            <div className="flex flex-wrap gap-2 text-base font-extrabold">
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{formatMoney(group.totals.income)} {th.transaction.income}</span>
               <span className="rounded-full bg-rose-50 px-3 py-1 text-rose-700">{formatMoney(group.totals.expense)} {th.transaction.expense}</span>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{formatMoney(group.totals.balance)} {th.transaction.balance}</span>

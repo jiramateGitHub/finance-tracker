@@ -46,9 +46,9 @@ export function FrequentTransactionShortcuts({ transactions, selectedMonth, onAd
   return (
     <Card title={th.monthly.frequent}>
       {templates.length ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1">
           {templates.map(({ transaction, count }) => (
-            <Button key={`${transaction.title}-${transaction.amount}-${count}`} type="button" size="sm" onClick={() => addFromTemplate(transaction)}>
+            <Button key={`${transaction.title}-${transaction.amount}-${count}`} className="shrink-0" type="button" size="sm" onClick={() => addFromTemplate(transaction)}>
               {transaction.title} · {count} ครั้ง
             </Button>
           ))}

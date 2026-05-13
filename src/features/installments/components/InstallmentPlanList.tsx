@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { EmptyState } from '../../../components/ui/EmptyState'
@@ -14,6 +15,8 @@ type InstallmentPlanListProps = {
 }
 
 export function InstallmentPlanList({ plans, onEdit, onDelete, onToggleMonth }: InstallmentPlanListProps) {
+  const [scheduleModalPlan, setScheduleModalPlan] = useState<InstallmentPlan | null>(null)
+
   if (!plans.length) {
     return (
       <EmptyState
@@ -24,11 +27,14 @@ export function InstallmentPlanList({ plans, onEdit, onDelete, onToggleMonth }: 
   }
 
   return (
-    <div className="grid gap-3">
-      {plans.map((plan) => {
+    <>
+      <div className="grid gap-3">
+        {plans.map((plan) => {
         const progress = calculateInstallmentProgress(plan)
         const paidMonthKeys = new Set(getPaidMonthKeys(plan))
-        const visibleMonths = getInstallmentScheduleMonths(plan).slice(0, 18)
+        const visibleMonths = getInstallmentScheduleMonths(plan).slice(0, 3)
+        const hiddenMonthCount = Math.max(0, progress.scheduleMonths.length - visibleMonths.length)
+        const interestText = getInterestText(plan)
         return (
           <article key={plan.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -59,78 +65,154 @@ export function InstallmentPlanList({ plans, onEdit, onDelete, onToggleMonth }: 
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">ยอดรวม</div>
-                <div className="font-extrabold">{formatMoney(progress.totalAmount)}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">จ่ายแล้ว</div>
-                <div className="font-extrabold text-emerald-700">{formatMoney(progress.totalPaid)}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">เดือนคงเหลือ</div>
-                <div className="font-extrabold">{progress.monthsRemaining}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">หมายเหตุ</div>
-                <div className="truncate font-extrabold">{plan.note || '-'}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">วันครบกำหนด</div>
-                <div className="font-extrabold">{plan.dueDay ?? plan.paymentDay ?? '-'}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">เงินต้น</div>
-                <div className="font-extrabold">{plan.principal ? formatMoney(plan.principal) : '-'}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">ดอกเบี้ย</div>
-                <div className="truncate font-extrabold">
-                  {plan.interestType === 'none' ? 'ไม่มี' : `${plan.interestRate ?? 0}% ${plan.interestType}`}
-                </div>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs font-bold text-slate-500">หมายเหตุดอกเบี้ย</div>
-                <div className="truncate font-extrabold">{plan.interestNote || '-'}</div>
-              </div>
+            <div className="grid grid-cols-2">
+              <DetailRow label="เงินต้น" value={plan.principal ? formatMoney(plan.principal) : formatMoney(progress.totalAmount)} />
+              <DetailRow label="จ่ายแล้ว" value={formatMoney(progress.totalPaid)} className="border-l border-slate-100" />
+              <DetailRow label="ดอกเบี้ย" value={interestText} />
+              <DetailRow label="เดือนคงเหลือ" value={`${progress.monthsRemaining}`} className="border-l border-slate-100" />
+              <DetailRow label="วันครบกำหนด" value={`${plan.dueDay ?? plan.paymentDay ?? '-'}`} lastRow />
+              <DetailRow label="หมายเหตุ" value={plan.note || '-'} className="border-l border-slate-100" lastRow />
             </div>
 
             <div className="grid gap-2">
               <div className="text-sm font-extrabold text-slate-600">รอบชำระ</div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {visibleMonths.map((monthKey) => {
                   const isPaid = paidMonthKeys.has(monthKey)
                   return (
-                    <button
+                    <ScheduleMonthChip
                       key={monthKey}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-extrabold transition ${
-                        isPaid
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-700'
-                      }`}
-                      type="button"
+                      monthKey={monthKey}
+                      isPaid={isPaid}
                       onClick={() => onToggleMonth(plan, monthKey, !isPaid)}
-                    >
-                      {monthKey} {isPaid ? th.transaction.paid : th.transaction.unpaid}
-                    </button>
+                    />
                   )
                 })}
-                {progress.scheduleMonths.length > visibleMonths.length && (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500">
-                    +{progress.scheduleMonths.length - visibleMonths.length} รอบ
-                  </span>
+                {hiddenMonthCount > 0 && (
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-blue-50 hover:text-blue-700"
+                    onClick={() => setScheduleModalPlan(plan)}
+                  >
+                    +{hiddenMonthCount} รอบ
+                  </button>
                 )}
+                <span className="hidden flex-1 sm:block" aria-hidden="true" />
+                <Button className="min-w-[5rem] flex-1 sm:flex-none" size="sm" onClick={() => onEdit(plan)}>{th.common.edit}</Button>
+                <Button className="min-w-[5rem] flex-1 sm:flex-none" size="sm" variant="danger" onClick={() => onDelete(plan.id)}>{th.common.delete}</Button>
               </div>
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
-              <Button onClick={() => onEdit(plan)}>{th.common.edit}</Button>
-              <Button variant="danger" onClick={() => onDelete(plan.id)}>{th.common.delete}</Button>
             </div>
           </article>
         )
       })}
+      </div>
+
+      {scheduleModalPlan ? (
+        <ScheduleModal
+          plan={scheduleModalPlan}
+          onClose={() => setScheduleModalPlan(null)}
+          onToggleMonth={onToggleMonth}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function ScheduleModal({
+  plan,
+  onClose,
+  onToggleMonth,
+}: {
+  plan: InstallmentPlan
+  onClose: () => void
+  onToggleMonth: (plan: InstallmentPlan, monthKey: string, isPaid: boolean) => void
+}) {
+  const paidMonthKeys = new Set(getPaidMonthKeys(plan))
+  const months = getInstallmentScheduleMonths(plan)
+
+  return (
+    <div className="finance-modal-backdrop">
+      <section className="finance-modal-panel max-w-2xl" role="dialog" aria-modal="true" aria-labelledby="installment-schedule-title">
+        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="min-w-0">
+            <h2 id="installment-schedule-title" className="break-words text-lg font-extrabold text-finance-text">
+              รอบชำระ {plan.name}
+            </h2>
+          </div>
+          <Button type="button" onClick={onClose}>{th.common.close}</Button>
+        </header>
+
+        <div className="finance-modal-body">
+          <div className="flex flex-wrap gap-2">
+            {months.map((monthKey) => {
+              const isPaid = paidMonthKeys.has(monthKey)
+              return (
+                <ScheduleMonthChip
+                  key={monthKey}
+                  monthKey={monthKey}
+                  isPaid={isPaid}
+                  onClick={() => onToggleMonth(plan, monthKey, !isPaid)}
+                />
+              )
+            })}
+          </div>
+        </div>
+
+        <footer className="finance-modal-footer">
+          <Button type="button" variant="primary" onClick={onClose}>{th.common.close}</Button>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+function ScheduleMonthChip({
+  monthKey,
+  isPaid,
+  onClick,
+}: {
+  monthKey: string
+  isPaid: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      className={`rounded-full border px-3 py-1.5 text-xs font-extrabold transition ${
+        isPaid
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+          : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-700'
+      }`}
+      type="button"
+      onClick={onClick}
+    >
+      {monthKey} {isPaid ? th.transaction.paid : th.transaction.unpaid}
+    </button>
+  )
+}
+
+function getInterestText(plan: InstallmentPlan): string {
+  if (!plan.interestType || plan.interestType === 'none') return plan.interestNote || 'ไม่มี'
+  const typeLabel = plan.interestType === 'flat' ? 'คงที่' : 'ลดต้นลดดอก'
+  const rate = Number(plan.interestRate || 0)
+  const rateText = rate > 0 ? `${rate}% ` : ''
+  return `${rateText}${typeLabel}${plan.interestNote ? ` · ${plan.interestNote}` : ''}`
+}
+
+function DetailRow({
+  label,
+  value,
+  className = '',
+  lastRow = false,
+}: {
+  label: string
+  value: string
+  className?: string
+  lastRow?: boolean
+}) {
+  return (
+    <div className={`flex min-w-0 items-center justify-between gap-2 px-2 py-1.5 ${lastRow ? '' : 'border-b border-slate-100'} ${className}`}>
+      <span className="text-xs text-slate-400">{label}</span>
+      <span className="min-w-0 truncate text-right text-sm font-medium text-slate-700" title={value}>{value}</span>
     </div>
   )
 }

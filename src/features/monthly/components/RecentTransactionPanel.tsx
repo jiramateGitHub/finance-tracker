@@ -14,7 +14,7 @@ export function RecentTransactionPanel({ transactions }: RecentTransactionPanelP
     .filter(isManualTransaction)
     .slice()
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)))
-    .slice(0, 5)
+    .slice(0, 3)
 
   return (
     <Card title={th.monthly.recent}>
