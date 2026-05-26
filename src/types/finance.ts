@@ -99,6 +99,8 @@ export interface TripItem {
   note?: string
   installmentId?: string
   isPaid?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Trip {
@@ -229,4 +231,3 @@ export interface NavItem {
   icon: string
   title: string
 }
-

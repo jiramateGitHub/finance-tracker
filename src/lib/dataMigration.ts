@@ -300,6 +300,7 @@ function normalizeInstallmentPlan(value: unknown): InstallmentPlan {
 
 function normalizeTripItem(value: unknown): TripItem {
   const record = readRecord(value)
+  const now = currentIsoTimestamp()
   const category = normalizeCategoryId(record.categoryId ?? record.category, 'ท่องเที่ยว')
   return {
     id: readId(record, 'trip-item'),
@@ -312,11 +313,14 @@ function normalizeTripItem(value: unknown): TripItem {
     note: readNullableString(record, 'note') ?? undefined,
     installmentId: readNullableString(record, 'installmentId') ?? undefined,
     isPaid: readBoolean(record, 'isPaid', true),
+    createdAt: normalizeTimestamp(record.createdAt, now),
+    updatedAt: normalizeTimestamp(record.updatedAt, now),
   }
 }
 
 
 function createTripItemFromTripTransaction(transaction: TransactionEntry): TripItem | null {
+  const now = currentIsoTimestamp()
   if (!transaction.tripId) return null
   const looksLikeTripTransaction = transaction.sourceModule === 'trip' || transaction.id.startsWith('tx-trip-')
   if (!looksLikeTripTransaction || transaction.type !== 'expense') return null
@@ -329,6 +333,8 @@ function createTripItemFromTripTransaction(transaction: TransactionEntry): TripI
     note: transaction.note,
     installmentId: transaction.installmentPlanId ?? transaction.installmentId ?? undefined,
     isPaid: transaction.status !== 'pending',
+    createdAt: normalizeTimestamp(transaction.createdAt, now),
+    updatedAt: normalizeTimestamp(transaction.updatedAt, now),
   }
 }
 

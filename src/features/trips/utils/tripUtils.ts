@@ -308,6 +308,7 @@ export function createTripItemFormValues(item?: TripItem, trip?: Trip): TripItem
 }
 
 export function buildTripItemFromForm(values: TripItemFormValues, existing?: TripItem): TripItem {
+  const now = currentIsoTimestamp()
   return {
     id: existing?.id ?? crypto.randomUUID(),
     title: values.title.trim(),
@@ -319,6 +320,8 @@ export function buildTripItemFromForm(values: TripItemFormValues, existing?: Tri
     isPaid: values.isPaid,
     note: values.note.trim() || undefined,
     installmentId: values.installmentId || undefined,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
   }
 }
 
@@ -336,7 +339,7 @@ export function upsertTripItem(trip: Trip, item: TripItem): Trip {
     : [item, ...trip.items]
   return {
     ...trip,
-    items: items.sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(a.title).localeCompare(String(b.title))),
+    items: items.sort(compareTripItemsByDateAndCreatedAt),
     updatedAt: currentIsoTimestamp(),
   }
 }
@@ -350,11 +353,18 @@ export function deleteTripItem(trip: Trip, itemId: string): Trip {
 }
 
 export function toggleTripItemPaid(trip: Trip, itemId: string): Trip {
+  const now = currentIsoTimestamp()
   return {
     ...trip,
-    items: trip.items.map((item) => item.id === itemId ? { ...item, isPaid: !item.isPaid } : item),
-    updatedAt: currentIsoTimestamp(),
+    items: trip.items.map((item) => item.id === itemId ? { ...item, isPaid: !item.isPaid, updatedAt: now } : item),
+    updatedAt: now,
   }
+}
+
+export function compareTripItemsByDateAndCreatedAt(a: TripItem, b: TripItem): number {
+  return String(a.date).localeCompare(String(b.date))
+    || String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? ''))
+    || String(a.title).localeCompare(String(b.title), 'th-TH')
 }
 
 export function createTripBudgetLineFormValues(line?: BudgetLine): TripBudgetLineFormValues {

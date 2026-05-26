@@ -8,6 +8,7 @@ type ComboboxFieldProps = {
   placeholder?: string
   emptyLabel?: string
   className?: string
+  showAllOptionsOnFocus?: boolean
 }
 
 function normalizeSearch(value: string): string {
@@ -22,6 +23,7 @@ export function ComboboxField({
   placeholder = '',
   emptyLabel = 'ไม่พบตัวเลือก',
   className = '',
+  showAllOptionsOnFocus = false,
 }: ComboboxFieldProps) {
   const id = useId()
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -88,7 +90,7 @@ export function ComboboxField({
           setOpen(true)
         }}
         onFocus={() => {
-          setDraft(value)
+          setDraft(showAllOptionsOnFocus ? '' : value)
           setActiveIndex(0)
           setOpen(true)
         }}

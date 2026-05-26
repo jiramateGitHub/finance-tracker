@@ -25,6 +25,20 @@ type TripItemModalProps = {
   onSubmit: (item: TripItem) => void
 }
 
+const tripItemCategoryPresets = [
+  'ที่พัก',
+  'เดินทาง',
+  'ค่าน้ำมัน',
+  'ของกิน',
+  'กาแฟ/ขนม',
+  'ช้อปปิ้ง',
+  'บันเทิง',
+  'ของขวัญ/งานสังคม',
+  'ท่องเที่ยว',
+  'ผ่อนสินค้า',
+  'อื่นๆ',
+]
+
 export function TripItemModal({ open, trip, item, categoryOptions, installmentPlans, onClose, onSubmit }: TripItemModalProps) {
   const [values, setValues] = useState<TripItemFormValues>(() => createTripItemFormValues(item ?? undefined, trip))
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +52,7 @@ export function TripItemModal({ open, trip, item, categoryOptions, installmentPl
     ],
     [installmentPlans],
   )
-  const categoryOptionsWithDefault = useMemo(() => Array.from(new Set(['ท่องเที่ยว', ...categoryOptions])), [categoryOptions])
+  const categoryOptionsWithDefault = useMemo(() => Array.from(new Set([...tripItemCategoryPresets, ...categoryOptions])), [categoryOptions])
 
   if (!open) return null
 
@@ -93,6 +107,7 @@ export function TripItemModal({ open, trip, item, categoryOptions, installmentPl
                 value={values.category}
                 options={categoryOptionsWithDefault}
                 placeholder="ท่องเที่ยว"
+                showAllOptionsOnFocus
                 onChange={(category) => updateField('category', category)}
               />
             </FormField>

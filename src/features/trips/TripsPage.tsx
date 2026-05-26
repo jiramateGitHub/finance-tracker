@@ -73,24 +73,25 @@ export function TripsPage({
   const [itemModal, setItemModal] = useState<TripItemModalState>({ open: false, trip: null, item: null })
   const [budgetModal, setBudgetModal] = useState<TripBudgetModalState>({ open: false, trip: null, line: null })
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
-  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [detailTripId, setDetailTripId] = useState<string | null>(null)
 
   const filteredTrips = useMemo(() => filterTrips(data.trips, filters), [data.trips, filters])
   const effectiveActiveTripId = filteredTrips.some((trip) => trip.id === activeTripId)
     ? activeTripId
     : filteredTrips[0]?.id ?? null
   const activeTrip = filteredTrips.find((trip) => trip.id === effectiveActiveTripId) ?? null
+  const detailTrip = detailTripId ? data.trips.find((trip) => trip.id === detailTripId) ?? null : null
   const summary = useMemo(() => summarizeTrips(data, filteredTrips), [data, filteredTrips])
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
 
   function selectTrip(tripId: string): void {
     setActiveTripId(tripId)
     setActiveTab('overview')
-    setDetailModalOpen(true)
+    setDetailTripId(tripId)
   }
 
-  function closeDetailModal(): void {
-    setDetailModalOpen(false)
+  function closeTripDetail(): void {
+    setDetailTripId(null)
   }
 
   function openAddTrip(): void {
@@ -182,10 +183,10 @@ export function TripsPage({
     if (!deleteTarget) return
     if (deleteTarget.type === 'trip') {
       onDeleteTrip(deleteTarget.tripId)
-      const nextTrip = data.trips.find((trip) => trip.id !== deleteTarget.tripId)
+      const nextTrip = filteredTrips.find((trip) => trip.id !== deleteTarget.tripId)
       setActiveTripId(nextTrip?.id ?? null)
       setActiveTab('overview')
-      setDetailModalOpen(false)
+      setDetailTripId(null)
       setDeleteTarget(null)
       return
     }
@@ -205,6 +206,91 @@ export function TripsPage({
     if (deleteTarget?.type === 'item') return th.trips.deleteItemTitle
     if (deleteTarget?.type === 'budgetLine') return th.trips.deleteBudgetLineTitle
     return th.trips.deleteTitle
+  }
+
+  const tripOverlays = (
+    <>
+      {tripModal.open && (
+        <TripModal
+          key={tripModal.trip?.id ?? 'new-trip'}
+          open={tripModal.open}
+          trip={tripModal.trip}
+          onClose={closeTripModal}
+          onSubmit={submitTrip}
+        />
+      )}
+
+      {itemModal.open && itemModal.trip && (
+        <TripItemModal
+          key={`${itemModal.trip.id}-${itemModal.item?.id ?? 'new-item'}`}
+          open={itemModal.open}
+          trip={itemModal.trip}
+          item={itemModal.item}
+          categoryOptions={categoryOptions}
+          installmentPlans={data.installmentPlans}
+          onClose={closeItemModal}
+          onSubmit={submitItem}
+        />
+      )}
+
+      {budgetModal.open && budgetModal.trip && (
+        <TripBudgetFormModal
+          key={`${budgetModal.trip.id}-${budgetModal.line?.categoryId ?? 'new-budget-line'}`}
+          open={budgetModal.open}
+          trip={budgetModal.trip}
+          line={budgetModal.line}
+          categoryOptions={Array.from(new Set([...categoryOptions, ...getTripBudgetLines(data, budgetModal.trip.id).map((line) => line.categoryId)]))}
+          onClose={closeBudgetModal}
+          onSubmit={submitBudgetLine}
+        />
+      )}
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title={getDeleteTitle()}
+        confirmLabel={th.common.delete}
+        destructive
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </>
+  )
+
+  if (detailTrip) {
+    return (
+      <div className="finance-page-shell">
+        <section className="finance-panel-compact grid min-w-0 gap-3 self-start">
+          <div className="finance-toolbar border-b border-slate-100 pb-3">
+            <Button type="button" size="sm" onClick={closeTripDetail}>
+              ย้อนกลับ
+            </Button>
+            <div className="min-w-0 text-right">
+              <h2 className="break-words text-base font-extrabold text-finance-text">{detailTrip.name}</h2>
+              <p className="mt-1 break-words text-sm font-bold leading-6 text-finance-muted">
+                {detailTrip.destination || 'ยังไม่ระบุจุดหมาย'}
+              </p>
+            </div>
+          </div>
+
+          <TripDetail
+            data={data}
+            trip={detailTrip}
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onEditTrip={openEditTrip}
+            onDeleteTrip={handleDeleteTrip}
+            onAddItem={openAddItem}
+            onEditItem={openEditItem}
+            onDeleteItem={handleDeleteItem}
+            onToggleItemPaid={handleToggleItemPaid}
+            onAddBudgetLine={openAddBudgetLine}
+            onEditBudgetLine={openEditBudgetLine}
+            onDeleteBudgetLine={handleDeleteBudgetLine}
+          />
+        </section>
+        {tripOverlays}
+      </div>
+    )
   }
 
   return (
@@ -265,86 +351,7 @@ export function TripsPage({
         )}
       </section>
 
-      {detailModalOpen && activeTrip && (
-        <div className="finance-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trip-detail-title">
-          <div className="finance-modal-panel max-w-6xl">
-            <div className="finance-toolbar border-b border-slate-100 pb-3">
-              <div className="min-w-0">
-                <h2 id="trip-detail-title" className="break-words text-lg font-extrabold text-finance-text">
-                  {activeTrip.name}
-                </h2>
-                <p className="mt-1 text-sm font-bold leading-6 text-finance-muted">
-                  {activeTrip.destination || 'ยังไม่ระบุจุดหมาย'}
-                </p>
-              </div>
-              <Button type="button" variant="light" onClick={closeDetailModal}>
-                {th.common.close}
-              </Button>
-            </div>
-            <div className="finance-modal-body trip-detail-modal-body">
-              <TripDetail
-                data={data}
-                trip={activeTrip}
-                activeTab={activeTab}
-                onChangeTab={setActiveTab}
-                onEditTrip={openEditTrip}
-                onDeleteTrip={handleDeleteTrip}
-                onAddItem={openAddItem}
-                onEditItem={openEditItem}
-                onDeleteItem={handleDeleteItem}
-                onToggleItemPaid={handleToggleItemPaid}
-                onAddBudgetLine={openAddBudgetLine}
-                onEditBudgetLine={openEditBudgetLine}
-                onDeleteBudgetLine={handleDeleteBudgetLine}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tripModal.open && (
-        <TripModal
-          key={tripModal.trip?.id ?? 'new-trip'}
-          open={tripModal.open}
-          trip={tripModal.trip}
-          onClose={closeTripModal}
-          onSubmit={submitTrip}
-        />
-      )}
-
-      {itemModal.open && itemModal.trip && (
-        <TripItemModal
-          key={`${itemModal.trip.id}-${itemModal.item?.id ?? 'new-item'}`}
-          open={itemModal.open}
-          trip={itemModal.trip}
-          item={itemModal.item}
-          categoryOptions={categoryOptions}
-          installmentPlans={data.installmentPlans}
-          onClose={closeItemModal}
-          onSubmit={submitItem}
-        />
-      )}
-
-      {budgetModal.open && budgetModal.trip && (
-        <TripBudgetFormModal
-          key={`${budgetModal.trip.id}-${budgetModal.line?.categoryId ?? 'new-budget-line'}`}
-          open={budgetModal.open}
-          trip={budgetModal.trip}
-          line={budgetModal.line}
-          categoryOptions={Array.from(new Set([...categoryOptions, ...getTripBudgetLines(data, budgetModal.trip.id).map((line) => line.categoryId)]))}
-          onClose={closeBudgetModal}
-          onSubmit={submitBudgetLine}
-        />
-      )}
-
-      <ConfirmModal
-        open={deleteTarget !== null}
-        title={getDeleteTitle()}
-        confirmLabel={th.common.delete}
-        destructive
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTarget(null)}
-      />
+      {tripOverlays}
     </div>
   )
 }

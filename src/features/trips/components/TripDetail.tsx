@@ -6,6 +6,7 @@ import type { AppData, BudgetLine, Trip, TripItem } from '../../../types/finance
 import { clampPercent, formatDate, formatMoney } from '../../../utils/formatters'
 import {
   calculateTripTotals,
+  compareTripItemsByDateAndCreatedAt,
   getTripActualByCategory,
   getTripBudgetLineViews,
   getTripDayCount,
@@ -75,6 +76,8 @@ export function TripDetail({
   const remainingTone = totals.remaining >= 0 ? 'text-emerald-700' : 'text-rose-700'
   const tripStatus = getTripStatus(trip)
   const usagePercent = clampPercent(totals.usagePercent)
+  const actualItemGroups = groupTripItemsByDate(trip.items)
+  const installmentNameById = new Map(data.installmentPlans.map((plan) => [plan.id, plan.name]))
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -160,17 +163,26 @@ export function TripDetail({
             <div className="text-sm font-bold text-slate-500">รายการใช้จ่ายจริงของทริปนี้</div>
             <Button type="button" size="sm" variant="primary" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>
           </div>
-          {trip.items.length ? trip.items.map((item) => (
-            <article key={item.id} className="finance-card-compact grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          {actualItemGroups.length ? actualItemGroups.map((group) => (
+            <section key={group.date} className="grid gap-2">
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-2">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-extrabold text-blue-950">{formatDate(group.date)}</h3>
+                  <p className="mt-0.5 text-xs font-bold text-blue-700">{group.items.length} รายการ</p>
+                </div>
+                <div className="text-right text-sm font-extrabold text-rose-700">{formatMoney(group.total)}</div>
+              </div>
+
+              {group.items.map((item) => (
+                <article key={item.id} className="finance-card-compact grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
               <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <h3 className="min-w-0 truncate font-extrabold">{item.title}</h3>
                   <Badge tone={item.isPaid ? 'income' : 'warning'}>{item.isPaid ? th.transaction.paid : th.transaction.unpaid}</Badge>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-500">
-                  <span>{formatDate(item.date)}</span>
                   <span>{item.category}</span>
-                  {item.installmentId ? <span>{th.transaction.installment}: {item.installmentId}</span> : null}
+                  {item.installmentId ? <span>{th.transaction.installment}: {installmentNameById.get(item.installmentId) ?? 'ไม่พบแผนผ่อน'}</span> : null}
                   {(item.destination || item.country) ? <span>{[item.destination, item.country].filter(Boolean).join(', ')}</span> : null}
                   {item.note ? <span className="truncate">หมายเหตุ: {item.note}</span> : null}
                 </div>
@@ -183,7 +195,9 @@ export function TripDetail({
                   <Button type="button" size="sm" variant="danger" onClick={() => onDeleteItem(trip, item.id)}>{th.common.delete}</Button>
                 </div>
               </div>
-            </article>
+                </article>
+              ))}
+            </section>
           )) : <EmptyState title="ยังไม่มีรายการทริป" description="เพิ่มรายการใช้จ่ายจริงของทริปนี้ เช่น ที่พัก อาหาร เดินทาง หรือกิจกรรม" />}
         </div>
       )}
@@ -263,4 +277,18 @@ function Metric({ label, value, className = 'text-blue-700' }: MetricProps) {
       <div className={`finance-metric-value ${className}`}>{value}</div>
     </div>
   )
+}
+
+function groupTripItemsByDate(items: TripItem[]): Array<{ date: string; items: TripItem[]; total: number }> {
+  const groups = new Map<string, TripItem[]>()
+  items.slice().sort(compareTripItemsByDateAndCreatedAt).forEach((item) => {
+    const date = item.date || ''
+    groups.set(date, [...(groups.get(date) ?? []), item])
+  })
+
+  return Array.from(groups.entries()).map(([date, groupItems]) => ({
+    date,
+    items: groupItems,
+    total: groupItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+  }))
 }
