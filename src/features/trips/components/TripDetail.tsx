@@ -1,6 +1,10 @@
+import { useMemo, useState } from 'react'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { EmptyState } from '../../../components/ui/EmptyState'
+import { FormField } from '../../../components/ui/FormField'
+import { SelectField } from '../../../components/ui/SelectField'
+import { TextInput } from '../../../components/ui/TextInput'
 import { th } from '../../../i18n/th'
 import type { AppData, BudgetLine, Trip, TripItem } from '../../../types/finance'
 import { clampPercent, formatDate, formatMoney } from '../../../utils/formatters'
@@ -33,6 +37,8 @@ type TripDetailProps = {
   onDeleteBudgetLine: (trip: Trip, categoryId: string) => void
 }
 
+type ActualItemStatusFilter = 'all' | 'paid' | 'unpaid' | 'installment'
+
 const budgetStatusTone: Record<TripBudgetStatus, 'income' | 'warning' | 'expense'> = {
   safe: 'income',
   'near-limit': 'warning',
@@ -51,6 +57,13 @@ const tabLabels: Record<TripDetailTab, string> = {
   plan: 'แผนงบ',
 }
 
+const actualStatusOptions: Array<{ value: ActualItemStatusFilter; label: string }> = [
+  { value: 'all', label: 'ทุกสถานะ' },
+  { value: 'unpaid', label: 'ยังไม่จ่าย' },
+  { value: 'paid', label: 'จ่ายแล้ว' },
+  { value: 'installment', label: 'ผูกยอดผ่อน' },
+]
+
 export function TripDetail({
   data,
   trip,
@@ -66,6 +79,31 @@ export function TripDetail({
   onEditBudgetLine,
   onDeleteBudgetLine,
 }: TripDetailProps) {
+  const [actualKeyword, setActualKeyword] = useState('')
+  const [actualCategory, setActualCategory] = useState('')
+  const [actualStatus, setActualStatus] = useState<ActualItemStatusFilter>('all')
+  const [collapsedActualDates, setCollapsedActualDates] = useState<Set<string>>(() => new Set())
+
+  const installmentNameById = useMemo(
+    () => new Map(data.installmentPlans.map((plan) => [plan.id, plan.name])),
+    [data.installmentPlans],
+  )
+  const actualCategoryOptions = useMemo(
+    () => Array.from(new Set((trip?.items ?? []).map((item) => item.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th-TH')),
+    [trip?.items],
+  )
+  const filteredActualItems = useMemo(
+    () => filterTripItems(trip?.items ?? [], {
+      category: actualCategory,
+      installmentNameById,
+      keyword: actualKeyword,
+      status: actualStatus,
+    }),
+    [actualCategory, actualKeyword, actualStatus, installmentNameById, trip?.items],
+  )
+  const actualItemGroups = useMemo(() => groupTripItemsByDate(filteredActualItems), [filteredActualItems])
+  const isActualFiltered = Boolean(actualKeyword.trim() || actualCategory || actualStatus !== 'all')
+
   if (!trip) {
     return <EmptyState title="ยังไม่ได้เลือกทริป" description="เลือกทริปจากรายการหรือสร้างทริปใหม่เพื่อดูรายละเอียด" />
   }
@@ -76,8 +114,22 @@ export function TripDetail({
   const remainingTone = totals.remaining >= 0 ? 'text-emerald-700' : 'text-rose-700'
   const tripStatus = getTripStatus(trip)
   const usagePercent = clampPercent(totals.usagePercent)
-  const actualItemGroups = groupTripItemsByDate(trip.items)
-  const installmentNameById = new Map(data.installmentPlans.map((plan) => [plan.id, plan.name]))
+  const filteredActualTotal = filteredActualItems.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+
+  function toggleActualDate(date: string): void {
+    setCollapsedActualDates((current) => {
+      const next = new Set(current)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
+
+  function clearActualFilters(): void {
+    setActualKeyword('')
+    setActualCategory('')
+    setActualStatus('all')
+  }
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -159,46 +211,126 @@ export function TripDetail({
 
       {activeTab === 'actual' && (
         <div className="grid gap-3">
-          <div className="finance-toolbar">
-            <div className="text-sm font-bold text-slate-500">รายการใช้จ่ายจริงของทริปนี้</div>
+          <div className="finance-toolbar items-start">
+            <div className="min-w-0">
+              <div className="text-sm font-extrabold text-slate-800">รายการใช้จ่ายจริงของทริปนี้</div>
+              <div className="mt-1 text-xs font-bold text-slate-500">
+                แสดง {filteredActualItems.length} จาก {trip.items.length} รายการ · รวม {formatMoney(filteredActualTotal)}
+              </div>
+            </div>
             <Button type="button" size="sm" variant="primary" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>
           </div>
-          {actualItemGroups.length ? actualItemGroups.map((group) => (
-            <section key={group.date} className="grid gap-2">
-              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-2">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-extrabold text-blue-950">{formatDate(group.date)}</h3>
-                  <p className="mt-0.5 text-xs font-bold text-blue-700">{group.items.length} รายการ</p>
-                </div>
-                <div className="text-right text-sm font-extrabold text-rose-700">{formatMoney(group.total)}</div>
-              </div>
 
-              {group.items.map((item) => (
-                <article key={item.id} className="finance-card-compact grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-              <div className="min-w-0">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <h3 className="min-w-0 truncate font-extrabold">{item.title}</h3>
-                  <Badge tone={item.isPaid ? 'income' : 'warning'}>{item.isPaid ? th.transaction.paid : th.transaction.unpaid}</Badge>
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-500">
-                  <span>{item.category}</span>
-                  {item.installmentId ? <span>{th.transaction.installment}: {installmentNameById.get(item.installmentId) ?? 'ไม่พบแผนผ่อน'}</span> : null}
-                  {(item.destination || item.country) ? <span>{[item.destination, item.country].filter(Boolean).join(', ')}</span> : null}
-                  {item.note ? <span className="truncate">หมายเหตุ: {item.note}</span> : null}
-                </div>
+          <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+            <div className="finance-filter-grid">
+              <FormField label="ค้นหารายการ">
+                <TextInput
+                  value={actualKeyword}
+                  placeholder="ชื่อ หมวด จุดหมาย หรือหมายเหตุ"
+                  onChange={(event) => setActualKeyword(event.target.value)}
+                />
+              </FormField>
+              <FormField label="หมวดหมู่">
+                <SelectField
+                  value={actualCategory}
+                  placeholder="ทุกหมวดหมู่"
+                  options={[
+                    { value: '', label: 'ทุกหมวดหมู่' },
+                    ...actualCategoryOptions.map((category) => ({ value: category, label: category })),
+                  ]}
+                  onChange={(event) => setActualCategory(event.target.value)}
+                />
+              </FormField>
+              <FormField label="สถานะ">
+                <SelectField
+                  value={actualStatus}
+                  options={actualStatusOptions}
+                  onChange={(event) => setActualStatus(event.target.value as ActualItemStatusFilter)}
+                />
+              </FormField>
+            </div>
+
+            <div className="finance-filter-actions">
+              <div className="text-xs font-extrabold text-slate-500">
+                {actualItemGroups.length} วัน · {filteredActualItems.length} รายการ
               </div>
-              <div className="grid gap-2 md:justify-items-end">
-                <div className="text-right text-lg font-extrabold text-rose-700">{formatMoney(item.amount)}</div>
-                <div className="flex min-w-0 flex-wrap justify-end gap-2">
-                  <Button type="button" size="sm" onClick={() => onToggleItemPaid(trip, item.id)}>{item.isPaid ? th.transaction.markUnpaid : th.transaction.markPaid}</Button>
-                  <Button type="button" size="sm" onClick={() => onEditItem(trip, item)}>{th.common.edit}</Button>
-                  <Button type="button" size="sm" variant="danger" onClick={() => onDeleteItem(trip, item.id)}>{th.common.delete}</Button>
-                </div>
+              <div className="flex min-w-0 flex-wrap justify-end gap-2">
+                {isActualFiltered ? <Button type="button" size="sm" onClick={clearActualFilters}>ล้างตัวกรอง</Button> : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setCollapsedActualDates(new Set(actualItemGroups.map((group) => group.date)))}
+                >
+                  ย่อทั้งหมด
+                </Button>
+                <Button type="button" size="sm" onClick={() => setCollapsedActualDates(new Set())}>
+                  ขยายทั้งหมด
+                </Button>
               </div>
-                </article>
-              ))}
-            </section>
-          )) : <EmptyState title="ยังไม่มีรายการทริป" description="เพิ่มรายการใช้จ่ายจริงของทริปนี้ เช่น ที่พัก อาหาร เดินทาง หรือกิจกรรม" />}
+            </div>
+          </div>
+
+          {actualItemGroups.length ? actualItemGroups.map((group) => {
+            const collapsed = collapsedActualDates.has(group.date)
+            return (
+              <section key={group.date} className="grid gap-2">
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/80 px-3 py-2 text-left transition hover:border-blue-200 hover:bg-blue-100/70"
+                  aria-expanded={!collapsed}
+                  onClick={() => toggleActualDate(group.date)}
+                >
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-sm font-extrabold text-blue-700 shadow-sm">
+                        {collapsed ? '+' : '-'}
+                      </span>
+                      <h3 className="text-sm font-extrabold text-blue-950">{formatDate(group.date)}</h3>
+                    </div>
+                    <p className="mt-1 text-xs font-bold text-blue-700">{group.items.length} รายการ</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-extrabold text-rose-700">{formatMoney(group.total)}</div>
+                    <div className="mt-0.5 text-xs font-bold text-slate-500">{collapsed ? 'แตะเพื่อดูรายการ' : 'แตะเพื่อย่อ'}</div>
+                  </div>
+                </button>
+
+                {!collapsed ? (
+                  <div className="grid gap-2 border-l-2 border-blue-100 pl-2 sm:pl-3">
+                    {group.items.map((item) => (
+                      <article key={item.id} className="finance-card-compact grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h3 className="min-w-0 truncate font-extrabold">{item.title}</h3>
+                            <Badge tone={item.isPaid ? 'income' : 'warning'}>{item.isPaid ? th.transaction.paid : th.transaction.unpaid}</Badge>
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-500">
+                            <span>{item.category}</span>
+                            {item.installmentId ? <span>{th.transaction.installment}: {installmentNameById.get(item.installmentId) ?? 'ไม่พบแผนผ่อน'}</span> : null}
+                            {(item.destination || item.country) ? <span>{[item.destination, item.country].filter(Boolean).join(', ')}</span> : null}
+                            {item.note ? <span className="truncate">หมายเหตุ: {item.note}</span> : null}
+                          </div>
+                        </div>
+                        <div className="grid gap-2 md:justify-items-end">
+                          <div className="text-right text-lg font-extrabold text-rose-700">{formatMoney(item.amount)}</div>
+                          <div className="flex min-w-0 flex-wrap justify-end gap-2">
+                            <Button type="button" size="sm" onClick={() => onToggleItemPaid(trip, item.id)}>{item.isPaid ? th.transaction.markUnpaid : th.transaction.markPaid}</Button>
+                            <Button type="button" size="sm" onClick={() => onEditItem(trip, item)}>{th.common.edit}</Button>
+                            <Button type="button" size="sm" variant="danger" onClick={() => onDeleteItem(trip, item.id)}>{th.common.delete}</Button>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            )
+          }) : (
+            <EmptyState
+              title={trip.items.length ? 'ไม่พบรายการตามตัวกรอง' : 'ยังไม่มีรายการทริป'}
+              description={trip.items.length ? 'ลองเปลี่ยนคำค้น หมวดหมู่ หรือสถานะเพื่อดูรายการอื่น' : 'เพิ่มรายการใช้จ่ายจริงของทริปนี้ เช่น ที่พัก อาหาร เดินทาง หรือกิจกรรม'}
+            />
+          )}
         </div>
       )}
 
@@ -291,4 +423,37 @@ function groupTripItemsByDate(items: TripItem[]): Array<{ date: string; items: T
     items: groupItems,
     total: groupItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
   }))
+}
+
+type TripItemFilterInput = {
+  category: string
+  installmentNameById: Map<string, string>
+  keyword: string
+  status: ActualItemStatusFilter
+}
+
+function filterTripItems(items: TripItem[], filters: TripItemFilterInput): TripItem[] {
+  const keyword = normalizeActualKeyword(filters.keyword)
+
+  return items.filter((item) => {
+    if (filters.category && item.category !== filters.category) return false
+    if (filters.status === 'paid' && !item.isPaid) return false
+    if (filters.status === 'unpaid' && item.isPaid) return false
+    if (filters.status === 'installment' && !item.installmentId) return false
+    if (!keyword) return true
+
+    const installmentName = item.installmentId ? filters.installmentNameById.get(item.installmentId) : ''
+    return [
+      item.title,
+      item.category,
+      item.destination,
+      item.country,
+      item.note,
+      installmentName,
+    ].some((value) => normalizeActualKeyword(value).includes(keyword))
+  })
+}
+
+function normalizeActualKeyword(value: unknown): string {
+  return String(value ?? '').trim().toLocaleLowerCase('th-TH')
 }
