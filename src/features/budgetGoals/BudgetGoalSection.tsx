@@ -152,7 +152,7 @@ export function BudgetGoalSection({
   return (
     <div className="grid gap-4">
       <Card title="งบประมาณและเป้าหมาย">
-        <div className="grid gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
           <SummaryCard label="งบเดือนนี้" value={formatMoney(totalBudget)} icon="B" tone="balance" />
           <SummaryCard label="ใช้ไปแล้ว" value={formatMoney(totalUsed)} icon="U" tone="expense" />
           <SummaryCard label="คงเหลือ" value={formatMoney(totalRemaining)} icon="R" tone={totalRemaining < 0 ? 'expense' : 'income'} />

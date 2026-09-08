@@ -1,6 +1,6 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../data/categories'
 import type { Budget, FinanceData, Goal, GoalStatus, TransactionEntry } from '../../types/finance'
-import { clampPercent, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../utils/formatters'
+import { clampPercent, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../utils/formatters'
 
 export type BudgetStatus = 'safe' | 'near-limit' | 'over-budget'
 export type InsightTone = 'neutral' | 'income' | 'expense' | 'warning' | 'active'
@@ -114,7 +114,8 @@ export function hasDuplicateMonthlyBudget(budgets: Budget[], values: BudgetFormV
 export function validateBudgetForm(values: BudgetFormValues, budgets: Budget[], editingBudgetId?: string): string | null {
   if (!values.month) return 'เลือกเดือนของงบประมาณ'
   if (!values.category.trim()) return 'กรอกหมวดหมู่'
-  if (!Number.isFinite(Number(values.amount)) || Number(values.amount) <= 0) return 'กรอกจำนวนงบประมาณมากกว่า 0'
+  const parsedAmount = parseAmountSafe(values.amount, Number.NaN)
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return 'กรอกจำนวนงบประมาณมากกว่า 0'
   if (hasDuplicateMonthlyBudget(budgets, values, editingBudgetId)) return 'มีงบรายเดือนของเดือนและหมวดหมู่นี้แล้ว'
   return null
 }
@@ -122,7 +123,7 @@ export function validateBudgetForm(values: BudgetFormValues, budgets: Budget[], 
 export function buildBudgetFromForm(values: BudgetFormValues, existing?: Budget): Budget {
   const now = currentIsoTimestamp()
   const category = normalizeCategoryId(values.category, 'อื่นๆ')
-  const amount = Math.max(0, Number(values.amount || 0))
+  const amount = Math.max(0, parseAmountSafe(values.amount, 0))
   const lineId = existing?.lines?.[0]?.id ?? crypto.randomUUID()
   return {
     id: existing?.id ?? crypto.randomUUID(),
@@ -154,15 +155,17 @@ export function createGoalFormValues(goal?: Goal): GoalFormValues {
 
 export function validateGoalForm(values: GoalFormValues): string | null {
   if (!values.name.trim()) return 'กรอกชื่อเป้าหมาย'
-  if (!Number.isFinite(Number(values.targetAmount)) || Number(values.targetAmount) <= 0) return 'กรอกยอดเป้าหมายมากกว่า 0'
-  if (!Number.isFinite(Number(values.currentAmount)) || Number(values.currentAmount) < 0) return 'กรอกยอดปัจจุบันตั้งแต่ 0 ขึ้นไป'
+  const parsedTarget = parseAmountSafe(values.targetAmount, Number.NaN)
+  if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) return 'กรอกยอดเป้าหมายมากกว่า 0'
+  const parsedCurrent = parseAmountSafe(values.currentAmount, Number.NaN)
+  if (!Number.isFinite(parsedCurrent) || parsedCurrent < 0) return 'กรอกยอดปัจจุบันตั้งแต่ 0 ขึ้นไป'
   return null
 }
 
 export function buildGoalFromForm(values: GoalFormValues, existing?: Goal): Goal {
   const now = currentIsoTimestamp()
-  const targetAmount = Math.max(0, Number(values.targetAmount || 0))
-  const currentAmount = Math.max(0, Number(values.currentAmount || 0))
+  const targetAmount = Math.max(0, parseAmountSafe(values.targetAmount, 0))
+  const currentAmount = Math.max(0, parseAmountSafe(values.currentAmount, 0))
   return {
     id: existing?.id ?? crypto.randomUUID(),
     name: values.name.trim(),

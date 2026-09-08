@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { ComboboxField } from '../../../components/ui/ComboboxField'
 import { DateInput } from '../../../components/ui/DateInput'
@@ -42,6 +42,16 @@ const tripItemCategoryPresets = [
 export function TripItemModal({ open, trip, item, categoryOptions, installmentPlans, onClose, onSubmit }: TripItemModalProps) {
   const [values, setValues] = useState<TripItemFormValues>(() => createTripItemFormValues(item ?? undefined, trip))
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose])
+
   const installmentOptions = useMemo(
     () => [
       { value: '', label: 'ไม่ผูกกับแผนผ่อน' },
@@ -77,12 +87,24 @@ export function TripItemModal({ open, trip, item, categoryOptions, installmentPl
 
   return (
     <div className="finance-modal-backdrop">
-      <form className="finance-modal-panel max-w-2xl" onSubmit={handleSubmit}>
-        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
+      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
+      <form className="finance-modal-panel relative z-10 max-w-2xl" onSubmit={handleSubmit}>
+        <div className="mx-auto -mt-1 mb-1 h-1 w-10 rounded-full bg-slate-200 sm:hidden" aria-hidden="true" />
+        <header className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-extrabold text-finance-text">{item ? 'แก้ไขรายการทริป' : 'เพิ่มรายการทริป'}</h2>
+            <h2 className="text-lg font-bold tracking-tight text-slate-900">{item ? 'แก้ไขรายการทริป' : 'เพิ่มรายการทริป'}</h2>
           </div>
-          <Button type="button" onClick={onClose}>{th.common.close}</Button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={th.common.close}
+            className="grid size-8.5 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95"
+          >
+            <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </header>
 
         {error ? <div className="finance-error">{error}</div> : null}
@@ -152,7 +174,7 @@ export function TripItemModal({ open, trip, item, categoryOptions, installmentPl
 
         <footer className="finance-modal-footer">
           <Button type="button" onClick={onClose}>{th.common.cancel}</Button>
-          <Button type="button" variant="primary" onClick={saveItem}>{item ? th.common.saveChanges : 'บันทึกรายการ'}</Button>
+          <Button type="submit" variant="primary">{item ? th.common.saveChanges : 'บันทึกรายการ'}</Button>
         </footer>
       </form>
     </div>

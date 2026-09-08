@@ -3,7 +3,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { th } from '../../i18n/th'
 import type { Goal } from '../../types/finance'
-import { formatMoney } from '../../utils/formatters'
+import { formatMoney, parseAmountSafe } from '../../utils/formatters'
 import { calculateGoalProgress } from './budgetGoalCalculations'
 
 type GoalCardProps = {
@@ -29,12 +29,12 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
   const progress = calculateGoalProgress(goal)
   const [draft, setDraft] = useState({ goalId: goal.id, amount: String(goal.currentAmount) })
   const draftAmount = draft.goalId === goal.id ? draft.amount : String(goal.currentAmount)
-  const amountChanged = Number(draftAmount) !== goal.currentAmount
+  const parsedDraft = parseAmountSafe(draftAmount, Number.NaN)
+  const amountChanged = Number.isFinite(parsedDraft) && parsedDraft >= 0 && parsedDraft !== goal.currentAmount
 
   function saveAmount(): void {
-    const amount = Number(draftAmount)
-    if (!Number.isFinite(amount) || amount < 0) return
-    onUpdateAmount(goal.id, amount)
+    if (!amountChanged) return
+    onUpdateAmount(goal.id, parsedDraft)
   }
 
   return (
@@ -80,16 +80,21 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <label className="grid min-w-44 flex-1 gap-1 text-sm font-bold text-slate-600">
+      <div className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
+        <label className="grid min-w-44 flex-1 gap-1 text-xs font-semibold text-slate-600">
           อัปเดตยอดปัจจุบัน
           <input
-            className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 py-2"
+            className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-xs outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
             inputMode="decimal"
-            min="0"
             type="text"
             value={draftAmount}
             onChange={(event) => setDraft({ goalId: goal.id, amount: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                saveAmount()
+              }
+            }}
           />
         </label>
         <Button type="button" size="sm" variant="primary" disabled={!amountChanged} onClick={saveAmount}>

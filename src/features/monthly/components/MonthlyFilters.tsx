@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { ComboboxField } from '../../../components/ui/ComboboxField'
 import { FilterBar } from '../../../components/ui/FilterBar'
@@ -28,14 +29,34 @@ export function MonthlyFilters({
   onAddIncome,
   onAddExpense,
 }: MonthlyFiltersProps) {
+  const hasExtendedFilters = Boolean(
+    filters.category || filters.status !== 'all' || filters.minAmount || filters.maxAmount,
+  )
+  const [showExtended, setShowExtended] = useState(hasExtendedFilters)
+
   return (
     <FilterBar
-      resultText={`พบ ${resultCount} รายการตามตัวกรอง`}
+      resultText={`พบ ${resultCount} รายการ`}
       actions={(
         <>
-          <Button onClick={() => onChange(createEmptyMonthlyFilters(selectedMonth))}>{th.common.clearFilters}</Button>
-          <Button variant="success" onClick={onAddIncome}>{th.transaction.addIncome}</Button>
-          <Button variant="danger" onClick={onAddExpense}>{th.transaction.addExpense}</Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setShowExtended((prev) => !prev)}
+            className={showExtended ? 'border-blue-300 bg-blue-50 text-blue-700' : ''}
+          >
+            {showExtended ? 'ย่อตัวกรอง' : 'ตัวกรองเพิ่มเติม'}
+            {hasExtendedFilters && !showExtended ? ' •' : ''}
+          </Button>
+          <Button type="button" size="sm" onClick={() => onChange(createEmptyMonthlyFilters(selectedMonth))}>
+            {th.common.clearFilters}
+          </Button>
+          <Button type="button" size="sm" variant="success" onClick={onAddIncome}>
+            {th.transaction.addIncome}
+          </Button>
+          <Button type="button" size="sm" variant="danger" onClick={onAddExpense}>
+            {th.transaction.addExpense}
+          </Button>
         </>
       )}
     >
@@ -69,15 +90,6 @@ export function MonthlyFilters({
         />
       </FormField>
 
-      <FormField label="หมวดหมู่">
-        <ComboboxField
-          value={filters.category}
-          options={categoryOptions}
-          placeholder="ทุกหมวดหมู่"
-          onChange={(category) => onChange({ ...filters, category })}
-        />
-      </FormField>
-
       <FormField label="ประเภท">
         <SelectField
           value={filters.type}
@@ -92,25 +104,38 @@ export function MonthlyFilters({
         />
       </FormField>
 
-      <FormField label="สถานะจ่าย">
-        <SelectField
-          value={filters.status}
-          options={[
-            { value: 'all', label: 'ทั้งหมด' },
-            { value: 'paid', label: th.transaction.paid },
-            { value: 'unpaid', label: th.transaction.unpaid },
-          ]}
-          onChange={(event) => onChange({ ...filters, status: event.target.value as MonthlyStatusFilter })}
-        />
-      </FormField>
+      {showExtended && (
+        <>
+          <FormField label="หมวดหมู่">
+            <ComboboxField
+              value={filters.category}
+              options={categoryOptions}
+              placeholder="ทุกหมวดหมู่"
+              onChange={(category) => onChange({ ...filters, category })}
+            />
+          </FormField>
 
-      <FormField label="ยอดขั้นต่ำ">
-        <TextInput inputMode="decimal" value={filters.minAmount} onChange={(event) => onChange({ ...filters, minAmount: event.target.value })} />
-      </FormField>
+          <FormField label="สถานะจ่าย">
+            <SelectField
+              value={filters.status}
+              options={[
+                { value: 'all', label: 'ทั้งหมด' },
+                { value: 'paid', label: th.transaction.paid },
+                { value: 'unpaid', label: th.transaction.unpaid },
+              ]}
+              onChange={(event) => onChange({ ...filters, status: event.target.value as MonthlyStatusFilter })}
+            />
+          </FormField>
 
-      <FormField label="ยอดสูงสุด">
-        <TextInput inputMode="decimal" value={filters.maxAmount} onChange={(event) => onChange({ ...filters, maxAmount: event.target.value })} />
-      </FormField>
+          <FormField label="ยอดขั้นต่ำ">
+            <TextInput inputMode="decimal" value={filters.minAmount} onChange={(event) => onChange({ ...filters, minAmount: event.target.value })} />
+          </FormField>
+
+          <FormField label="ยอดสูงสุด">
+            <TextInput inputMode="decimal" value={filters.maxAmount} onChange={(event) => onChange({ ...filters, maxAmount: event.target.value })} />
+          </FormField>
+        </>
+      )}
     </FilterBar>
   )
 }

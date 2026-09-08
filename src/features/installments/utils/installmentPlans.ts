@@ -1,6 +1,6 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
-import { currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../../utils/formatters'
+import { currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
 export type InstallmentViewMode = 'list' | 'calendar'
 export type InstallmentStatusFilter = 'all' | 'active' | 'paid'
@@ -194,18 +194,20 @@ export function getCategoryOptions(data: AppData): string[] {
 export function buildInstallmentPlanFromForm(values: InstallmentFormValues, existing?: InstallmentPlan): InstallmentPlan {
   const now = currentIsoTimestamp()
   const monthsTotal = Math.max(1, Math.floor(Number(values.monthsTotal || 1)))
-  const monthlyAmount = Math.max(0, Number(values.monthlyAmount || 0))
-  const principal = Math.max(0, Number(values.principal || values.totalAmount || monthlyAmount * monthsTotal))
-  const totalAmount = Math.max(monthlyAmount * monthsTotal, Number(values.totalAmount || principal || 0))
+  const monthlyAmount = Math.max(0, parseAmountSafe(values.monthlyAmount, 0))
+  const parsedTotal = parseAmountSafe(values.totalAmount, 0)
+  const parsedPrincipal = parseAmountSafe(values.principal, 0)
+  const principal = Math.max(0, parsedPrincipal || parsedTotal || monthlyAmount * monthsTotal)
+  const totalAmount = Math.max(monthlyAmount * monthsTotal, parsedTotal || principal || 0)
   const paidMonths = Math.max(0, Math.min(monthsTotal, Math.floor(Number(values.paidMonths || 0))))
   const startMonth = values.startMonth || currentMonthKey()
   const scheduleMonths = Array.from({ length: monthsTotal }, (_, index) => addMonths(startMonth, index))
   const paidMonthKeys = scheduleMonths.slice(0, paidMonths)
   const category = normalizeCategoryId(values.category, 'ผ่อนสินค้า')
   const dueDay = values.dueDay ? Math.min(31, Math.max(1, Math.floor(Number(values.dueDay)))) : undefined
-  const interestRate = values.interestRate ? Math.max(0, Number(values.interestRate)) : null
+  const interestRate = values.interestRate ? Math.max(0, parseAmountSafe(values.interestRate, 0)) : null
   const interestType: InterestType = values.interestType
-  const remainingOverride = values.remainingOverride === '' ? undefined : Math.max(0, Number(values.remainingOverride || 0))
+  const remainingOverride = values.remainingOverride.trim() === '' ? undefined : Math.max(0, parseAmountSafe(values.remainingOverride, 0))
 
   return {
     id: existing?.id ?? crypto.randomUUID(),
@@ -241,13 +243,39 @@ export function buildInstallmentPlanFromForm(values: InstallmentFormValues, exis
 export function validateInstallmentForm(values: InstallmentFormValues): string | null {
   if (!values.name.trim()) return 'กรอกชื่อแผนผ่อน'
   if (!values.startMonth) return 'เลือกเดือนเริ่มต้น'
-  if (!Number.isFinite(Number(values.monthlyAmount)) || Number(values.monthlyAmount) <= 0) return 'กรอกยอดผ่อนต่อเดือนมากกว่า 0'
-  if (!Number.isFinite(Number(values.monthsTotal)) || Number(values.monthsTotal) <= 0) return 'กรอกจำนวนเดือนอย่างน้อย 1 เดือน'
-  if (values.totalAmount && (!Number.isFinite(Number(values.totalAmount)) || Number(values.totalAmount) <= 0)) return 'ยอดรวมต้องมากกว่า 0'
-  if (values.principal && (!Number.isFinite(Number(values.principal)) || Number(values.principal) <= 0)) return 'เงินต้นต้องมากกว่า 0'
-  if (values.remainingOverride && (!Number.isFinite(Number(values.remainingOverride)) || Number(values.remainingOverride) < 0)) return 'ยอดคงเหลือที่กำหนดเองต้องเป็น 0 หรือมากกว่า'
-  if (values.dueDay && (!Number.isFinite(Number(values.dueDay)) || Number(values.dueDay) < 1 || Number(values.dueDay) > 31)) return 'วันครบกำหนดต้องอยู่ระหว่าง 1 ถึง 31'
-  if (values.interestRate && (!Number.isFinite(Number(values.interestRate)) || Number(values.interestRate) < 0)) return 'อัตราดอกเบี้ยต้องเป็น 0 หรือมากกว่า'
+  const monthlyAmount = parseAmountSafe(values.monthlyAmount, Number.NaN)
+  if (!Number.isFinite(monthlyAmount) || monthlyAmount <= 0) return 'กรอกยอดผ่อนต่อเดือนมากกว่า 0'
+  const monthsTotal = Number(values.monthsTotal)
+  if (!Number.isFinite(monthsTotal) || !Number.isInteger(monthsTotal) || monthsTotal <= 0) return 'จำนวนเดือนต้องเป็นจำนวนเต็มอย่างน้อย 1 เดือน'
+  if (values.paidMonths.trim()) {
+    const paidMonths = Number(values.paidMonths)
+    if (!Number.isFinite(paidMonths) || !Number.isInteger(paidMonths) || paidMonths < 0) {
+      return 'จำนวนเดือนที่จ่ายแล้วต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป'
+    }
+    if (paidMonths > monthsTotal) {
+      return 'จำนวนเดือนที่จ่ายแล้วต้องไม่เกินจำนวนเดือนทั้งหมด'
+    }
+  }
+  if (values.totalAmount.trim()) {
+    const total = parseAmountSafe(values.totalAmount, Number.NaN)
+    if (!Number.isFinite(total) || total <= 0) return 'ยอดรวมต้องมากกว่า 0'
+  }
+  if (values.principal.trim()) {
+    const principal = parseAmountSafe(values.principal, Number.NaN)
+    if (!Number.isFinite(principal) || principal <= 0) return 'เงินต้นต้องมากกว่า 0'
+  }
+  if (values.remainingOverride.trim()) {
+    const remaining = parseAmountSafe(values.remainingOverride, Number.NaN)
+    if (!Number.isFinite(remaining) || remaining < 0) return 'ยอดคงเหลือที่กำหนดเองต้องเป็น 0 หรือมากกว่า'
+  }
+  if (values.dueDay.trim()) {
+    const due = Number(values.dueDay)
+    if (!Number.isFinite(due) || !Number.isInteger(due) || due < 1 || due > 31) return 'วันครบกำหนดต้องเป็นวันที่ 1 ถึง 31'
+  }
+  if (values.interestRate.trim()) {
+    const rate = parseAmountSafe(values.interestRate, Number.NaN)
+    if (!Number.isFinite(rate) || rate < 0) return 'อัตราดอกเบี้ยต้องเป็น 0 หรือมากกว่า'
+  }
   return null
 }
 

@@ -9,7 +9,7 @@ type MonthlySummaryCardsProps = {
 
 export function MonthlySummaryCards({ totals }: MonthlySummaryCardsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
       <SummaryCard label={th.transaction.income} value={formatMoney(totals.income)} icon="+" tone="income" />
       <SummaryCard label={th.transaction.expense} value={formatMoney(totals.expense)} icon="-" tone="expense" />
       <SummaryCard label={th.transaction.balance} value={formatMoney(totals.balance)} icon="=" tone="balance" />

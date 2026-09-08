@@ -8,16 +8,16 @@ type BadgeProps = PropsWithChildren<{
 }>
 
 const toneClassName: Record<BadgeTone, string> = {
-  neutral: 'border-slate-200 bg-slate-50 text-slate-600',
-  income: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  expense: 'border-rose-200 bg-rose-50 text-rose-700',
-  warning: 'border-amber-200 bg-amber-50 text-amber-700',
-  active: 'border-blue-200 bg-blue-50 text-blue-700',
+  neutral: 'border-slate-200/80 bg-slate-100/80 text-slate-600',
+  income: 'border-emerald-200/60 bg-emerald-50/90 text-emerald-700',
+  expense: 'border-rose-200/60 bg-rose-50/90 text-rose-700',
+  warning: 'border-amber-200/60 bg-amber-50/90 text-amber-700',
+  active: 'border-blue-200/60 bg-blue-50/90 text-blue-700',
 }
 
 export function Badge({ tone = 'neutral', className = '', children }: BadgeProps) {
   return (
-    <span className={`inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-xs font-bold ${toneClassName[tone]} ${className}`}>
+    <span className={`inline-flex min-h-6.5 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneClassName[tone]} ${className}`}>
       {children}
     </span>
   )

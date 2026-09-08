@@ -8,7 +8,7 @@ type InstallmentSummaryCardsProps = {
 
 export function InstallmentSummaryCards({ summary }: InstallmentSummaryCardsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
       <SummaryCard label="จำนวนแผน" value={summary.planCount} icon="#" tone="violet" />
       <SummaryCard label="จ่ายแล้วทั้งหมด" value={formatMoney(summary.totalPaid)} icon="+" tone="income" />
       <SummaryCard label="คงเหลือ" value={formatMoney(summary.totalRemaining)} icon="-" tone="expense" />

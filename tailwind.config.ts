@@ -22,8 +22,12 @@ export default {
         },
       },
       boxShadow: {
+        xs: '0 1px 2px 0 rgba(15, 23, 42, 0.04)',
         finance: '0 14px 32px rgba(15, 23, 42, 0.07)',
         'finance-sm': '0 8px 20px rgba(15, 23, 42, 0.055)',
+      },
+      backdropBlur: {
+        xs: '2px',
       },
     },
   },

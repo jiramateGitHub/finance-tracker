@@ -1,6 +1,6 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { AppData, Budget, BudgetLine, InstallmentPlan, TransactionEntry, Trip, TripItem, TripStatus } from '../../../types/finance'
-import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
 export type TripStatusFilter = 'all' | TripStatus
 export type TripSortOrder = 'start-desc' | 'start-asc' | 'name-asc' | 'actual-desc' | 'budget-desc'
@@ -274,7 +274,7 @@ export function buildTripFromForm(values: TripFormValues, existing?: Trip): Trip
     id: existing?.id ?? crypto.randomUUID(),
     name: values.name.trim(),
     destination: values.destination.trim() || undefined,
-    budget: values.budget ? Math.max(0, Number(values.budget)) : undefined,
+    budget: values.budget.trim() ? Math.max(0, parseAmountSafe(values.budget, 0)) : undefined,
     startDate: values.startDate,
     endDate: values.endDate,
     note: values.note.trim() || undefined,
@@ -288,7 +288,10 @@ export function validateTripForm(values: TripFormValues): string | null {
   if (!values.name.trim()) return 'กรอกชื่อทริป'
   if (!values.startDate || !values.endDate) return 'เลือกวันเริ่มต้นและวันสิ้นสุด'
   if (values.endDate < values.startDate) return 'วันสิ้นสุดต้องไม่มาก่อนวันเริ่มต้น'
-  if (values.budget && (!Number.isFinite(Number(values.budget)) || Number(values.budget) < 0)) return 'งบประมาณต้องเป็น 0 หรือมากกว่า'
+  if (values.budget.trim()) {
+    const parsedBudget = parseAmountSafe(values.budget, Number.NaN)
+    if (!Number.isFinite(parsedBudget) || parsedBudget < 0) return 'งบประมาณต้องเป็น 0 หรือมากกว่า'
+  }
   return null
 }
 
@@ -312,7 +315,7 @@ export function buildTripItemFromForm(values: TripItemFormValues, existing?: Tri
   return {
     id: existing?.id ?? crypto.randomUUID(),
     title: values.title.trim(),
-    amount: Math.max(0, Number(values.amount || 0)),
+    amount: Math.max(0, parseAmountSafe(values.amount, 0)),
     date: values.date,
     category: normalizeCategoryId(values.category, 'ท่องเที่ยว'),
     destination: values.destination.trim() || undefined,
@@ -328,7 +331,8 @@ export function buildTripItemFromForm(values: TripItemFormValues, existing?: Tri
 export function validateTripItemForm(values: TripItemFormValues): string | null {
   if (!values.title.trim()) return 'กรอกชื่อรายการ'
   if (!values.date) return 'เลือกวันที่'
-  if (!Number.isFinite(Number(values.amount)) || Number(values.amount) <= 0) return 'กรอกจำนวนเงินมากกว่า 0'
+  const parsedAmount = parseAmountSafe(values.amount, Number.NaN)
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return 'กรอกจำนวนเงินมากกว่า 0'
   return null
 }
 
@@ -378,14 +382,15 @@ export function createTripBudgetLineFormValues(line?: BudgetLine): TripBudgetLin
 export function buildTripBudgetLineFromForm(values: TripBudgetLineFormValues): Pick<BudgetLine, 'categoryId' | 'amount' | 'note'> {
   return {
     categoryId: normalizeCategoryId(values.categoryId, 'ท่องเที่ยว'),
-    amount: Math.max(0, Number(values.amount || 0)),
+    amount: Math.max(0, parseAmountSafe(values.amount, 0)),
     note: values.note.trim() || undefined,
   }
 }
 
 export function validateTripBudgetLineForm(values: TripBudgetLineFormValues): string | null {
   if (!values.categoryId.trim()) return 'กรอกหมวดหมู่งบประมาณ'
-  if (!Number.isFinite(Number(values.amount)) || Number(values.amount) <= 0) return 'กรอกจำนวนงบประมาณมากกว่า 0'
+  const parsedAmount = parseAmountSafe(values.amount, Number.NaN)
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return 'กรอกจำนวนงบประมาณมากกว่า 0'
   return null
 }
 

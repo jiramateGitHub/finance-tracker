@@ -1,6 +1,6 @@
 import { SMART_CATEGORY_RULES, normalizeCategoryId } from '../../../data/categories'
 import type { TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
-import { currentDateInputValue, currentIsoTimestamp, getMonthKey } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
 export type QuickAddParseResult = {
   type: TransactionType
@@ -27,9 +27,10 @@ export function detectQuickAddCategory(text: string, type: TransactionType): str
 }
 
 function detectQuickAddType(text: string, explicitIncome: boolean, explicitExpense: boolean): TransactionType {
-  const lowered = text.toLocaleLowerCase('th-TH')
-  if (explicitIncome || incomeKeywords.some((keyword) => lowered.includes(keyword.toLocaleLowerCase('th-TH')))) return 'income'
   if (explicitExpense) return 'expense'
+  if (explicitIncome) return 'income'
+  const lowered = text.toLocaleLowerCase('th-TH')
+  if (incomeKeywords.some((keyword) => lowered.includes(keyword.toLocaleLowerCase('th-TH')))) return 'income'
   return 'expense'
 }
 
@@ -43,7 +44,9 @@ function detectQuickAddStatus(text: string, type: TransactionType): TransactionS
 
 function cleanQuickAddTitle(text: string): string {
   return text
+    .replace(/^[+-]\s*|\s*[+-]$/g, '')
     .replace(/ยังไม่จ่าย|ค้างจ่าย|ค้าง|pending|unpaid|จ่ายแล้ว|paid|cleared/gi, '')
+    .replace(/(?:^|\s)(?:บาท|฿|\.-)(?:\s|$)/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -52,15 +55,18 @@ export function parseQuickAdd(input: string): QuickAddParseResult | null {
   const normalized = input.trim().replace(/\s+/g, ' ')
   if (!normalized) return null
 
-  const amountMatches = Array.from(normalized.matchAll(/\d+(?:\.\d{1,2})?/g))
+  const amountMatches = Array.from(normalized.matchAll(/(\d[\d,]*(?:\.\d{1,2})?)(?:\s*(?:บาท|฿|\.-))?/g))
   const amountMatch = amountMatches.at(-1)
-  const amount = amountMatch ? Number(amountMatch[0]) : Number.NaN
-  if (!amountMatch || !Number.isFinite(amount) || amount <= 0) return null
+  if (!amountMatch) return null
+
+  const numPart = amountMatch[1] ?? amountMatch[0]
+  const amount = parseAmountSafe(numPart, Number.NaN)
+  if (!Number.isFinite(amount) || amount <= 0) return null
 
   const withoutAmount = `${normalized.slice(0, amountMatch.index)} ${normalized.slice((amountMatch.index ?? 0) + amountMatch[0].length)}`.trim()
-  const explicitIncome = withoutAmount.startsWith('+')
-  const explicitExpense = withoutAmount.startsWith('-')
-  const text = withoutAmount.replace(/^[+-]\s*/, '').trim()
+  const explicitIncome = withoutAmount.startsWith('+') || withoutAmount.endsWith('+')
+  const explicitExpense = withoutAmount.startsWith('-') || withoutAmount.endsWith('-')
+  const text = withoutAmount.replace(/^[+-]\s*/, '').replace(/\s*[+-]$/, '').trim()
   const type = detectQuickAddType(text, explicitIncome, explicitExpense)
   const title = cleanQuickAddTitle(text)
   if (!title) return null

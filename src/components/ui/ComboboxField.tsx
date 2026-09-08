@@ -28,10 +28,10 @@ export function ComboboxField({
   const id = useId()
   const rootRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const ignoreBlurRef = useRef(false)
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const userTypedRef = useRef(false)
   const search = open ? draft : value
 
   const uniqueOptions = useMemo(
@@ -45,30 +45,56 @@ export function ComboboxField({
   }, [search, uniqueOptions])
   const activeOptionIndex = filteredOptions.length ? Math.min(activeIndex, filteredOptions.length - 1) : 0
 
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent): void {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [])
+  const isPointerInteractingRef = useRef(false)
 
   function selectOption(nextValue: string): void {
     onChange(nextValue)
     setDraft(nextValue)
     setActiveIndex(0)
+    userTypedRef.current = false
     setOpen(false)
   }
 
   function commitFreeText(): void {
+    if (!userTypedRef.current && showAllOptionsOnFocus && !draft && value) {
+      setDraft(value)
+      setOpen(false)
+      return
+    }
     const nextValue = search.trim()
     onChange(nextValue)
     setDraft(nextValue)
+    userTypedRef.current = false
     setOpen(false)
   }
 
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent): void {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function handlePointerUp(): void {
+      isPointerInteractingRef.current = false
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('pointerup', handlePointerUp)
+    document.addEventListener('pointercancel', handlePointerUp)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('pointerup', handlePointerUp)
+      document.removeEventListener('pointercancel', handlePointerUp)
+    }
+  }, [])
+
   return (
-    <div ref={rootRef} className={`finance-combobox ${className}`}>
+    <div
+      ref={rootRef}
+      className={`finance-combobox ${className}`}
+      onPointerDown={() => {
+        isPointerInteractingRef.current = true
+      }}
+    >
       <input
         ref={inputRef}
         aria-activedescendant={open && filteredOptions[activeOptionIndex] ? `${id}-${activeOptionIndex}` : undefined}
@@ -80,16 +106,20 @@ export function ComboboxField({
         placeholder={placeholder}
         role="combobox"
         value={search}
-        onBlur={() => {
-          if (ignoreBlurRef.current) return
+        onBlur={(event) => {
+          if (rootRef.current?.contains(event.relatedTarget as Node) || isPointerInteractingRef.current) {
+            return
+          }
           commitFreeText()
         }}
         onChange={(event) => {
+          userTypedRef.current = true
           setDraft(event.target.value)
           setActiveIndex(0)
           setOpen(true)
         }}
         onFocus={() => {
+          userTypedRef.current = false
           setDraft(showAllOptionsOnFocus ? '' : value)
           setActiveIndex(0)
           setOpen(true)
@@ -119,7 +149,7 @@ export function ComboboxField({
       />
       <button
         aria-label="เปิดรายการตัวเลือก"
-        className="absolute inset-y-1 right-1 grid w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
+        className="absolute inset-y-1 right-1 grid w-9 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
         type="button"
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
@@ -127,37 +157,33 @@ export function ComboboxField({
           inputRef.current?.focus()
         }}
       >
-        ▾
+        <span className="text-xs">▾</span>
       </button>
       {open && (
         <div id={`${id}-panel`} className="finance-combobox-panel" role="listbox">
           <div className="finance-combobox-search">{search || placeholder || 'ค้นหา'}</div>
-          <div className="grid gap-1 p-1">
+          <div className="grid gap-0.5 p-1">
             {filteredOptions.length ? filteredOptions.map((option, index) => (
               <button
                 id={`${id}-${index}`}
                 key={option}
-                className={`finance-combobox-option ${index === activeIndex ? 'is-active' : ''} ${option === value ? 'is-selected' : ''}`}
+                className={`finance-combobox-option ${index === activeOptionIndex ? 'is-active' : ''} ${option === value ? 'is-selected' : ''}`}
                 type="button"
                 role="option"
                 aria-selected={option === value}
                 onMouseDown={(event) => {
                   event.preventDefault()
-                  ignoreBlurRef.current = true
                 }}
-                onMouseUp={() => {
-                  ignoreBlurRef.current = false
-                }}
-                onMouseLeave={() => {
-                  ignoreBlurRef.current = false
+                onClick={() => {
+                  isPointerInteractingRef.current = false
+                  selectOption(option)
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => selectOption(option)}
               >
                 {option}
               </button>
             )) : (
-              <div className="px-3 py-3 text-sm font-bold leading-6 text-slate-400">{emptyLabel}</div>
+              <div className="px-3 py-3 text-sm font-semibold leading-6 text-slate-400">{emptyLabel}</div>
             )}
           </div>
         </div>

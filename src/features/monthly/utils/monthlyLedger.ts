@@ -1,7 +1,7 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { FinanceData, TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { th } from '../../../i18n/th'
-import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 import { parseMonthlySmartKeyword } from './monthlySmartFilter'
 
 export type MonthlySortOrder = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'title-asc'
@@ -171,8 +171,8 @@ export function filterMonthlyTransactions(transactions: TransactionEntry[], filt
     smartFilter.monthOffset === undefined ? normalizedFilters.rangeStartMonth : addMonthsToMonthKey(currentMonthInputValue(), smartFilter.monthOffset),
     smartFilter.monthOffset === undefined ? normalizedFilters.rangeEndMonth : addMonthsToMonthKey(currentMonthInputValue(), smartFilter.monthOffset),
   )
-  const minAmount = smartFilter.minAmount ?? Number(normalizedFilters.minAmount || Number.NaN)
-  const maxAmount = smartFilter.maxAmount ?? Number(normalizedFilters.maxAmount || Number.NaN)
+  const minAmount = smartFilter.minAmount ?? (normalizedFilters.minAmount ? parseAmountSafe(normalizedFilters.minAmount, Number.NaN) : Number.NaN)
+  const maxAmount = smartFilter.maxAmount ?? (normalizedFilters.maxAmount ? parseAmountSafe(normalizedFilters.maxAmount, Number.NaN) : Number.NaN)
   return transactions
     .filter((transaction) => {
       const monthKey = getMonthKey(transaction.date)
@@ -276,7 +276,7 @@ export function getCategoryOptions(data: FinanceData): string[] {
 export function buildTransactionFromForm(values: TransactionFormValues, existing?: TransactionEntry): TransactionEntry {
   const now = currentIsoTimestamp()
   const category = normalizeCategoryId(values.category, 'อื่นๆ')
-  const amount = Math.max(0, Number(values.amount || 0))
+  const amount = Math.max(0, parseAmountSafe(values.amount, 0))
   const status: TransactionStatus = values.type === 'income' ? 'cleared' : values.status
   return {
     id: existing?.id ?? crypto.randomUUID(),
@@ -306,7 +306,8 @@ export function buildTransactionFromForm(values: TransactionFormValues, existing
 export function validateTransactionForm(values: TransactionFormValues): string | null {
   if (!values.date) return 'เลือกวันที่'
   if (!values.title.trim()) return 'กรอกชื่อรายการ'
-  if (!Number.isFinite(Number(values.amount)) || Number(values.amount) <= 0) return 'กรอกจำนวนเงินมากกว่า 0'
+  const parsedAmount = parseAmountSafe(values.amount, Number.NaN)
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return 'กรอกจำนวนเงินมากกว่า 0'
   if (values.repeatEnabled) {
     const repeatCountText = values.repeatCount.trim()
     const repeatCount = Number(repeatCountText)

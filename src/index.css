@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     font-family: Inter, 'Noto Sans Thai', system-ui, sans-serif;
     color: #102033;
     background: #f4f8fc;
@@ -53,22 +54,22 @@
 
 @layer components {
   .finance-input {
-    @apply min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-finance-text shadow-sm transition focus:border-blue-500;
+    @apply min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-900 shadow-xs transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
   }
 
   .finance-field {
     min-width: 0;
-    @apply grid gap-1 text-sm font-bold text-slate-600;
+    @apply grid gap-1.5 text-sm font-medium text-slate-700;
   }
 
   .finance-label {
-    @apply min-w-0 break-words text-sm font-extrabold leading-5 text-slate-600;
+    @apply min-w-0 break-words text-sm font-semibold leading-5 text-slate-700;
   }
 
   .finance-control,
   .finance-select {
     min-width: 0;
-    @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold leading-5 text-finance-text shadow-sm transition placeholder:text-slate-400 hover:border-blue-300 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400;
+    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium leading-5 text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100 disabled:text-slate-400;
   }
 
   .finance-select {
@@ -77,11 +78,11 @@
 
   .finance-textarea {
     min-width: 0;
-    @apply min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-finance-text shadow-sm transition placeholder:text-slate-400 hover:border-blue-300 focus:border-blue-500;
+    @apply min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
   }
 
   .finance-error {
-    @apply rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold leading-6 text-rose-700;
+    @apply rounded-xl border border-rose-200 bg-rose-50/90 px-3.5 py-2.5 text-sm font-semibold leading-relaxed text-rose-700;
   }
 
   .finance-form-grid {
@@ -129,19 +130,19 @@
   }
 
   .finance-mini-summary-grid {
-    @apply grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5;
+    @apply grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5;
   }
 
   .finance-mini-summary-card {
-    @apply min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5;
+    @apply min-w-0 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 transition;
   }
 
   .finance-metric-label {
-    @apply truncate text-xs font-extrabold text-slate-500;
+    @apply truncate text-xs font-semibold text-slate-500;
   }
 
   .finance-metric-value {
-    @apply mt-0.5 min-w-0 break-words text-base font-extrabold leading-tight text-slate-900 sm:text-lg;
+    @apply mt-0.5 min-w-0 break-words text-base font-bold leading-tight text-slate-900 sm:text-lg;
   }
 
   .finance-progress-track {
@@ -174,30 +175,30 @@
 
   .finance-combobox-trigger {
     min-width: 0;
-    @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 pr-11 text-sm font-bold text-finance-text shadow-sm transition placeholder:text-slate-400 hover:border-blue-300 focus:border-blue-500;
+    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-10 text-sm font-medium leading-5 text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100 disabled:text-slate-400;
   }
 
   .finance-combobox-panel {
     max-height: min(18rem, 50dvh);
-    @apply absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[140] grid min-w-0 overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl;
+    @apply absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[140] grid min-w-0 overflow-auto rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10;
     overscroll-behavior: contain;
   }
 
   .finance-combobox-search {
-    @apply mb-1 truncate rounded-xl bg-slate-50 px-3 py-2 text-xs font-extrabold text-slate-500;
+    @apply mb-1 truncate rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500;
   }
 
   .finance-combobox-option {
-    @apply min-h-10 rounded-xl px-3 py-2 text-left text-sm font-bold leading-5 text-slate-700 transition hover:bg-blue-50 hover:text-blue-700;
+    @apply min-h-10 rounded-xl px-3 py-2 text-left text-sm font-medium leading-5 text-slate-700 transition hover:bg-slate-50 hover:text-slate-900;
     overflow-wrap: anywhere;
   }
 
   .finance-combobox-option.is-active {
-    @apply bg-blue-50 text-blue-700;
+    @apply bg-slate-100/90 text-slate-900;
   }
 
   .finance-combobox-option.is-selected {
-    @apply bg-blue-600 text-white hover:bg-blue-600 hover:text-white;
+    @apply bg-blue-600 font-semibold text-white hover:bg-blue-600 hover:text-white;
   }
 
   .finance-calendar-input {
@@ -214,13 +215,17 @@
   }
 
   .finance-modal-backdrop {
-    @apply fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-slate-950/45 px-3 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:items-center sm:py-6;
+    @apply fixed inset-0 z-[80] flex items-end justify-center overflow-hidden bg-slate-950/40 backdrop-blur-xs px-3 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:items-center sm:py-6;
   }
 
   .finance-modal-panel {
     max-height: min(92dvh, 820px);
-    @apply grid w-full min-w-0 gap-3 overflow-y-auto overflow-x-hidden rounded-t-[22px] border border-slate-200 bg-white p-4 shadow-2xl sm:gap-4 sm:rounded-[18px] sm:p-5;
+    @apply grid w-full min-w-0 gap-3 overflow-y-auto overflow-x-hidden rounded-t-[24px] border border-slate-200 bg-white p-4 shadow-2xl sm:gap-4 sm:rounded-[20px] sm:p-5;
     overscroll-behavior: contain;
+  }
+
+  .finance-confirm-panel {
+    @apply my-auto self-center;
   }
 
   .finance-modal-body {
@@ -263,21 +268,37 @@
     }
 
     .finance-modal-backdrop {
-      @apply items-stretch px-0 py-0;
+      @apply items-end justify-center px-0 pb-0 pt-6;
     }
 
     .finance-modal-panel {
       width: 100vw;
-      max-width: none !important;
-      height: 100dvh;
-      max-height: 100dvh;
+      max-width: 100vw !important;
+      height: auto;
+      max-height: min(90dvh, 720px);
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border-radius: 0;
-      border-width: 0;
-      padding-top: max(1rem, env(safe-area-inset-top));
+      border-top-left-radius: 1.5rem;
+      border-top-right-radius: 1.5rem;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      border-width: 1px 1px 0 1px;
+      border-color: rgba(226, 232, 240, 0.85);
+      padding-top: 1rem;
       padding-bottom: 0;
+    }
+
+    .finance-confirm-panel {
+      width: calc(100vw - 2rem) !important;
+      max-width: 24rem !important;
+      height: auto !important;
+      max-height: 85dvh !important;
+      border-radius: 1.5rem !important;
+      border-width: 1px !important;
+      padding: 1.25rem !important;
+      margin: auto !important;
+      align-self: center !important;
     }
 
     .finance-modal-body {

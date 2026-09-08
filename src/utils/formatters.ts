@@ -50,5 +50,18 @@ export function getMonthKey(dateValue: string): string {
 }
 
 export function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
   return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+export function sanitizeAmountInput(value: string | number | null | undefined): string {
+  return String(value ?? '').replace(/,/g, '').trim()
+}
+
+export function parseAmountSafe(value: string | number | null | undefined, fallback = 0): number {
+  if (value === null || value === undefined) return fallback
+  const sanitized = sanitizeAmountInput(value)
+  if (!sanitized) return fallback
+  const num = Number(sanitized)
+  return Number.isFinite(num) ? num : fallback
 }

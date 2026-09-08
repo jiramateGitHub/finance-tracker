@@ -119,21 +119,21 @@ export function MorePage({
           Tip: Cloud เป็นข้อมูลหลัก ส่วน JSON ใช้สำรองก่อนนำเข้า
         </p>
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-extrabold">บัญชี Firebase</h3>
+              <h3 className="font-bold text-slate-900">บัญชี Firebase</h3>
               <SyncStatusBadge status={syncStatus} />
             </div>
-            <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+            <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
               โหลดและบันทึกข้อมูลผ่านบัญชีนี้
             </p>
-            <div className="mt-3 truncate rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600">
+            <div className="mt-3 truncate rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
               {currentUserEmail}
             </div>
-            <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-bold ${cloudStatusTone}`}>
+            <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold ${cloudStatusTone}`}>
               {syncStatus.message}
               {syncStatus.lastSyncedAt ? (
-                <span className="mt-1 block text-xs font-semibold opacity-80">
+                <span className="mt-1 block text-xs font-medium opacity-80">
                   {th.sync.lastSynced}: {new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH')}
                 </span>
               ) : null}
@@ -151,12 +151,12 @@ export function MorePage({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="font-extrabold">นำเข้า/ส่งออก JSON</h3>
-            <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+            <h3 className="font-bold text-slate-900">นำเข้า/ส่งออก JSON</h3>
+            <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
               ก่อนนำเข้า ระบบจะดาวน์โหลดไฟล์สำรองให้อัตโนมัติ
             </p>
-            <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-bold ${statusTone}`}>
+            <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold ${statusTone}`}>
               {dataStatus.message}
             </div>
 
@@ -172,7 +172,7 @@ export function MorePage({
               <Button type="button" variant="primary" onClick={onExportJson} disabled={isCloudBusy}>
                 {th.file.exportJson}
               </Button>
-              <label className={`inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-blue-700 hover:bg-blue-50 ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
+              <label className={`inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-blue-700 shadow-xs hover:bg-blue-50/80 active:scale-[0.98] transition ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
                 เลือกไฟล์ JSON เพื่อตรวจสอบก่อนนำเข้า
                 <input className="sr-only" type="file" accept="application/json,.json" onChange={handleFileChange} disabled={isCloudBusy} />
               </label>
