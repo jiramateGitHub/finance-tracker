@@ -88,11 +88,11 @@ export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListPr
                   <span className="text-[11px] text-slate-400 font-medium">ใช้จ่ายจริง</span>
                   <span className="text-[11px] text-slate-400 font-medium">งบที่วางไว้</span>
                 </div>
-                <div className="flex items-baseline justify-between mt-0.5">
-                  <span className="text-lg sm:text-xl font-extrabold text-rose-700">
+                <div className="flex items-baseline justify-between mt-0.5 gap-2">
+                  <span className="text-base sm:text-lg lg:text-xl font-extrabold text-rose-700 break-words tabular-nums">
                     {formatMoney(totals.actualSpending)}
                   </span>
-                  <span className="text-sm sm:text-base font-bold text-slate-700">
+                  <span className="text-xs sm:text-sm md:text-base font-bold text-slate-700 break-words tabular-nums text-right">
                     {formatMoney(totals.plannedBudget)}
                   </span>
                 </div>

@@ -52,7 +52,7 @@ function NavIcon({ id }: { id: ViewId }): ReactNode {
 
 export function BottomNav({ items, activeView, onChange }: BottomNavProps) {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 mx-auto grid max-w-lg grid-cols-5 gap-1 rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white/90 p-1.5 shadow-lg shadow-slate-900/5 backdrop-blur-xl pb-[calc(0.375rem+env(safe-area-inset-bottom))]" aria-label="เมนูหลัก">
+    <nav className="fixed inset-x-2 sm:inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] sm:bottom-3 z-50 mx-auto grid max-w-lg grid-cols-5 gap-0.5 sm:gap-1 rounded-2xl sm:rounded-3xl border border-slate-200/85 bg-white/95 p-1 sm:p-1.5 shadow-lg shadow-slate-900/5 backdrop-blur-xl" aria-label="เมนูหลัก">
       {items.map((item) => {
         const isActive = item.id === activeView
         return (
@@ -60,7 +60,7 @@ export function BottomNav({ items, activeView, onChange }: BottomNavProps) {
             key={item.id}
             type="button"
             onClick={() => onChange(item.id)}
-            className={`group flex flex-col items-center justify-center gap-1 rounded-xl py-2 px-1 text-[11px] font-semibold transition-all duration-150 active:scale-95 ${
+            className={`group flex min-h-12 flex-col items-center justify-center gap-0.5 sm:gap-1 rounded-xl py-1.5 sm:py-2 px-0.5 sm:px-1 text-[10px] sm:text-[11px] font-semibold transition-all duration-150 active:scale-95 ${
               isActive
                 ? 'bg-blue-50 text-blue-600 font-bold'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'

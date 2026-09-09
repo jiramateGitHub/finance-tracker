@@ -32,19 +32,19 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
   }, [slices, circumference])
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between">
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between min-w-0 w-full max-w-full">
       {/* Title */}
-      <div className="mb-2">
+      <div className="mb-1 sm:mb-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-            <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <h3 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
               <path d="M22 12A10 10 0 0 0 12 2v10z" />
             </svg>
-            สัดส่วนตามหมวดหมู่ (เดือนนี้)
+            <span>สัดส่วนตามหมวดหมู่ (เดือนนี้)</span>
           </h3>
         </div>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs text-slate-500 mt-0.5 truncate">
           แบ่งตามประเภทสินค้าและภาระผ่อนในเดือนนี้
         </p>
       </div>
@@ -56,8 +56,8 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
       ) : (
         <>
           {/* Donut Chart */}
-          <div className="relative flex items-center justify-center my-3 h-44">
-            <svg viewBox="0 0 100 100" className="w-40 h-40 -rotate-90 transform">
+          <div className="relative flex items-center justify-center my-2 sm:my-3 h-40 sm:h-44">
+            <svg viewBox="0 0 100 100" className="w-36 h-36 sm:w-40 sm:h-40 -rotate-90 transform">
               {/* Background circle */}
               <circle
                 cx="50"
@@ -83,6 +83,7 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                     strokeDasharray={slice.strokeDasharray}
                     strokeDashoffset={slice.strokeDashoffset}
                     className="transition-all duration-200 cursor-pointer"
+                    onClick={() => setHoveredSlice(hoveredSlice?.category === slice.category ? null : slice)}
                     onMouseEnter={() => setHoveredSlice(slice)}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
@@ -91,13 +92,13 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
             </svg>
 
             {/* Donut Center Label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
               {hoveredSlice ? (
                 <>
-                  <span className="text-[10px] text-slate-400 font-medium truncate max-w-[80px]">
+                  <span className="text-[10px] text-slate-500 font-semibold truncate max-w-[90px] block" title={hoveredSlice.category}>
                     {hoveredSlice.category}
                   </span>
-                  <span className="text-xs font-extrabold text-slate-900 mt-0.5">
+                  <span className="text-[11px] sm:text-xs font-extrabold text-slate-900 mt-0.5 tabular-nums tracking-tight" title={formatMoney(hoveredSlice.totalAmount)}>
                     {formatMoney(hoveredSlice.totalAmount)}
                   </span>
                   <span className="text-[10px] font-bold text-blue-600">
@@ -106,10 +107,10 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                 </>
               ) : (
                 <>
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase">
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase block">
                     รวมงวดเดือนนี้
                   </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-slate-900 mt-0.5">
+                  <span className="text-[11px] sm:text-xs font-extrabold text-slate-900 mt-0.5 tabular-nums tracking-tight" title={formatMoney(totalMonthlyDue)}>
                     {formatMoney(totalMonthlyDue)}
                   </span>
                   <span className="text-[10px] text-slate-500">
@@ -121,7 +122,7 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
           </div>
 
           {/* Legend / Breakdown List */}
-          <div className="mt-2 pt-2 border-t border-slate-100 space-y-1.5 max-h-32 overflow-y-auto pr-1 text-xs">
+          <div className="mt-1 pt-2 border-t border-slate-100 space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-1 text-xs">
             {slices.map((slice) => {
               const icon = CATEGORY_ICONS[slice.category] || '🧾'
               const isHovered = hoveredSlice?.category === slice.category
@@ -129,13 +130,16 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
               return (
                 <div
                   key={slice.category}
+                  onClick={() => setHoveredSlice(hoveredSlice?.category === slice.category ? null : slice)}
                   onMouseEnter={() => setHoveredSlice(slice)}
                   onMouseLeave={() => setHoveredSlice(null)}
-                  className={`flex items-center justify-between p-1 rounded-lg transition-colors cursor-pointer ${
-                    isHovered ? 'bg-slate-50 font-semibold' : ''
+                  className={`flex items-center justify-between p-2 sm:p-1.5 rounded-xl transition-all cursor-pointer select-none ${
+                    isHovered
+                      ? 'bg-blue-50/80 ring-1 ring-blue-200/80 font-bold'
+                      : 'hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 truncate pr-2">
+                  <div className="flex items-center gap-1.5 truncate pr-2 min-w-0">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: slice.color }}
@@ -145,10 +149,10 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 font-medium text-[11px] sm:text-xs">
-                    <span className="font-bold text-slate-900">
+                    <span className="font-bold text-slate-900 tabular-nums">
                       {formatMoney(slice.totalAmount)}
                     </span>
-                    <span className="text-slate-400 text-[10px]">
+                    <span className="text-slate-400 text-[10px] tabular-nums">
                       ({slice.percentage}%)
                     </span>
                   </div>

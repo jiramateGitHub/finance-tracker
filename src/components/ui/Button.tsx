@@ -16,7 +16,7 @@ const variantClassName: Record<ButtonVariant, string> = {
 }
 
 export function Button({ variant = 'light', size = 'md', className = '', children, ...buttonProps }: ButtonProps) {
-  const sizeClassName = size === 'sm' ? 'min-h-9 px-3 py-1.5 text-xs' : 'min-h-11 px-4 py-2 text-sm'
+  const sizeClassName = size === 'sm' ? 'min-h-10 px-3 py-2 text-xs sm:min-h-9 sm:py-1.5' : 'min-h-11 px-4 py-2 text-sm'
   return (
     <button
       className={`inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-xl border text-center font-semibold leading-5 transition duration-150 ease-in-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${sizeClassName} ${variantClassName[variant]} ${className}`}

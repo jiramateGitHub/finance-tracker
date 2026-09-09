@@ -37,7 +37,26 @@ export interface FinanceStore {
 
 export function useFinanceStore(): FinanceStore {
   const financeData = useFinanceData()
-  const [activeView, setActiveView] = useState<ViewId>('monthly')
+  const [activeView, setActiveViewState] = useState<ViewId>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const v = params.get('view') as ViewId | null
+      if (v && ['monthly', 'yearly', 'installments', 'trips', 'more'].includes(v)) {
+        return v
+      }
+    }
+    return 'monthly'
+  })
+
+  const setActiveView = (viewId: ViewId) => {
+    setActiveViewState(viewId)
+    if (typeof window !== 'undefined' && window.history) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', viewId)
+      window.history.replaceState(null, '', url.toString())
+    }
+  }
+
   const [selectedMonth, setSelectedMonth] = useState(() => currentMonthInputValue())
   const { data } = financeData
 

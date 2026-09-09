@@ -78,7 +78,7 @@ export function SummaryCard({
   return (
     <div
       className={`min-w-0 rounded-2xl border border-slate-200/80 bg-white shadow-xs transition hover:shadow-md ${
-        compact ? 'p-3 sm:p-3.5' : 'p-4 sm:p-5'
+        compact ? 'p-3 sm:p-3.5' : 'p-3.5 sm:p-5'
       } ${className}`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -95,15 +95,15 @@ export function SummaryCard({
       </div>
 
       <div
-        className={`mt-2 min-w-0 break-words font-extrabold tracking-tight text-slate-900 ${
-          compact ? 'text-lg sm:text-xl' : 'text-2xl sm:text-3xl'
+        className={`mt-2 min-w-0 break-words tabular-nums font-extrabold tracking-tight text-slate-900 ${
+          compact ? 'text-base sm:text-lg lg:text-xl' : 'text-xl sm:text-2xl lg:text-3xl'
         }`}
       >
         {value}
       </div>
 
       {subValue && (
-        <div className="mt-2 text-xs font-medium text-slate-500">
+        <div className="mt-1.5 sm:mt-2 text-[11px] sm:text-xs font-medium text-slate-500 break-words">
           {subValue}
         </div>
       )}

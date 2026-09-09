@@ -42,7 +42,7 @@ export function QuickAddBar({ selectedMonth, onAddTransaction }: QuickAddBarProp
           <label className="sr-only" htmlFor="quick-add-input">{th.monthly.quickAdd}</label>
           <input
             id="quick-add-input"
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm font-medium text-slate-800 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-base sm:text-sm font-medium text-slate-800 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
             value={value}
             onChange={(event) => {
               setValue(event.target.value)
@@ -61,13 +61,13 @@ export function QuickAddBar({ selectedMonth, onAddTransaction }: QuickAddBarProp
       {error ? <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p> : null}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
         <span className="font-medium text-slate-500">ตัวอย่าง:</span>
-        <button type="button" onClick={() => fillSample('กาแฟ 65')} className="rounded-lg bg-white px-2 py-0.5 font-medium text-slate-600 border border-slate-200/60 hover:bg-slate-100 hover:text-slate-800 transition">
+        <button type="button" onClick={() => fillSample('กาแฟ 65')} className="min-h-9 sm:min-h-8 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200/60 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer">
           กาแฟ 65
         </button>
-        <button type="button" onClick={() => fillSample('+ เงินเดือน 35000')} className="rounded-lg bg-white px-2 py-0.5 font-medium text-emerald-700 border border-emerald-200/60 hover:bg-emerald-50 transition">
+        <button type="button" onClick={() => fillSample('+ เงินเดือน 35000')} className="min-h-9 sm:min-h-8 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 border border-emerald-200/60 hover:bg-emerald-50 transition cursor-pointer">
           + เงินเดือน 35000
         </button>
-        <button type="button" onClick={() => fillSample('ค่าไฟ 1,450 ยังไม่จ่าย')} className="rounded-lg bg-white px-2 py-0.5 font-medium text-amber-700 border border-amber-200/60 hover:bg-amber-50 transition">
+        <button type="button" onClick={() => fillSample('ค่าไฟ 1,450 ยังไม่จ่าย')} className="min-h-9 sm:min-h-8 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-amber-700 border border-amber-200/60 hover:bg-amber-50 transition cursor-pointer">
           ค่าไฟ 1,450 ยังไม่จ่าย
         </button>
       </div>

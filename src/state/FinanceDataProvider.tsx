@@ -90,6 +90,65 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     async function loadCloudData(): Promise<void> {
       setStatus(loadingStatus)
       try {
+        if (userId === 'demo-user') {
+          const sampleData = normalizeFinanceData({
+            installmentPlans: [
+              {
+                id: 'p-shopee',
+                name: 'ผ่อน Shopee',
+                category: 'ผ่อนสินค้า',
+                monthlyAmount: 943.46,
+                monthsTotal: 10,
+                monthsPaid: 9,
+                startMonth: '2025-12',
+                dueDay: 5,
+                interestType: 'none',
+                paidMonthKeys: ['2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'],
+              },
+              {
+                id: 'p-iphone',
+                name: 'iPhone 16 Pro Max 256GB',
+                category: 'ผ่อนสินค้า',
+                monthlyAmount: 4890.00,
+                monthsTotal: 10,
+                monthsPaid: 0,
+                startMonth: '2026-09',
+                dueDay: 25,
+                interestType: 'none',
+                paidMonthKeys: [],
+              },
+              {
+                id: 'p-car',
+                name: 'ผ่อนรถยนต์ Honda City',
+                category: 'รถยนต์',
+                monthlyAmount: 8500.00,
+                monthsTotal: 48,
+                monthsPaid: 5,
+                startMonth: '2026-04',
+                dueDay: 10,
+                interestType: 'flat',
+                interestRate: 2.39,
+                paidMonthKeys: ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08'],
+              },
+              {
+                id: 'p-appliance',
+                name: 'เครื่องซักผ้า Electrolux',
+                category: 'บ้านและที่อยู่อาศัย',
+                monthlyAmount: 1800.00,
+                monthsTotal: 12,
+                monthsPaid: 2,
+                startMonth: '2026-07',
+                dueDay: 1,
+                interestType: 'none',
+                paidMonthKeys: ['2026-07', '2026-08'],
+              },
+            ],
+          })
+          if (cancelled) return
+          setData(sampleData)
+          setStatus(markLoaded('โหลดข้อมูลทดสอบแล้ว'))
+          return
+        }
         const cloudData = await loadFinanceDataFromCloud(userId)
         if (cancelled) return
         setData(cloudData ? normalizeFinanceData(cloudData) : createEmptyFinanceData())

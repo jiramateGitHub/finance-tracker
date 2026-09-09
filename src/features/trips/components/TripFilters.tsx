@@ -35,7 +35,7 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
           <button
             type="button"
             onClick={() => handleStatusClick('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 inline-flex items-center justify-center rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
               currentStatus === 'all'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -47,7 +47,7 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
           <button
             type="button"
             onClick={() => handleStatusClick('ongoing')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 inline-flex items-center justify-center rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
               currentStatus === 'ongoing'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -59,7 +59,7 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
           <button
             type="button"
             onClick={() => handleStatusClick('upcoming')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 inline-flex items-center justify-center rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
               currentStatus === 'upcoming'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -71,7 +71,7 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
           <button
             type="button"
             onClick={() => handleStatusClick('completed')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 inline-flex items-center justify-center rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
               currentStatus === 'completed'
                 ? 'bg-slate-700 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -108,7 +108,7 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
         <div className="relative">
           <label className="text-xs font-semibold text-slate-500 mb-1 block">ค้นหา</label>
           <div className="relative">
-            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -117,13 +117,13 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
               placeholder="ทริป, จุดหมาย, หมวด, หมายเหตุ..."
               value={filters.keyword}
               onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
-              className="w-full pl-9 pr-7 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+              className="h-11 sm:h-9 text-base sm:text-xs w-full pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
             />
             {filters.keyword && (
               <button
                 type="button"
                 onClick={() => onChange({ ...filters, keyword: '' })}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                className="min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 flex items-center justify-center absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
               >
                 ✕
               </button>

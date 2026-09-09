@@ -94,7 +94,7 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-slate-100 pt-2 md:border-t-0 md:pt-0 md:justify-end">
-                      <div className={`text-right text-base sm:text-lg font-bold tracking-tight ${isIncome ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      <div className={`text-right text-base sm:text-lg font-bold tracking-tight break-words tabular-nums ${isIncome ? 'text-emerald-700' : 'text-rose-700'}`}>
                         {isIncome ? '+' : '-'}{formatMoney(transaction.amount)}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">

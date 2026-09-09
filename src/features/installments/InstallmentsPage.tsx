@@ -145,52 +145,52 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
   }
 
   return (
-    <div className="finance-page-shell space-y-4">
+    <div className="finance-page-shell">
       {/* ==================== COMMAND / HEADER PANEL ==================== */}
       <section className="finance-command-panel">
         <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
           {/* Left: Title & Subtitle */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20 shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="20" height="14" x="2" y="5" rx="2" />
                 <line x1="2" x2="22" y1="10" y2="10" />
               </svg>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">ยอดผ่อน</h2>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
                   ผ่อนสบาย
                 </span>
               </div>
-              <p className="text-xs text-slate-500 hidden sm:block">
+              <p className="text-xs text-slate-500 hidden sm:block truncate">
                 บันทึกยอดผ่อน & สรุปภาระรายจ่ายรายเดือน
               </p>
             </div>
           </div>
 
-          {/* Center: Month Navigator (from installment_tracker.html line 109) */}
-          <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200/90 shadow-xs">
+          {/* Center: Month Navigator (Touch-friendly & flexible) */}
+          <div className="flex items-center justify-between bg-white p-1 rounded-xl border border-slate-200/90 shadow-xs w-full sm:w-auto">
             <button
               type="button"
               title="เดือนก่อนหน้า"
               onClick={() => setSelectedMonth((prev) => addMonths(prev, -1))}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+              className="min-h-10 min-w-10 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer shrink-0"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
 
-            <div className="px-3 flex items-center gap-1.5 select-none">
-              <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="px-2 sm:px-3 flex items-center justify-center gap-1.5 select-none flex-1 sm:flex-initial min-w-0">
+              <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
                 <line x1="16" x2="16" y1="2" y2="6" />
                 <line x1="8" x2="8" y1="2" y2="6" />
                 <line x1="3" y1="21" x2="21" y2="21" />
               </svg>
-              <span className="text-sm font-bold text-slate-800 tracking-tight">
+              <span className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight truncate">
                 {formatMonth(selectedMonth)}
               </span>
             </div>
@@ -199,7 +199,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
               type="button"
               title="เดือนถัดไป"
               onClick={() => setSelectedMonth((prev) => addMonths(prev, 1))}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+              className="min-h-10 min-w-10 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer shrink-0"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
@@ -211,7 +211,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
                 type="button"
                 title="กลับมาเดือนปัจจุบัน"
                 onClick={() => setSelectedMonth(currentRealMonth)}
-                className="ml-1 px-2.5 py-1 text-xs font-semibold rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 transition border-l border-slate-200 cursor-pointer"
+                className="ml-1 min-h-10 sm:min-h-8 px-2.5 py-1 text-xs font-semibold rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 transition border-l border-slate-200 cursor-pointer flex items-center shrink-0"
               >
                 เดือนนี้
               </button>
@@ -219,9 +219,9 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
           </div>
 
           {/* Right: Actions */}
-          <div className="finance-command-actions">
-            <Button type="button" variant="primary" onClick={openAddModal}>
-              <span className="flex items-center gap-1.5">
+          <div className="finance-command-actions w-full sm:w-auto">
+            <Button type="button" variant="primary" onClick={openAddModal} className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center">
+              <span className="flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="16" />
@@ -247,14 +247,14 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
       </section>
 
       {/* ==================== ANALYTICS & PROJECTION SECTION (installment_tracker.html line 280) ==================== */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4">
-        <div className="lg:col-span-2">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 min-w-0 w-full max-w-full">
+        <div className="lg:col-span-2 min-w-0 w-full max-w-full">
           <InstallmentProjectionChart
             projection={projection}
             selectedMonth={selectedMonth}
           />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 min-w-0 w-full max-w-full">
           <InstallmentCategoryChart
             distribution={categoryDistribution}
           />

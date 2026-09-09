@@ -55,18 +55,18 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
         </div>
       </header>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="text-xs font-semibold text-slate-500">เป้าหมาย</div>
-          <div className="mt-1 text-base font-extrabold text-slate-900">{formatMoney(progress.targetAmount)}</div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:p-3">
+          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">เป้าหมาย</div>
+          <div className="mt-1 text-xs sm:text-sm md:text-base font-extrabold text-slate-900 break-words tabular-nums">{formatMoney(progress.targetAmount)}</div>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="text-xs font-semibold text-slate-500">ปัจจุบัน</div>
-          <div className="mt-1 text-base font-extrabold text-blue-700">{formatMoney(progress.currentAmount)}</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:p-3">
+          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">ปัจจุบัน</div>
+          <div className="mt-1 text-xs sm:text-sm md:text-base font-extrabold text-blue-700 break-words tabular-nums">{formatMoney(progress.currentAmount)}</div>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="text-xs font-semibold text-slate-500">คงเหลือ</div>
-          <div className="mt-1 text-base font-extrabold text-emerald-700">{formatMoney(progress.remaining)}</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:p-3">
+          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">คงเหลือ</div>
+          <div className="mt-1 text-xs sm:text-sm md:text-base font-extrabold text-emerald-700 break-words tabular-nums">{formatMoney(progress.remaining)}</div>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
         <label className="grid min-w-44 flex-1 gap-1 text-xs font-semibold text-slate-600">
           อัปเดตยอดปัจจุบัน
           <input
-            className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-xs outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+            className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base sm:text-sm font-medium text-slate-900 shadow-xs outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
             inputMode="decimal"
             type="text"
             value={draftAmount}
@@ -97,7 +97,7 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
             }}
           />
         </label>
-        <Button type="button" size="sm" variant="primary" disabled={!amountChanged} onClick={saveAmount}>
+        <Button className="w-full sm:w-auto" type="button" size="sm" variant="primary" disabled={!amountChanged} onClick={saveAmount}>
           บันทึกยอด
         </Button>
       </div>

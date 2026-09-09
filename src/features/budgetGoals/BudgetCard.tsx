@@ -51,18 +51,18 @@ export function BudgetCard({ budget, transactions, onEdit, onDelete }: BudgetCar
         </div>
       </header>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="text-xs font-semibold text-slate-500">งบประมาณ</div>
-          <div className="mt-1 text-base font-extrabold text-slate-900">{formatMoney(progress.amount)}</div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:p-3">
+          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">งบประมาณ</div>
+          <div className="mt-1 text-xs sm:text-sm md:text-base font-extrabold text-slate-900 break-words tabular-nums">{formatMoney(progress.amount)}</div>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="text-xs font-semibold text-slate-500">ใช้ไป</div>
-          <div className="mt-1 text-base font-extrabold text-rose-700">{formatMoney(progress.used)}</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:p-3">
+          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">ใช้ไป</div>
+          <div className="mt-1 text-xs sm:text-sm md:text-base font-extrabold text-rose-700 break-words tabular-nums">{formatMoney(progress.used)}</div>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="text-xs font-semibold text-slate-500">คงเหลือ</div>
-          <div className={`mt-1 text-base font-extrabold ${progress.remaining < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2 sm:p-3">
+          <div className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">คงเหลือ</div>
+          <div className={`mt-1 text-xs sm:text-sm md:text-base font-extrabold break-words tabular-nums ${progress.remaining < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
             {formatMoney(progress.remaining)}
           </div>
         </div>

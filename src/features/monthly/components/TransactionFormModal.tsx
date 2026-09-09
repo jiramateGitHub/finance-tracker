@@ -88,7 +88,7 @@ export function TransactionFormModal({
             type="button"
             onClick={onClose}
             aria-label={th.common.close}
-            className="grid size-8.5 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95"
+            className="grid min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95 cursor-pointer"
           >
             <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"/>
@@ -105,7 +105,7 @@ export function TransactionFormModal({
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
                 <button
                   type="button"
-                  className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition ${
+                  className={`flex min-h-10 sm:min-h-9 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition cursor-pointer ${
                     values.type === 'expense'
                       ? 'bg-rose-500 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -117,7 +117,7 @@ export function TransactionFormModal({
                 </button>
                 <button
                   type="button"
-                  className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition ${
+                  className={`flex min-h-10 sm:min-h-9 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition cursor-pointer ${
                     values.type === 'income'
                       ? 'bg-emerald-500 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'

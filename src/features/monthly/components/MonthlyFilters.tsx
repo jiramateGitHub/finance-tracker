@@ -43,7 +43,7 @@ export function MonthlyFilters({
           <button
             type="button"
             onClick={() => handleTypeClick('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center ${
               currentType === 'all'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -55,7 +55,7 @@ export function MonthlyFilters({
           <button
             type="button"
             onClick={() => handleTypeClick('expense')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center ${
               currentType === 'expense'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -67,7 +67,7 @@ export function MonthlyFilters({
           <button
             type="button"
             onClick={() => handleTypeClick('income')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center ${
               currentType === 'income'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -79,7 +79,7 @@ export function MonthlyFilters({
           <button
             type="button"
             onClick={() => handleTypeClick('installment')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center ${
               currentType === 'installment'
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -91,7 +91,7 @@ export function MonthlyFilters({
           <button
             type="button"
             onClick={() => handleTypeClick('trip')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center ${
               currentType === 'trip'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -144,13 +144,13 @@ export function MonthlyFilters({
               placeholder="ค้นหารายการ, หมวดหมู่, หมายเหตุ, ยังไม่จ่าย..."
               value={filters.keyword}
               onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
-              className="w-full pl-9 pr-7 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+              className="h-11 sm:h-9 w-full pl-9 pr-8 py-2 text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
             />
             {filters.keyword && (
               <button
                 type="button"
                 onClick={() => onChange({ ...filters, keyword: '' })}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                className="absolute right-2 top-1/2 -translate-y-1/2 min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 flex items-center justify-center text-slate-400 hover:text-slate-600 text-xs"
               >
                 ✕
               </button>

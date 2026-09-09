@@ -84,7 +84,7 @@ export function InstallmentScheduleModal({
             type="button"
             onClick={onClose}
             aria-label={th.common.close}
-            className="grid size-8.5 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95"
+            className="grid min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95 cursor-pointer"
           >
             <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -96,31 +96,75 @@ export function InstallmentScheduleModal({
         {/* Modal Body */}
         <div className="finance-modal-body space-y-3">
           {/* Summary Strip (from installment_tracker.html line 697) */}
-          <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/70 text-center">
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">ค่างวดต่อเดือน</span>
-              <div className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-200/70 text-center">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block truncate">ค่างวดต่อเดือน</span>
+              <div className="text-[11px] sm:text-base font-extrabold text-slate-900 mt-0.5 truncate tabular-nums tracking-tight" title={formatMoney(plan.monthlyAmount)}>
                 {formatMoney(plan.monthlyAmount)}
               </div>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">ผ่อนแล้ว</span>
-              <div className="text-sm sm:text-base font-extrabold text-emerald-600 mt-0.5">
-                {progress.monthsPaid} / {progress.scheduleMonths.length} งวด
+            <div className="min-w-0 border-x border-slate-200/60 px-1">
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block truncate">ผ่อนแล้ว</span>
+              <div className="text-[11px] sm:text-base font-extrabold text-emerald-600 mt-0.5 truncate tabular-nums tracking-tight">
+                {progress.monthsPaid}/{progress.scheduleMonths.length} งวด
               </div>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">คงเหลือ</span>
-              <div className="text-sm sm:text-base font-extrabold text-rose-600 mt-0.5">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block truncate">คงเหลือ</span>
+              <div className="text-[11px] sm:text-base font-extrabold text-rose-600 mt-0.5 truncate tabular-nums tracking-tight" title={formatMoney(progress.remainingAmount)}>
                 {formatMoney(progress.remainingAmount)}
               </div>
             </div>
           </div>
 
-          {/* Schedule Table */}
-          <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="max-h-72 overflow-y-auto">
-              <table className="w-full text-left border-collapse text-xs">
+          {/* 1. Mobile Schedule List (sm:hidden - naturally scrolls inside modal body) */}
+          <div className="space-y-2 sm:hidden pr-0.5">
+            {months.map((monthKey, idx) => {
+              const isPaid = paidMonthKeys.has(monthKey)
+              return (
+                <div
+                  key={monthKey}
+                  className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/80 transition shadow-2xs"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-slate-500">#{idx + 1}</span>
+                      <span className="text-xs font-bold text-slate-900">{formatMonth(monthKey)}</span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          isPaid
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {isPaid ? 'จ่ายแล้ว ✓' : 'รอชำระ'}
+                      </span>
+                    </div>
+                    <div className="text-xs font-extrabold text-blue-700 mt-0.5 tabular-nums">
+                      {formatMoney(plan.monthlyAmount)}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onToggleMonth(plan, monthKey, !isPaid)}
+                    className={`shrink-0 min-h-10 px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center transition cursor-pointer ${
+                      isPaid
+                        ? 'border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
+                    }`}
+                  >
+                    {isPaid ? 'ยกเลิก' : 'บันทึกจ่าย'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* 2. Desktop Schedule Table (hidden sm:block) */}
+          <div className="hidden sm:block border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+            <div className="max-h-72 overflow-y-auto overflow-x-auto">
+              <table className="w-full min-w-[460px] text-left border-collapse text-xs">
                 <thead className="sticky top-0 bg-slate-100 z-10 text-slate-600 font-semibold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">งวดที่</th>
@@ -141,7 +185,7 @@ export function InstallmentScheduleModal({
                         <td className="py-2.5 px-3 font-bold text-slate-800">
                           {formatMonth(monthKey)}
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-700">
+                        <td className="py-2.5 px-3 font-semibold text-slate-700 tabular-nums">
                           {formatMoney(plan.monthlyAmount)}
                         </td>
                         <td className="py-2.5 px-3">
@@ -159,7 +203,7 @@ export function InstallmentScheduleModal({
                           <button
                             type="button"
                             onClick={() => onToggleMonth(plan, monthKey, !isPaid)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                            className={`min-h-9 sm:min-h-8 px-3 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center transition cursor-pointer ${
                               isPaid
                                 ? 'border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
                                 : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
@@ -178,31 +222,31 @@ export function InstallmentScheduleModal({
         </div>
 
         {/* Modal Footer */}
-        <footer className="finance-modal-footer flex items-center justify-between">
-          <div>
-            {!isAllPaid ? (
-              <button
-                type="button"
-                onClick={() => handleSettleAll(true)}
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                  <polyline points="15 6 4 17 1 14" />
-                </svg>
-                ปิดยอดทั้งหมดล่วงหน้า
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleSettleAll(false)}
-                className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline"
-              >
-                ยกเลิกการชำระทั้งหมด
-              </button>
-            )}
-          </div>
-          <Button type="button" variant="primary" onClick={onClose}>
+        <footer className="finance-modal-footer">
+          {!isAllPaid ? (
+            <Button
+              type="button"
+              variant="success"
+              onClick={() => handleSettleAll(true)}
+              className="min-h-11 sm:min-h-9 justify-center"
+            >
+              <svg className="w-4 h-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+                <polyline points="15 6 4 17 1 14" />
+              </svg>
+              <span>ปิดยอดทั้งหมด</span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => handleSettleAll(false)}
+              className="min-h-11 sm:min-h-9 justify-center"
+            >
+              ยกเลิกชำระทั้งหมด
+            </Button>
+          )}
+          <Button type="button" variant="primary" onClick={onClose} className="min-h-11 sm:min-h-9 justify-center">
             {th.common.close}
           </Button>
         </footer>

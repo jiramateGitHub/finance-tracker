@@ -141,7 +141,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
             type="button"
             onClick={onClose}
             aria-label={th.common.close}
-            className="grid size-8.5 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95"
+            className="grid min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95 cursor-pointer"
           >
             <svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -168,7 +168,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
                     key={item.name}
                     type="button"
                     onClick={() => handleQuickNameSuggestion(item)}
-                    className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-600 text-[11px] font-medium transition cursor-pointer"
+                    className="min-h-9 sm:min-h-7 inline-flex items-center px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-medium transition cursor-pointer"
                   >
                     {item.name}
                   </button>
@@ -229,7 +229,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
                       key={term}
                       type="button"
                       onClick={() => handleTermPresetClick(term)}
-                      className={`py-1 px-1 rounded-lg text-xs font-semibold text-center transition border ${
+                      className={`min-h-10 sm:min-h-9 py-1 px-1 rounded-xl text-xs font-semibold text-center transition border flex items-center justify-center cursor-pointer ${
                         isActive
                           ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-xs'
                           : 'border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-200'
@@ -252,7 +252,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
             {/* Monthly Payment with Auto-Calculate */}
             <FormField
               label={
-                <span className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-1 w-full">
                   <span>ค่างวดต่อเดือน (บาท)</span>
                   <button
                     type="button"
@@ -261,12 +261,12 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
                       e.stopPropagation()
                       handleAutoCalculateMonthly()
                     }}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer flex items-center gap-1"
+                    className="min-h-8 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 cursor-pointer transition"
                   >
                     <span>✨</span>
                     <span>คำนวณอัตโนมัติ</span>
                   </button>
-                </span>
+                </div>
               }
             >
               <TextInput
@@ -369,10 +369,10 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
         </div>
 
         <footer className="finance-modal-footer">
-          <Button type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose} className="min-h-11 sm:min-h-9 justify-center">
             {th.common.cancel}
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" className="min-h-11 sm:min-h-9 justify-center">
             {plan ? th.common.saveChanges : 'บันทึกแผนผ่อน'}
           </Button>
         </footer>

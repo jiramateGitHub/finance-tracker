@@ -54,7 +54,7 @@
 
 @layer components {
   .finance-input {
-    @apply min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-900 shadow-xs transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
+    @apply min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-base sm:text-sm font-medium text-slate-900 shadow-xs transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
   }
 
   .finance-field {
@@ -69,7 +69,7 @@
   .finance-control,
   .finance-select {
     min-width: 0;
-    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium leading-5 text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100 disabled:text-slate-400;
+    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-base sm:text-sm font-medium leading-5 text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100 disabled:text-slate-400;
   }
 
   .finance-select {
@@ -78,7 +78,7 @@
 
   .finance-textarea {
     min-width: 0;
-    @apply min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
+    @apply min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-medium text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
   }
 
   .finance-error {
@@ -90,11 +90,11 @@
   }
 
   .finance-page-shell {
-    @apply grid min-w-0 gap-3 sm:gap-4;
+    @apply grid grid-cols-1 min-w-0 w-full max-w-full gap-3 sm:gap-4;
   }
 
   .finance-command-panel {
-    @apply rounded-[18px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3 shadow-finance-sm sm:p-4;
+    @apply min-w-0 w-full max-w-full rounded-[18px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3 shadow-finance-sm sm:p-4;
   }
 
   .finance-card-compact {
@@ -114,7 +114,7 @@
   }
 
   .finance-segmented-button {
-    @apply min-h-9 min-w-0 rounded-lg px-3 py-1.5 text-sm font-extrabold text-slate-600 transition hover:bg-white hover:text-blue-700;
+    @apply min-h-10 sm:min-h-9 min-w-0 rounded-lg px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-extrabold text-slate-600 transition hover:bg-white hover:text-blue-700;
   }
 
   .finance-segmented-button.is-active {
@@ -134,7 +134,7 @@
   }
 
   .finance-metric-value {
-    @apply mt-0.5 min-w-0 break-words text-base font-bold leading-tight text-slate-900 sm:text-lg;
+    @apply mt-0.5 min-w-0 break-words tabular-nums text-base font-bold leading-tight text-slate-900 sm:text-lg;
   }
 
   .finance-progress-track {
@@ -167,7 +167,7 @@
 
   .finance-combobox-trigger {
     min-width: 0;
-    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-10 text-sm font-medium leading-5 text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100 disabled:text-slate-400;
+    @apply h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-10 text-base sm:text-sm font-medium leading-5 text-slate-900 shadow-xs transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100 disabled:text-slate-400;
   }
 
   .finance-combobox-panel {
@@ -277,6 +277,11 @@
       padding-bottom: 0;
     }
 
+    .finance-modal-panel header button {
+      min-height: 2.5rem;
+      min-width: 2.5rem;
+    }
+
     .finance-confirm-panel {
       width: calc(100vw - 2rem) !important;
       max-width: 24rem !important;
@@ -304,6 +309,19 @@
       padding-right: 1rem;
       padding-left: 1rem;
       padding-bottom: max(1rem, env(safe-area-inset-bottom));
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+    }
+
+    .finance-modal-footer > button {
+      flex: 1 1 0%;
+      min-height: 2.75rem;
+    }
+
+    .finance-confirm-panel .flex > button {
+      flex: 1 1 0%;
+      min-height: 2.75rem;
     }
 
     .finance-filter-actions {

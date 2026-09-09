@@ -23,18 +23,22 @@ type AuthGateProps = {
 
 export function AuthGate({ children }: AuthGateProps) {
   const configured = isFirebaseConfigured()
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [initializing, setInitializing] = useState(true)
+  const isDemo = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true'
+  const [user, setUser] = useState<AuthUser | null>(() => (
+    isDemo ? ({ uid: 'demo-user', email: 'demo@example.com' } as unknown as AuthUser) : null
+  ))
+  const [initializing, setInitializing] = useState(() => !isDemo)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (isDemo) return
     const unsubscribe = subscribeToAuthState((nextUser) => {
       setUser(nextUser)
       setInitializing(false)
     })
     return unsubscribe
-  }, [])
+  }, [isDemo])
 
   const runAuthAction = useCallback(async (action: () => Promise<void>) => {
     setLoading(true)

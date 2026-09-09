@@ -113,7 +113,7 @@ export function MorePage({
   const importPreviewDiagnostics = pendingImport?.diagnostics ?? dataStatus.lastImportDiagnostics
 
   return (
-    <div className="finance-page-shell space-y-4">
+    <div className="finance-page-shell">
       {/* ==================== COMMAND / HEADER PANEL ==================== */}
       <section className="finance-command-panel">
         <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
@@ -206,10 +206,10 @@ export function MorePage({
             ) : null}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
+            <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy}>
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
                   <path d="M12 12v9" />
                   <path d="m16 16-4-4-4 4" />
@@ -217,9 +217,9 @@ export function MorePage({
                 <span>{th.sync.saveToCloud}</span>
               </span>
             </Button>
-            <Button type="button" onClick={onLoadFromCloud} disabled={isCloudBusy}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Button className="w-full sm:w-auto" type="button" onClick={onLoadFromCloud} disabled={isCloudBusy}>
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
                   <path d="M12 21v-9" />
                   <path d="m8 17 4 4 4-4" />
@@ -252,10 +252,10 @@ export function MorePage({
             />
           ) : null}
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" variant="primary" onClick={onExportJson} disabled={isCloudBusy}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
+            <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onExportJson} disabled={isCloudBusy}>
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
@@ -263,14 +263,14 @@ export function MorePage({
                 <span>{th.file.exportJson}</span>
               </span>
             </Button>
-            <label className={`inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-blue-700 shadow-xs hover:bg-blue-50/80 active:scale-[0.98] transition ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <label className={`inline-flex min-h-11 sm:min-h-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-blue-700 shadow-xs hover:bg-blue-50/80 active:scale-[0.98] transition w-full sm:w-auto ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
+              <span className="flex items-center justify-center gap-1.5 min-w-0 text-center">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <span>เลือกไฟล์ JSON ตรวจสอบก่อนนำเข้า</span>
+                <span className="break-words">เลือกไฟล์ JSON ตรวจสอบก่อนนำเข้า</span>
               </span>
               <input className="sr-only" type="file" accept="application/json,.json" onChange={handleFileChange} disabled={isCloudBusy} />
             </label>

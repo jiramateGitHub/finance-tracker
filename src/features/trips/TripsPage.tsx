@@ -270,7 +270,7 @@ export function TripsPage({
     const usagePercent = clampPercent(tripTotals.usagePercent)
 
     return (
-      <div className="finance-page-shell space-y-4">
+      <div className="finance-page-shell">
         {/* ==================== COMMAND / HEADER PANEL FOR TRIP DETAIL ==================== */}
         <section className="finance-command-panel">
           <div className="finance-toolbar finance-command-header border-b border-sky-100 pb-3">
@@ -438,7 +438,7 @@ export function TripsPage({
   }
 
   return (
-    <div className="finance-page-shell space-y-4">
+    <div className="finance-page-shell">
       {/* ==================== COMMAND / HEADER PANEL ==================== */}
       <section className="finance-command-panel">
         <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">

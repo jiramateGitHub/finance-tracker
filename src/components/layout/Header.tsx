@@ -9,7 +9,7 @@ type HeaderProps = {
 
 export function Header({ activeItem, syncStatus }: HeaderProps) {
   return (
-    <header className="sticky top-2 z-40 min-w-0 rounded-2xl sm:rounded-3xl border border-slate-200/75 bg-white/90 p-3 shadow-xs backdrop-blur-md sm:top-3 sm:p-4">
+    <header className="sticky top-[calc(0.5rem+env(safe-area-inset-top))] sm:top-3 z-40 min-w-0 rounded-2xl sm:rounded-3xl border border-slate-200/75 bg-white/90 p-3 shadow-xs backdrop-blur-md sm:p-4">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="hidden size-9 place-items-center rounded-xl bg-blue-600 text-white shadow-xs font-bold text-base sm:grid">

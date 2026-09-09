@@ -41,7 +41,7 @@ export function InstallmentCalendar({ plans, filters }: InstallmentCalendarProps
                 <h3 className="font-extrabold">{formatMonth(monthKey)}</h3>
                 <p className="text-sm text-slate-500">{monthPlans.length} รอบ</p>
               </div>
-              <div className="font-extrabold text-blue-700">{formatMoney(monthTotal)}</div>
+              <div className="font-extrabold text-blue-700 tabular-nums shrink-0">{formatMoney(monthTotal)}</div>
             </div>
 
             <div className="grid content-start gap-2">
@@ -55,8 +55,8 @@ export function InstallmentCalendar({ plans, filters }: InstallmentCalendarProps
                         <div className="truncate text-xs font-extrabold text-slate-700">{plan.name}</div>
                         <div className="text-xs text-slate-500">จ่ายแล้ว {progress.monthsPaid}/{progress.scheduleMonths.length}</div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs font-extrabold text-rose-700">{formatMoney(plan.monthlyAmount)}</div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-extrabold text-rose-700 tabular-nums">{formatMoney(plan.monthlyAmount)}</div>
                         <div className={`text-xs font-bold ${isPaid ? 'text-emerald-700' : 'text-amber-700'}`}>
                           {isPaid ? th.transaction.paid : th.transaction.unpaid}
                         </div>
