@@ -9,17 +9,29 @@ export function formatMoney(value: number): string {
 
 export function formatDate(value: string): string {
   if (!value) return '-'
-  return new Intl.DateTimeFormat('th-TH', {
-    dateStyle: 'medium',
-  }).format(new Date(value))
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return value
+    return new Intl.DateTimeFormat('th-TH', {
+      dateStyle: 'medium',
+    }).format(d)
+  } catch {
+    return value
+  }
 }
 
 export function formatMonth(value: string): string {
   if (!value) return '-'
-  return new Intl.DateTimeFormat('th-TH', {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(`${value}-01T00:00:00`))
+  try {
+    const d = new Date(`${value}-01T00:00:00`)
+    if (Number.isNaN(d.getTime())) return value
+    return new Intl.DateTimeFormat('th-TH', {
+      month: 'long',
+      year: 'numeric',
+    }).format(d)
+  } catch {
+    return value
+  }
 }
 
 export function currentIsoTimestamp(): string {
@@ -43,6 +55,22 @@ export function currentMonthInputValue(): string {
   const year = now.getFullYear()
   const month = formatLocalDatePart(now.getMonth() + 1)
   return `${year}-${month}`
+}
+
+export function addMonths(monthKey: string, count: number): string {
+  if (!monthKey || typeof monthKey !== 'string' || !monthKey.includes('-')) {
+    return currentMonthInputValue()
+  }
+  const [yearStr, monthStr] = monthKey.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  if (!Number.isFinite(year) || !Number.isFinite(month)) {
+    return currentMonthInputValue()
+  }
+  const date = new Date(year, month - 1 + count, 1)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  return `${y}-${m}`
 }
 
 export function getMonthKey(dateValue: string): string {

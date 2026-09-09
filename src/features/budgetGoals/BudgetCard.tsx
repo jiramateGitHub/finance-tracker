@@ -35,7 +35,7 @@ export function BudgetCard({ budget, transactions, onEdit, onDelete }: BudgetCar
   const category = getBudgetCategoryKey(budget)
 
   return (
-    <article className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <article className="grid gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs hover:border-slate-300 hover:shadow-md transition-all">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -52,16 +52,16 @@ export function BudgetCard({ budget, transactions, onEdit, onDelete }: BudgetCar
       </header>
 
       <div className="grid gap-2 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-bold text-slate-500">งบประมาณ</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+          <div className="text-xs font-semibold text-slate-500">งบประมาณ</div>
           <div className="mt-1 text-base font-extrabold text-slate-900">{formatMoney(progress.amount)}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-bold text-slate-500">ใช้ไป</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+          <div className="text-xs font-semibold text-slate-500">ใช้ไป</div>
           <div className="mt-1 text-base font-extrabold text-rose-700">{formatMoney(progress.used)}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-bold text-slate-500">คงเหลือ</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+          <div className="text-xs font-semibold text-slate-500">คงเหลือ</div>
           <div className={`mt-1 text-base font-extrabold ${progress.remaining < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
             {formatMoney(progress.remaining)}
           </div>

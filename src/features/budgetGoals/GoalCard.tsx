@@ -38,7 +38,7 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
   }
 
   return (
-    <article className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <article className="grid gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs hover:border-slate-300 hover:shadow-md transition-all">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -56,16 +56,16 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
       </header>
 
       <div className="grid gap-2 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-bold text-slate-500">เป้าหมาย</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+          <div className="text-xs font-semibold text-slate-500">เป้าหมาย</div>
           <div className="mt-1 text-base font-extrabold text-slate-900">{formatMoney(progress.targetAmount)}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-bold text-slate-500">ปัจจุบัน</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+          <div className="text-xs font-semibold text-slate-500">ปัจจุบัน</div>
           <div className="mt-1 text-base font-extrabold text-blue-700">{formatMoney(progress.currentAmount)}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-bold text-slate-500">คงเหลือ</div>
+        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+          <div className="text-xs font-semibold text-slate-500">คงเหลือ</div>
           <div className="mt-1 text-base font-extrabold text-emerald-700">{formatMoney(progress.remaining)}</div>
         </div>
       </div>

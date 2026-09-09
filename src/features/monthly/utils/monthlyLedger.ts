@@ -1,7 +1,7 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import type { FinanceData, TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { th } from '../../../i18n/th'
-import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe, addMonths } from '../../../utils/formatters'
 import { parseMonthlySmartKeyword } from './monthlySmartFilter'
 
 export type MonthlySortOrder = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'title-asc'
@@ -85,11 +85,7 @@ export function normalizeMonthRange(startMonth: string, endMonth: string): [stri
   return [startMonth, endMonth]
 }
 
-export function addMonthsToMonthKey(monthKey: string, amount: number): string {
-  const [year, month] = monthKey.split('-').map(Number)
-  const date = new Date(year, (month || 1) - 1 + amount, 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
+export const addMonthsToMonthKey = addMonths
 
 export function getMonthKeysInRange(startMonth: string, endMonth: string): string[] {
   const [start, end] = normalizeMonthRange(startMonth, endMonth)

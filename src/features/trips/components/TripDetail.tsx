@@ -24,6 +24,7 @@ import {
 type TripDetailProps = {
   data: AppData
   trip: Trip | null
+  hideHeader?: boolean
   activeTab: TripDetailTab
   onChangeTab: (tab: TripDetailTab) => void
   onEditTrip: (trip: Trip) => void
@@ -67,6 +68,7 @@ const actualStatusOptions: Array<{ value: ActualItemStatusFilter; label: string 
 export function TripDetail({
   data,
   trip,
+  hideHeader = false,
   activeTab,
   onChangeTab,
   onEditTrip,
@@ -133,43 +135,47 @@ export function TripDetail({
 
   return (
     <div className="grid min-w-0 gap-3">
-      <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3 sm:p-4">
-        <div className="finance-toolbar items-start">
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="min-w-0 break-words text-xl font-extrabold leading-tight text-blue-950">{trip.name}</h2>
-              <Badge tone={tripStatus === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[tripStatus]}</Badge>
+      {!hideHeader && (
+        <>
+          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3 sm:p-4">
+            <div className="finance-toolbar items-start">
+              <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h2 className="min-w-0 break-words text-xl font-extrabold leading-tight text-blue-950">{trip.name}</h2>
+                  <Badge tone={tripStatus === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[tripStatus]}</Badge>
+                </div>
+                <p className="mt-1 text-sm font-semibold leading-6 text-blue-700">
+                  {trip.destination || 'ยังไม่ระบุจุดหมาย'} · {formatDate(trip.startDate)} - {formatDate(trip.endDate)} · {getTripDayCount(trip)} วัน
+                </p>
+                {trip.note ? <p className="mt-1 text-sm leading-6 text-blue-800">{trip.note}</p> : null}
+              </div>
+              <div className="flex min-w-0 flex-wrap justify-end gap-2">
+                <Button type="button" size="sm" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>
+                <Button type="button" size="sm" onClick={() => onEditTrip(trip)}>แก้ไขทริป</Button>
+                <Button type="button" size="sm" variant="danger" onClick={() => onDeleteTrip(trip.id)}>{th.common.delete}</Button>
+              </div>
             </div>
-            <p className="mt-1 text-sm font-semibold leading-6 text-blue-700">
-              {trip.destination || 'ยังไม่ระบุจุดหมาย'} · {formatDate(trip.startDate)} - {formatDate(trip.endDate)} · {getTripDayCount(trip)} วัน
-            </p>
-            {trip.note ? <p className="mt-1 text-sm leading-6 text-blue-800">{trip.note}</p> : null}
-          </div>
-          <div className="flex min-w-0 flex-wrap justify-end gap-2">
-            <Button type="button" size="sm" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>
-            <Button type="button" size="sm" onClick={() => onEditTrip(trip)}>แก้ไขทริป</Button>
-            <Button type="button" size="sm" variant="danger" onClick={() => onDeleteTrip(trip.id)}>{th.common.delete}</Button>
-          </div>
-        </div>
 
-        <div className="mt-3 grid gap-2">
-          <div className="flex items-center justify-between gap-3 text-xs font-bold text-blue-700">
-            <span>ใช้จริงเทียบงบ</span>
-            <span>{usagePercent}%</span>
+            <div className="mt-3 grid gap-2">
+              <div className="flex items-center justify-between gap-3 text-xs font-bold text-blue-700">
+                <span>ใช้จริงเทียบงบ</span>
+                <span>{usagePercent}%</span>
+              </div>
+              <div className="finance-progress-track bg-blue-100">
+                <div className="finance-progress-bar" style={{ width: `${usagePercent}%` }} />
+              </div>
+            </div>
           </div>
-          <div className="finance-progress-track bg-blue-100">
-            <div className="finance-progress-bar" style={{ width: `${usagePercent}%` }} />
-          </div>
-        </div>
-      </div>
 
-      <div className="finance-mini-summary-grid">
-        <Metric label="งบที่วางไว้" value={formatMoney(totals.plannedBudget)} />
-        <Metric label="ใช้จริง" value={formatMoney(totals.actualSpending)} className="text-rose-700" />
-        <Metric label="จ่ายแล้ว" value={formatMoney(totals.paidTotal)} className="text-emerald-700" />
-        <Metric label="ยังไม่จ่าย" value={formatMoney(totals.unpaidTotal)} className="text-amber-700" />
-        <Metric label={totals.remaining >= 0 ? 'คงเหลือ' : 'เกินงบ'} value={formatMoney(Math.abs(totals.remaining))} className={remainingTone} />
-      </div>
+          <div className="finance-mini-summary-grid">
+            <Metric label="งบที่วางไว้" value={formatMoney(totals.plannedBudget)} />
+            <Metric label="ใช้จริง" value={formatMoney(totals.actualSpending)} className="text-rose-700" />
+            <Metric label="จ่ายแล้ว" value={formatMoney(totals.paidTotal)} className="text-emerald-700" />
+            <Metric label="ยังไม่จ่าย" value={formatMoney(totals.unpaidTotal)} className="text-amber-700" />
+            <Metric label={totals.remaining >= 0 ? 'คงเหลือ' : 'เกินงบ'} value={formatMoney(Math.abs(totals.remaining))} className={remainingTone} />
+          </div>
+        </>
+      )}
 
       <div className="finance-segmented" aria-label="แท็บรายละเอียดทริป">
         {(['overview', 'actual', 'plan'] as TripDetailTab[]).map((tab) => (

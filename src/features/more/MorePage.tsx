@@ -113,78 +113,176 @@ export function MorePage({
   const importPreviewDiagnostics = pendingImport?.diagnostics ?? dataStatus.lastImportDiagnostics
 
   return (
-    <div className="grid gap-4">
-      <Card title="ซิงก์ Cloud และไฟล์สำรอง">
-        <p className="-mt-2 mb-4 text-sm font-semibold leading-6 text-finance-muted">
-          Tip: Cloud เป็นข้อมูลหลัก ส่วน JSON ใช้สำรองก่อนนำเข้า
-        </p>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-bold text-slate-900">บัญชี Firebase</h3>
-              <SyncStatusBadge status={syncStatus} />
+    <div className="finance-page-shell space-y-4">
+      {/* ==================== COMMAND / HEADER PANEL ==================== */}
+      <section className="finance-command-panel">
+        <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
+          {/* Left: Title & Subtitle */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-white shadow-sm shadow-slate-700/20">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+              </svg>
             </div>
-            <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
-              โหลดและบันทึกข้อมูลผ่านบัญชีนี้
-            </p>
-            <div className="mt-3 truncate rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
-              {currentUserEmail}
-            </div>
-            <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold ${cloudStatusTone}`}>
-              {syncStatus.message}
-              {syncStatus.lastSyncedAt ? (
-                <span className="mt-1 block text-xs font-medium opacity-80">
-                  {th.sync.lastSynced}: {new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH')}
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">ตั้งค่า & ข้อมูล</h2>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80">
+                  Cloud & Backup
                 </span>
-              ) : null}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy}>
-                {th.sync.saveToCloud}
-              </Button>
-              <Button type="button" onClick={onLoadFromCloud} disabled={isCloudBusy}>
-                {th.sync.loadFromCloud}
-              </Button>
-              <Button type="button" onClick={onLogout} disabled={isCloudBusy}>
-                {th.auth.logout}
-              </Button>
+              </div>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                จัดการบัญชี Firebase, ซิงก์ข้อมูลบน Cloud และนำเข้า/ส่งออกไฟล์สำรอง
+              </p>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
-            <h3 className="font-bold text-slate-900">นำเข้า/ส่งออก JSON</h3>
-            <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
-              ก่อนนำเข้า ระบบจะดาวน์โหลดไฟล์สำรองให้อัตโนมัติ
-            </p>
-            <div className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold ${statusTone}`}>
-              {dataStatus.message}
-            </div>
-
-            {importPreviewDiagnostics ? (
-              <ImportDiagnosticsPanel
-                diagnostics={importPreviewDiagnostics}
-                title={pendingImport ? 'ตัวอย่างไฟล์ก่อนนำเข้า' : 'สรุปการนำเข้าล่าสุด'}
-                dropWarnings={pendingImport ? dropWarnings : []}
-              />
-            ) : null}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button type="button" variant="primary" onClick={onExportJson} disabled={isCloudBusy}>
-                {th.file.exportJson}
-              </Button>
-              <label className={`inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-blue-700 shadow-xs hover:bg-blue-50/80 active:scale-[0.98] transition ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
-                เลือกไฟล์ JSON เพื่อตรวจสอบก่อนนำเข้า
-                <input className="sr-only" type="file" accept="application/json,.json" onChange={handleFileChange} disabled={isCloudBusy} />
-              </label>
-            </div>
+          {/* Right: Cloud Sync Status & Quick Actions */}
+          <div className="finance-command-actions items-center">
+            <SyncStatusBadge status={syncStatus} />
+            <Button type="button" size="sm" onClick={onLogout} disabled={isCloudBusy}>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>{th.auth.logout}</span>
+              </span>
+            </Button>
           </div>
         </div>
-      </Card>
 
-      <details className="rounded-[18px] border border-slate-200 bg-white p-3 text-sm shadow-finance-sm sm:p-4">
-        <summary className="cursor-pointer list-none font-extrabold text-slate-700 marker:hidden">
-          ข้อมูลทางเทคนิคสำหรับตรวจสอบ
-          <span className="ml-2 text-xs font-bold text-slate-400">ใช้ดูบัญชี โปรเจกต์ และจำนวนข้อมูล</span>
+        {/* Overview Counts Bar */}
+        <div className="mt-3.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
+          <span className="text-slate-400">ข้อมูลปัจจุบัน:</span>
+          <span className="rounded-xl bg-white border border-slate-200/80 px-2.5 py-1">
+            รายการ {currentCounts.transactions.toLocaleString('th-TH')}
+          </span>
+          <span className="rounded-xl bg-white border border-slate-200/80 px-2.5 py-1">
+            แผนผ่อน {currentCounts.installmentPlans.toLocaleString('th-TH')}
+          </span>
+          <span className="rounded-xl bg-white border border-slate-200/80 px-2.5 py-1">
+            ทริป {currentCounts.trips.toLocaleString('th-TH')}
+          </span>
+          <span className="rounded-xl bg-white border border-slate-200/80 px-2.5 py-1">
+            งบประมาณ {currentCounts.budgets.toLocaleString('th-TH')}
+          </span>
+          <span className="rounded-xl bg-white border border-slate-200/80 px-2.5 py-1">
+            เป้าหมาย {currentCounts.goals.toLocaleString('th-TH')}
+          </span>
+        </div>
+      </section>
+
+      {/* ==================== 2 COLUMNS: FIREBASE & BACKUP ==================== */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Firebase Account Panel */}
+        <Card
+          title={
+            <div className="flex items-center justify-between gap-2 w-full">
+              <span className="font-bold text-slate-900">บัญชี Firebase Cloud</span>
+              <SyncStatusBadge status={syncStatus} />
+            </div>
+          }
+        >
+          <p className="-mt-1 mb-3 text-xs font-medium text-slate-500">
+            ข้อมูลหลักถูกบันทึกบน Cloud Firestore อัตโนมัติ ปลอดภัยและซิงก์ข้ามอุปกรณ์
+          </p>
+
+          <div className="truncate rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <svg className="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="5" />
+              <path d="M20 21a8 8 0 0 0-16 0" />
+            </svg>
+            <span className="truncate">{currentUserEmail}</span>
+          </div>
+
+          <div className={`mt-3 rounded-xl border px-3.5 py-2.5 text-sm font-semibold ${cloudStatusTone}`}>
+            <div>{syncStatus.message}</div>
+            {syncStatus.lastSyncedAt ? (
+              <span className="mt-1 block text-xs font-medium opacity-80">
+                {th.sync.lastSynced}: {new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH')}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy}>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                  <path d="M12 12v9" />
+                  <path d="m16 16-4-4-4 4" />
+                </svg>
+                <span>{th.sync.saveToCloud}</span>
+              </span>
+            </Button>
+            <Button type="button" onClick={onLoadFromCloud} disabled={isCloudBusy}>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                  <path d="M12 21v-9" />
+                  <path d="m8 17 4 4 4-4" />
+                </svg>
+                <span>{th.sync.loadFromCloud}</span>
+              </span>
+            </Button>
+          </div>
+        </Card>
+
+        {/* JSON Backup Panel */}
+        <Card
+          title={
+            <span className="font-bold text-slate-900">นำเข้า/ส่งออก JSON สำรอง</span>
+          }
+        >
+          <p className="-mt-1 mb-3 text-xs font-medium text-slate-500">
+            ก่อนนำเข้าทุกครั้ง ระบบจะดาวน์โหลดไฟล์สำรองให้อัตโนมัติเพื่อความปลอดภัย
+          </p>
+
+          <div className={`rounded-xl border px-3.5 py-2.5 text-sm font-semibold ${statusTone}`}>
+            {dataStatus.message}
+          </div>
+
+          {importPreviewDiagnostics ? (
+            <ImportDiagnosticsPanel
+              diagnostics={importPreviewDiagnostics}
+              title={pendingImport ? 'ตัวอย่างไฟล์ก่อนนำเข้า' : 'สรุปการนำเข้าล่าสุด'}
+              dropWarnings={pendingImport ? dropWarnings : []}
+            />
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" variant="primary" onClick={onExportJson} disabled={isCloudBusy}>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>{th.file.exportJson}</span>
+              </span>
+            </Button>
+            <label className={`inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-blue-700 shadow-xs hover:bg-blue-50/80 active:scale-[0.98] transition ${isCloudBusy ? 'pointer-events-none opacity-60' : ''}`}>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>เลือกไฟล์ JSON ตรวจสอบก่อนนำเข้า</span>
+              </span>
+              <input className="sr-only" type="file" accept="application/json,.json" onChange={handleFileChange} disabled={isCloudBusy} />
+            </label>
+          </div>
+        </Card>
+      </div>
+
+      {/* Technical Info QA Accordion */}
+      <details className="rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-xs transition hover:border-slate-300">
+        <summary className="cursor-pointer list-none font-extrabold text-slate-700 marker:hidden flex items-center justify-between">
+          <span>ข้อมูลทางเทคนิคสำหรับตรวจสอบ</span>
+          <span className="text-xs font-bold text-slate-400">แตะเพื่อเปิด/ปิด</span>
         </summary>
         <div className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm md:grid-cols-2 xl:grid-cols-4">
           <TechnicalItem label="รหัสผู้ใช้" value={currentUserId} />

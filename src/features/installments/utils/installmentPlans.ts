@@ -2,9 +2,15 @@ import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
 import { currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
-export type InstallmentViewMode = 'list' | 'calendar'
-export type InstallmentStatusFilter = 'all' | 'active' | 'paid'
+export type InstallmentViewMode = 'list' | 'table' | 'calendar'
+export type InstallmentStatusFilter = 'all' | 'dueThisMonth' | 'unpaid' | 'paid' | 'completed' | 'active'
 export type InstallmentSortOrder =
+  | 'dueDay'
+  | 'amountDesc'
+  | 'amountAsc'
+  | 'remainingDesc'
+  | 'remainingAsc'
+  | 'progressDesc'
   | 'start-asc'
   | 'start-desc'
   | 'name-asc'
@@ -16,9 +22,11 @@ export type InstallmentSortOrder =
 export type InstallmentFilters = {
   keyword: string
   status: InstallmentStatusFilter
+  category?: string
   startMonth: string
   endMonth: string
   sortOrder: InstallmentSortOrder
+  selectedMonth?: string
 }
 
 export type InstallmentFormValues = {
@@ -63,6 +71,13 @@ export function addMonths(monthKey: string, count: number): string {
   const [yearText, monthText] = monthKey.split('-')
   const date = new Date(Number(yearText), Number(monthText) - 1 + count, 1)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function monthDiff(ym1: string, ym2: string): number {
+  if (!ym1 || !ym2) return 0
+  const [y1, m1] = ym1.split('-').map(Number)
+  const [y2, m2] = ym2.split('-').map(Number)
+  return (y2 - y1) * 12 + (m2 - m1)
 }
 
 export function currentMonthKey(): string {
@@ -139,15 +154,385 @@ export function summarizeInstallmentPlans(plans: InstallmentPlan[]): Installment
   )
 }
 
+export type InstallmentMonthlyInfo = {
+  progress: InstallmentProgress
+  startYM: string
+  endYM: string
+  totalMonths: number
+  paidCount: number
+  remainingMonths: number
+  monthlyPayment: number
+  remainingBalance: number
+  progressPercent: number
+  isActiveInMonth: boolean
+  isPaidInMonth: boolean
+  isCompleted: boolean
+  termInMonth: number
+  dueDay: number
+  actualDueDay: number
+  isOverdue: boolean
+  isDueSoon: boolean
+  daysUntilDue: number | null
+}
+
+export function calculateInstallmentMonthlyInfo(
+  plan: InstallmentPlan,
+  selectedMonth: string,
+  today: Date = new Date(),
+): InstallmentMonthlyInfo {
+  const progress = calculateInstallmentProgress(plan)
+  const startYM = plan.startMonth || currentMonthKey()
+  const totalMonths = progress.scheduleMonths.length
+  const endYM = progress.endMonth || startYM
+  const paidCount = progress.monthsPaid
+  const remainingMonths = progress.monthsRemaining
+  const isCompleted = remainingMonths === 0
+  const monthlyPayment = Math.max(0, Number(plan.monthlyAmount || plan.paymentAmount || 0))
+  const remainingBalance = progress.remainingAmount
+  const progressPercent = progress.progressPercent
+
+  const diff = monthDiff(startYM, selectedMonth)
+  const isActiveInMonth = diff >= 0 && diff < totalMonths
+  const termInMonth = diff + 1
+  const isPaidInMonth = progress.paidMonthKeys.includes(selectedMonth)
+
+  const rawDueDay = Number(plan.dueDay ?? plan.paymentDay ?? 25)
+  const dueDay = Number.isFinite(rawDueDay) && rawDueDay >= 1 && rawDueDay <= 31 ? Math.floor(rawDueDay) : 25
+
+  const [vYear, vMonth] = (selectedMonth || currentMonthKey()).split('-').map(Number)
+  const daysInMonth = Number.isFinite(vYear) && Number.isFinite(vMonth) ? new Date(vYear, vMonth, 0).getDate() : 31
+  const actualDueDay = Math.min(dueDay, daysInMonth)
+
+  const todayYear = today.getFullYear()
+  const todayMonthNum = today.getMonth() + 1
+  const todayDate = today.getDate()
+  const todayMonthStr = `${todayYear}-${String(todayMonthNum).padStart(2, '0')}`
+  const todayStr = `${todayMonthStr}-${String(todayDate).padStart(2, '0')}`
+  const dueDateStr = `${selectedMonth}-${String(actualDueDay).padStart(2, '0')}`
+
+  let isOverdue = false
+  let isDueSoon = false
+  let daysUntilDue: number | null = null
+
+  if (isActiveInMonth && !isPaidInMonth && !isCompleted) {
+    if (dueDateStr < todayStr) {
+      isOverdue = true
+      daysUntilDue = actualDueDay - todayDate
+    } else if (selectedMonth === todayMonthStr) {
+      daysUntilDue = actualDueDay - todayDate
+      if (daysUntilDue >= 0 && daysUntilDue <= 3) {
+        isDueSoon = true
+      }
+    }
+  }
+
+  return {
+    progress,
+    startYM,
+    endYM,
+    totalMonths,
+    paidCount,
+    remainingMonths,
+    monthlyPayment,
+    remainingBalance,
+    progressPercent,
+    isActiveInMonth,
+    isPaidInMonth,
+    isCompleted,
+    termInMonth,
+    dueDay,
+    actualDueDay,
+    isOverdue,
+    isDueSoon,
+    daysUntilDue,
+  }
+}
+
+export type InstallmentDashboardMetrics = {
+  selectedMonth: string
+  totalDueThisMonth: number
+  totalPaidThisMonth: number
+  remainingThisMonth: number
+  paidMonthPercent: number
+  totalLifetimeDebt: number
+  totalLifetimePaid: number
+  totalLifetimeOriginal: number
+  lifetimePercent: number
+  activeCountThisMonth: number
+  paidCountThisMonth: number
+  pendingCountThisMonth: number
+  overdueCountThisMonth: number
+  dueSoonCountThisMonth: number
+  nextPayoffCandidate: {
+    plan: InstallmentPlan
+    remainingMonths: number
+    endMonth: string
+    monthlyAmount: number
+  } | null
+  urgentPlans: Array<{
+    plan: InstallmentPlan
+    type: 'overdue' | 'dueSoon'
+    actualDueDay: number
+    monthlyAmount: number
+  }>
+}
+
+export function getInstallmentDashboardMetrics(
+  plans: InstallmentPlan[],
+  selectedMonth: string = currentMonthKey(),
+  today: Date = new Date(),
+): InstallmentDashboardMetrics {
+  let totalDueThisMonth = 0
+  let totalPaidThisMonth = 0
+  let activeCountThisMonth = 0
+  let paidCountThisMonth = 0
+  let pendingCountThisMonth = 0
+  let overdueCountThisMonth = 0
+  let dueSoonCountThisMonth = 0
+
+  let totalLifetimeDebt = 0
+  let totalLifetimePaid = 0
+  let totalLifetimeOriginal = 0
+
+  let nextPayoffCandidate: InstallmentDashboardMetrics['nextPayoffCandidate'] = null
+  const urgentPlans: InstallmentDashboardMetrics['urgentPlans'] = []
+
+  plans.forEach((plan) => {
+    const info = calculateInstallmentMonthlyInfo(plan, selectedMonth, today)
+    const { progress } = info
+
+    totalLifetimeOriginal += progress.totalAmount
+    totalLifetimePaid += progress.totalPaid
+    totalLifetimeDebt += progress.remainingAmount
+
+    // Next payoff milestone (earliest completion date among active non-completed items)
+    if (!info.isCompleted && info.remainingMonths > 0) {
+      if (
+        !nextPayoffCandidate ||
+        info.endYM < nextPayoffCandidate.endMonth ||
+        (info.endYM === nextPayoffCandidate.endMonth && info.remainingMonths < nextPayoffCandidate.remainingMonths)
+      ) {
+        nextPayoffCandidate = {
+          plan,
+          remainingMonths: info.remainingMonths,
+          endMonth: info.endYM,
+          monthlyAmount: info.monthlyPayment,
+        }
+      }
+    }
+
+    if (info.isActiveInMonth) {
+      activeCountThisMonth += 1
+      totalDueThisMonth += info.monthlyPayment
+
+      if (info.isPaidInMonth) {
+        paidCountThisMonth += 1
+        totalPaidThisMonth += info.monthlyPayment
+      } else if (!info.isCompleted) {
+        pendingCountThisMonth += 1
+        if (info.isOverdue) {
+          overdueCountThisMonth += 1
+          urgentPlans.push({
+            plan,
+            type: 'overdue',
+            actualDueDay: info.actualDueDay,
+            monthlyAmount: info.monthlyPayment,
+          })
+        } else if (info.isDueSoon) {
+          dueSoonCountThisMonth += 1
+          urgentPlans.push({
+            plan,
+            type: 'dueSoon',
+            actualDueDay: info.actualDueDay,
+            monthlyAmount: info.monthlyPayment,
+          })
+        }
+      }
+    }
+  })
+
+  const remainingThisMonth = Math.max(0, totalDueThisMonth - totalPaidThisMonth)
+  const paidMonthPercent = totalDueThisMonth > 0 ? Math.round((totalPaidThisMonth / totalDueThisMonth) * 100) : (totalPaidThisMonth > 0 ? 100 : 0)
+  const lifetimePercent = totalLifetimeOriginal > 0 ? Math.round((totalLifetimePaid / totalLifetimeOriginal) * 100) : 0
+
+  return {
+    selectedMonth,
+    totalDueThisMonth,
+    totalPaidThisMonth,
+    remainingThisMonth,
+    paidMonthPercent,
+    totalLifetimeDebt,
+    totalLifetimePaid,
+    totalLifetimeOriginal,
+    lifetimePercent,
+    activeCountThisMonth,
+    paidCountThisMonth,
+    pendingCountThisMonth,
+    overdueCountThisMonth,
+    dueSoonCountThisMonth,
+    nextPayoffCandidate,
+    urgentPlans,
+  }
+}
+
+export type InstallmentProjectionMonth = {
+  monthKey: string
+  label: string
+  totalDue: number
+  finishingPlans: string[]
+}
+
+export type Installment12MonthProjection = {
+  months: InstallmentProjectionMonth[]
+  maxMonthlyDue: number
+  firstMilestone: {
+    monthKey: string
+    label: string
+    finishingPlans: string[]
+  } | null
+}
+
+export function getInstallment12MonthProjection(
+  plans: InstallmentPlan[],
+  startMonth: string = currentMonthKey(),
+): Installment12MonthProjection {
+  const months: InstallmentProjectionMonth[] = []
+  let maxMonthlyDue = 0
+  let firstMilestone: Installment12MonthProjection['firstMilestone'] = null
+
+  for (let i = 0; i < 12; i++) {
+    const targetYM = addMonths(startMonth, i)
+    let totalDue = 0
+    const finishingPlans: string[] = []
+
+    plans.forEach((plan) => {
+      const progress = calculateInstallmentProgress(plan)
+      if (progress.monthsRemaining === 0) return
+
+      const startYM = plan.startMonth || currentMonthKey()
+      const diff = monthDiff(startYM, targetYM)
+      if (diff >= 0 && diff < progress.scheduleMonths.length) {
+        const isTargetPaid = progress.paidMonthKeys.includes(targetYM)
+        if (!isTargetPaid) {
+          totalDue += Math.max(0, Number(plan.monthlyAmount || plan.paymentAmount || 0))
+        }
+        if (targetYM === progress.endMonth) {
+          finishingPlans.push(plan.name)
+        }
+      }
+    })
+
+    if (totalDue > maxMonthlyDue) {
+      maxMonthlyDue = totalDue
+    }
+
+    const monthData: InstallmentProjectionMonth = {
+      monthKey: targetYM,
+      label: targetYM,
+      totalDue: Math.round(totalDue),
+      finishingPlans,
+    }
+
+    if (finishingPlans.length > 0 && !firstMilestone) {
+      firstMilestone = {
+        monthKey: targetYM,
+        label: targetYM,
+        finishingPlans,
+      }
+    }
+
+    months.push(monthData)
+  }
+
+  return {
+    months,
+    maxMonthlyDue: Math.max(maxMonthlyDue, 1),
+    firstMilestone,
+  }
+}
+
+export type InstallmentCategorySlice = {
+  category: string
+  totalAmount: number
+  planCount: number
+  percentage: number
+  color: string
+}
+
+export type InstallmentCategoryDistribution = {
+  slices: InstallmentCategorySlice[]
+  totalMonthlyDue: number
+}
+
+const CATEGORY_CHART_COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#64748b', // slate
+]
+
+export function getInstallmentCategoryDistribution(
+  plans: InstallmentPlan[],
+  selectedMonth: string = currentMonthKey(),
+): InstallmentCategoryDistribution {
+  const catMap = new Map<string, { totalAmount: number; planCount: number }>()
+  let totalMonthlyDue = 0
+
+  plans.forEach((plan) => {
+    const info = calculateInstallmentMonthlyInfo(plan, selectedMonth)
+    if (info.isActiveInMonth && (!info.isCompleted || info.isPaidInMonth)) {
+      const cat = plan.category || 'ผ่อนสินค้า'
+      const current = catMap.get(cat) ?? { totalAmount: 0, planCount: 0 }
+      current.totalAmount += info.monthlyPayment
+      current.planCount += 1
+      catMap.set(cat, current)
+      totalMonthlyDue += info.monthlyPayment
+    }
+  })
+
+  const sortedCategories = Array.from(catMap.entries()).sort((a, b) => b[1].totalAmount - a[1].totalAmount)
+
+  const slices: InstallmentCategorySlice[] = sortedCategories.map(([category, data], idx) => {
+    const percentage = totalMonthlyDue > 0 ? Math.round((data.totalAmount / totalMonthlyDue) * 100) : 0
+    const color = CATEGORY_CHART_COLORS[idx % CATEGORY_CHART_COLORS.length]
+    return {
+      category,
+      totalAmount: data.totalAmount,
+      planCount: data.planCount,
+      percentage,
+      color,
+    }
+  })
+
+  return {
+    slices,
+    totalMonthlyDue,
+  }
+}
+
 export function filterInstallmentPlans(plans: InstallmentPlan[], filters: InstallmentFilters): InstallmentPlan[] {
   const keyword = filters.keyword.trim().toLocaleLowerCase()
   const [rangeStart, rangeEnd] = normalizeMonthRange(filters.startMonth, filters.endMonth)
+  const currentMonth = filters.selectedMonth || currentMonthKey()
+
   return plans
     .filter((plan) => {
-      const progress = calculateInstallmentProgress(plan)
-      if (filters.status === 'active') return progress.monthsRemaining > 0
-      if (filters.status === 'paid') return progress.monthsRemaining === 0
+      const info = calculateInstallmentMonthlyInfo(plan, currentMonth)
+      if (filters.status === 'dueThisMonth') return info.isActiveInMonth
+      if (filters.status === 'unpaid') return info.isActiveInMonth && !info.isPaidInMonth && !info.isCompleted
+      if (filters.status === 'paid') return info.isActiveInMonth && info.isPaidInMonth
+      if (filters.status === 'completed') return info.isCompleted
+      if (filters.status === 'active') return info.remainingMonths > 0
       return true
+    })
+    .filter((plan) => {
+      if (!filters.category || filters.category === 'all') return true
+      const cat = String(plan.categoryId || plan.category || '')
+      return cat === filters.category
     })
     .filter((plan) => {
       if (!rangeStart && !rangeEnd) return true
@@ -294,13 +679,29 @@ export function setPaidMonth(plan: InstallmentPlan, monthKey: string, isPaid: bo
   }
 }
 
-export function createDefaultInstallmentFilters(): InstallmentFilters {
+export function setAllMonthsPaid(plan: InstallmentPlan, isPaid: boolean): InstallmentPlan {
+  const scheduleMonths = getInstallmentScheduleMonths(plan)
+  const paidMonthKeys = isPaid ? [...scheduleMonths] : []
+  return {
+    ...plan,
+    paidMonthKeys,
+    monthsPaid: paidMonthKeys.length,
+    paidMonths: paidMonthKeys.length,
+    remainingOverride: isPaid ? 0 : undefined,
+    balanceSnapshotAmount: isPaid ? 0 : null,
+    updatedAt: currentIsoTimestamp(),
+  }
+}
+
+export function createDefaultInstallmentFilters(selectedMonth = currentMonthKey()): InstallmentFilters {
   return {
     keyword: '',
     status: 'all',
+    category: 'all',
     startMonth: '',
     endMonth: '',
-    sortOrder: 'start-asc',
+    sortOrder: 'dueDay',
+    selectedMonth,
   }
 }
 
@@ -313,11 +714,20 @@ export function compareInstallmentPlans(a: InstallmentPlan, b: InstallmentPlan, 
   const baseCompare = String(a.startMonth).localeCompare(String(b.startMonth)) || String(a.name).localeCompare(String(b.name))
   const aProgress = calculateInstallmentProgress(a)
   const bProgress = calculateInstallmentProgress(b)
+  const aMonthly = Number(a.monthlyAmount || 0)
+  const bMonthly = Number(b.monthlyAmount || 0)
+  const aDueDay = Number(a.dueDay ?? a.paymentDay ?? 25)
+  const bDueDay = Number(b.dueDay ?? b.paymentDay ?? 25)
+
+  if (sortOrder === 'dueDay') return aDueDay - bDueDay || baseCompare
+  if (sortOrder === 'amountDesc' || sortOrder === 'monthly-desc') return bMonthly - aMonthly || baseCompare
+  if (sortOrder === 'amountAsc') return aMonthly - bMonthly || baseCompare
+  if (sortOrder === 'remainingDesc' || sortOrder === 'remaining-desc') return bProgress.remainingAmount - aProgress.remainingAmount || baseCompare
+  if (sortOrder === 'remainingAsc' || sortOrder === 'remaining-asc') return aProgress.remainingAmount - bProgress.remainingAmount || baseCompare
+  if (sortOrder === 'progressDesc') return bProgress.progressPercent - aProgress.progressPercent || baseCompare
   if (sortOrder === 'start-desc') return String(b.startMonth).localeCompare(String(a.startMonth)) || String(a.name).localeCompare(String(b.name))
+  if (sortOrder === 'start-asc') return String(a.startMonth).localeCompare(String(b.startMonth)) || String(a.name).localeCompare(String(b.name))
   if (sortOrder === 'name-asc') return String(a.name).localeCompare(String(b.name)) || String(a.startMonth).localeCompare(String(b.startMonth))
-  if (sortOrder === 'remaining-desc') return bProgress.remainingAmount - aProgress.remainingAmount || baseCompare
-  if (sortOrder === 'remaining-asc') return aProgress.remainingAmount - bProgress.remainingAmount || baseCompare
-  if (sortOrder === 'monthly-desc') return Number(b.monthlyAmount || 0) - Number(a.monthlyAmount || 0) || baseCompare
   if (sortOrder === 'status-active') {
     const aRank = aProgress.monthsRemaining > 0 ? 0 : 1
     const bRank = bProgress.monthsRemaining > 0 ? 0 : 1

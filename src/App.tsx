@@ -43,7 +43,17 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
   }
 
   function renderActiveView() {
-    if (store.activeView === 'yearly') return <YearlyPage data={store.data} />
+    if (store.activeView === 'yearly') {
+      return (
+        <YearlyPage
+          data={store.data}
+          onSelectMonth={(monthKey) => {
+            store.setSelectedMonth(monthKey)
+            store.setActiveView('monthly')
+          }}
+        />
+      )
+    }
     if (store.activeView === 'installments') {
       return (
         <InstallmentsPage

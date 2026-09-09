@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "npx -y tsx src/utils/formatters.test.ts && npx -y tsx src/features/installments/utils/installmentPlans.test.ts && npx -y tsx src/features/monthly/utils/monthlyLedger.test.ts && npx -y tsx src/features/trips/utils/tripUtils.test.ts && npx -y tsx src/features/budgetGoals/budgetGoalCalculations.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
