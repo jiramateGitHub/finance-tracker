@@ -68,6 +68,7 @@
 
 - Desktop smoke ผ่านบน dev และ production preview (`http://192.168.1.18:4173/finance-tracker/?demo=true`) โดยตรวจ route และ workflow หลักทุกหน้า; production preview ไม่มี console error
 - พบและแก้ `crypto.randomUUID is not a function` ใน browser backend ด้วย [src/lib/id.ts](../src/lib/id.ts) และเพิ่ม regression test ใน `src/lib/id.test.ts`
+- Follow-up reconciliation fix: legacy derived trip rows ที่ขาด `note`/`travelDetails` จะถูกเติม metadata จาก nested item โดยไม่ถูกนับเป็น conflict; ยังคง block เมื่อยอด วันที่ หมวด หรือสถานะหลักไม่ตรงกัน
 - Initial JavaScript ลดจาก 909,287 bytes (ก่อน lazy loading) เหลือประมาณ 623,670 bytes หลังแยก page chunks; gzip ลดจากประมาณ 246.20 kB เหลือ 190.08 kB สำหรับ initial chunk
 - CUA browser ที่ใช้ตรวจเปิดได้เฉพาะ viewport 1280×720 และไม่มี viewport override จึงยังไม่ได้ยืนยันขนาด 390–430 px หรือ non-empty multi-device Cloud workflow; ให้รัน mobile/device smoke เพิ่มใน CI หรือ browser ภายนอกก่อน release production
 

@@ -233,6 +233,17 @@ const existingTripTransaction = {
 const reusedTrip = migrateFinanceDataWithReport(existingTripTransaction)
 assert(reusedTrip.report.tripOwnership.createdTransactionIds.length === 0 && reusedTrip.report.tripOwnership.reusedTransactionIds[0] === 'existing-trip-tx', 'Existing mapped trip transaction must be reused rather than duplicated')
 
+const legacyDerivedTripTransaction = {
+  ...tripWithNestedItems,
+  transactions: [{
+    ...existingTripTransaction.transactions[0],
+    note: 'รายการทริปจาก ทริป canonical แก้ไขได้จากหน้าทริป',
+  }],
+}
+const legacyDerivedTrip = migrateFinanceData(legacyDerivedTripTransaction)
+assert(legacyDerivedTrip.transactions[0]?.travelDetails?.destination === 'เชียงใหม่', 'Legacy trip transaction should inherit missing travel metadata from the nested item')
+assert(legacyDerivedTrip.trips[0]?.items[0]?.destination === 'เชียงใหม่', 'Legacy trip hydration should preserve nested travel metadata')
+
 const mismatchedTrip = migrateFinanceDataWithReport({
   ...tripWithNestedItems,
   transactions: [{

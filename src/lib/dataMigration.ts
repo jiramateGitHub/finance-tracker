@@ -662,15 +662,42 @@ function tripItemMatchesTransaction(item: TripItem, transaction: TransactionEntr
   const itemCategoryId = normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว')
   const transactionCategoryId = normalizeCategoryId(transaction.categoryId ?? transaction.category, 'ท่องเที่ยว')
   const travelDetails = transaction.travelDetails ?? {}
+  const optionalFieldMatches = (left: unknown, right: unknown): boolean => {
+    // Legacy derived trip rows did not persist note/travel metadata. Missing
+    // optional values are therefore compatible; core cashflow fields below
+    // still require an exact match before a migration can proceed.
+    if (!hasMeaningfulValue(left) || !hasMeaningfulValue(right)) return true
+    return valuesConflict(left, right) === false
+  }
   return normalizeDate(item.date) === normalizeDate(transaction.date)
     && itemCategoryId === transactionCategoryId
     && item.title === transaction.title
     && Math.abs(Number(item.amount || 0) - Number(transaction.amount || 0)) < 1e-9
     && (item.isPaid === false ? 'pending' : 'cleared') === transaction.status
-    && (item.note ?? null) === (transaction.note ?? null)
-    && (item.destination ?? null) === (travelDetails.destination ?? null)
-    && (item.country ?? null) === (travelDetails.country ?? null)
-    && (item.installmentPlanId ?? item.installmentId ?? null) === (transaction.installmentPlanId ?? transaction.installmentId ?? null)
+    && optionalFieldMatches(item.note, transaction.note)
+    && optionalFieldMatches(item.destination, travelDetails.destination)
+    && optionalFieldMatches(item.country, travelDetails.country)
+    && optionalFieldMatches(
+      item.installmentPlanId ?? item.installmentId,
+      transaction.installmentPlanId ?? transaction.installmentId,
+    )
+}
+
+function enrichTripTransactionFromItem(transaction: TransactionEntry, item: TripItem): TransactionEntry {
+  const existingTravelDetails = transaction.travelDetails ?? {}
+  const destination = existingTravelDetails.destination ?? item.destination ?? null
+  const country = existingTravelDetails.country ?? item.country ?? null
+  const travelDetails = destination || country
+    ? { destination, country }
+    : transaction.travelDetails ?? null
+  const installmentPlanId = transaction.installmentPlanId ?? item.installmentPlanId ?? item.installmentId ?? null
+  return {
+    ...transaction,
+    note: transaction.note ?? item.note,
+    travelDetails,
+    installmentId: transaction.installmentId ?? item.installmentId ?? item.installmentPlanId ?? undefined,
+    installmentPlanId,
+  }
 }
 
 function materializeTripTransactions(
@@ -729,7 +756,10 @@ function materializeTripTransactions(
         report.reusedTransactionIds.push(existing.id)
         materializedBySource.set(key, existing.id)
         report.hydratedItemIds.push(item.id)
-        if (!tripItemMatchesTransaction(item, existing)) {
+        const enrichedExisting = enrichTripTransactionFromItem(existing, item)
+        const existingIndex = nextTransactions.findIndex((transaction) => transaction.id === existing.id)
+        if (existingIndex >= 0) nextTransactions[existingIndex] = enrichedExisting
+        if (!tripItemMatchesTransaction(item, enrichedExisting)) {
           report.issues.push({
             tripId: trip.id,
             itemId: item.id,

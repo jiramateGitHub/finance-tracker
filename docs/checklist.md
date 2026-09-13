@@ -302,6 +302,7 @@ Repository behavior:
 - เพิ่ม browser-compatible ID fallback หลังพบว่า runtime browser ไม่มี `crypto.randomUUID`; regression test อยู่ใน `src/lib/id.test.ts`
 - ตรวจ horizontal overflow ที่ viewport 1280×720 แล้วไม่พบ; CUA browser รอบนี้ไม่มี viewport override จึงยังไม่ได้ยืนยัน mobile 390–430px
 - ไม่กด settlement, delete และ confirm import ที่มี side effect ระหว่าง smoke; รายการเหล่านี้ต้องทำต่อบน browser/device หรือ test project ที่เหมาะสมก่อน release production
+- Legacy trip reconciliation รองรับ transaction เดิมที่มี note สำรองหรือไม่มี travel metadata แล้ว โดยเติมค่าที่ขาดจาก nested item และยังคงตรวจ mismatch ของข้อมูลหลัก
 
 ## Live Auth / Firestore smoke evidence (2026-09-13)
 
