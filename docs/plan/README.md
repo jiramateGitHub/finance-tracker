@@ -2,7 +2,7 @@
 
 ความคืบหน้าปัจจุบัน: Phase 0–4 / PR-01 ถึง PR-12 เสร็จแล้วใน working tree — เพิ่ม test baseline, revision guard สำหรับ Cloud writes, แยก ordinary save ออกจาก explicit dataset replacement, แก้ trip migration/ledger ownership, installment balance/due date, import validation/recovery, sync lifecycle/demo isolation, shared ledger selector, budget/settings selectors, canonical DTO/alias migration, transaction-backed trip ownership, pure domain commands/memoized selectors และ UI smoke/lazy loading
 
-วันที่ตรวจ: 2026-09-13 · ขอบเขต: วิเคราะห์โค้ดและลงมือแก้ PR-01 ถึง PR-12 ใน working tree ยังไม่ได้ migrate ข้อมูล production; PR-12 เพิ่ม live Auth/Firestore smoke ด้วยบัญชีที่ผู้ใช้ระบุและชุดข้อมูลว่าง
+วันที่ตรวจ: 2026-09-13 · ขอบเขต: วิเคราะห์โค้ดและลงมือแก้ PR-01 ถึง PR-12 ใน working tree ยังไม่ได้ migrate ข้อมูล production; PR-12 เพิ่ม live Auth/Firestore smoke ด้วยชุดข้อมูลว่าง และ follow-up ตรวจบัญชีที่มีข้อมูลจริง
 
 ## ข้อสรุป
 
@@ -41,7 +41,7 @@
 - **ยืนยันจากเส้นทางโค้ด:** เห็นเงื่อนไขและผลลัพธ์ในโค้ด แต่ยังไม่ได้ทดสอบผ่าน browser หรือ Firestore
 - **ความเสี่ยงที่ต้องทดสอบ:** concurrency, เครือข่ายล้มเหลว และ semantics ที่ต้องกำหนดให้ชัดก่อนแก้
 
-การตรวจ baseline ไม่ได้ audit Firestore rules ที่ deploy อยู่จริง; live smoke ของ PR-12 ใช้บัญชีที่ผู้ใช้ระบุเพื่อ login, load, save ชุดข้อมูลว่าง และ reload เท่านั้น จึงยังไม่ถือว่าเป็นการยืนยันสถานะ production หรือการ audit security ครบระบบ
+การตรวจ baseline ไม่ได้ audit Firestore rules ที่ deploy อยู่จริง; live smoke ตรวจทั้งบัญชีชุดข้อมูลว่างและบัญชีที่มีข้อมูลจริงเพื่อ login/load/reload แต่ยังไม่ถือว่าเป็นการยืนยันสถานะ production หรือการ audit security ครบระบบ
 
 ## ผลตรวจพื้นฐาน
 
@@ -79,6 +79,7 @@
 - reload และ login ซ้ำโหลดจาก Cloud สำเร็จ; logout กลับ LoginScreen; console error/warn เป็นศูนย์
 - ไม่สร้าง transaction/budget/goal จริงในบัญชี เพราะต้องใช้ข้อมูลทดสอบและมีผลต่อข้อมูลการเงินของบัญชี
 - บัญชีทดสอบที่มีข้อมูลจริงพบ nested trip item เก่าไม่ตรงกับ transaction เจ้าของ 3 รายการ; ปรับ Firestore load ให้ใช้ `migrateFinanceDataWithReport` hydrate read model จาก transaction source จึงเข้า dashboard ได้ ขณะที่ import/export/save ยังคงใช้ strict reconciliation เพื่อกันการเขียนทับข้อมูลที่ยังไม่ตรวจ
+- Cloud load เก็บ reconciliation report ไว้ในสถานะและแสดงในหน้า More; ordinary save เขียนเฉพาะ singleton/เอกสารที่เปลี่ยนแล้ว จึงไม่ชนเพดาน 500 writes จาก transaction เดิมจำนวนมาก ขณะที่ full replacement ยังคงตรวจเพดานแบบ atomic
 
 ก่อน PR-01 การตรวจ assertions เดิมใช้วิธีสำรองด้วย `typescript.transpileModule` เพราะ `npx -y tsx` ดาวน์โหลดไม่ได้ วิธีนั้นไม่ใช่ test command ของโปรเจคและยังไม่ทดแทน integration tests; หลัง PR-01 ให้ใช้ `npm test` เป็น baseline หลัก
 

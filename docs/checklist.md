@@ -304,6 +304,7 @@ Repository behavior:
 - ไม่กด settlement, delete และ confirm import ที่มี side effect ระหว่าง smoke; รายการเหล่านี้ต้องทำต่อบน browser/device หรือ test project ที่เหมาะสมก่อน release production
 - Legacy trip reconciliation รองรับ transaction เดิมที่มี note สำรองหรือไม่มี travel metadata แล้ว โดยเติมค่าที่ขาดจาก nested item และยังคงตรวจ mismatch ของข้อมูลหลัก
 - Cloud load รองรับ nested trip item เก่าที่ต่างจาก transaction owner โดย hydrate จาก transaction source ก่อนเข้า runtime; strict reconciliation ยังทำงานที่ import/export/save boundary
+- แสดง reconciliation report จาก Cloud load ในหน้า More และ ordinary save เขียนเฉพาะเอกสารที่เปลี่ยน ลดความเสี่ยงชนเพดาน Firestore 500 writes; full replacement ยังบล็อกเมื่อเกินเพดานเพื่อป้องกัน partial snapshot
 
 ## Live Auth / Firestore smoke evidence (2026-09-13)
 

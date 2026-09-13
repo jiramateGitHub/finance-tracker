@@ -216,6 +216,8 @@ export function MorePage({
             ) : null}
           </div>
 
+          <CloudReconciliationPanel report={dataStatus.lastReconciliation ?? syncStatus.reconciliation ?? null} />
+
           <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
             <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy || isSaveBlockedByConflict}>
               <span className="flex items-center justify-center gap-1.5">
@@ -410,6 +412,27 @@ function ImportDiagnosticsPanel({
       ) : null}
       <ul className="mt-2 grid gap-1 text-xs font-semibold leading-5 text-blue-800">
         {diagnostics.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
+      </ul>
+    </div>
+  )
+}
+
+function CloudReconciliationPanel({ report }: { report: FinanceDataStatus['lastReconciliation'] }) {
+  const issues = report?.tripOwnership.issues ?? []
+  if (!issues.length) return null
+
+  return (
+    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      <div className="font-extrabold">ตรวจ reconciliation จาก Cloud: พบ {issues.length} รายการ</div>
+      <p className="mt-1 text-xs font-semibold leading-5">
+        ระบบใช้ transaction owner เป็นข้อมูลหลักในการโหลด และเก็บรายการที่ต่างกันไว้ให้ตรวจสอบก่อนแก้ไขหรือบันทึกข้อมูลชุดใหญ่
+      </p>
+      <ul className="mt-2 grid gap-1 text-xs font-semibold leading-5">
+        {issues.map((issue) => (
+          <li key={`${issue.code}-${issue.tripId}-${issue.itemId}-${issue.transactionId ?? ''}`}>
+            • {issue.message} ({issue.tripId} / {issue.itemId}{issue.transactionId ? ` / ${issue.transactionId}` : ''})
+          </li>
+        ))}
       </ul>
     </div>
   )

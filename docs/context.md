@@ -15,7 +15,7 @@ Finance Tracker เป็นแอป Vite + React + TypeScript + Tailwind CSS �
 - Import JSON ต้องผ่าน preview/diagnostics และ confirm ก่อน overwrite Cloud
 - ก่อน confirm import ระบบ download backup ของข้อมูลปัจจุบันเป็น JSON อัตโนมัติ
 - Deploy ผ่าน GitHub Pages โดย `vite.config.ts` ตั้ง `base: '/finance-tracker/'`
-- PR-12 แยก feature pages เป็น lazy chunks และตรวจ workflow หลักผ่าน production preview ในโหมด demo; live Auth/Firestore bootstrap, load, save ชุดข้อมูลว่าง และ reload ผ่านแล้ว ส่วน mobile viewport และ non-empty multi-device acceptance ยังต้องตรวจแยกบน browser/device จริง
+- PR-12 แยก feature pages เป็น lazy chunks และตรวจ workflow หลักผ่าน production preview ในโหมด demo; live Auth/Firestore bootstrap, load, save ชุดข้อมูลว่าง, reload และ load บัญชีที่มีข้อมูลจริงพร้อม reconciliation report ผ่านแล้ว ส่วน mobile viewport และ non-empty multi-device acceptance ยังต้องตรวจแยกบน browser/device จริง
 
 ## คำสั่งหลัก
 

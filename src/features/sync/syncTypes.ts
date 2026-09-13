@@ -1,3 +1,5 @@
+import type { FinanceMigrationReport } from '../../lib/dataMigration'
+
 export type SyncState = 'idle' | 'pending' | 'loading' | 'saving' | 'saved' | 'conflict' | 'error'
 
 export type SyncStatus = {
@@ -7,4 +9,5 @@ export type SyncStatus = {
   errorMessage: string | null
   operationId: string | null
   dirty: boolean
+  reconciliation?: FinanceMigrationReport | null
 }

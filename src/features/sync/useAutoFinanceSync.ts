@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createExportableFinanceData, normalizeFinanceData } from '../../lib/dataMigration'
 import { th } from '../../i18n/th'
-import { loadFinanceDataFromCloud, saveFinanceDataToCloud } from '../../services/firebase/firestoreFinanceRepository'
+import { loadFinanceDataFromCloudWithReport, saveFinanceDataToCloud } from '../../services/firebase/firestoreFinanceRepository'
 import { FinanceDataConflictError } from '../../services/financeRepository'
 import type { FinanceData } from '../../types/finance'
 import { currentIsoTimestamp } from '../../utils/formatters'
@@ -44,6 +44,7 @@ function createInitialStatus(): SyncStatus {
     errorMessage: null,
     operationId: null,
     dirty: false,
+    reconciliation: null,
   }
 }
 
@@ -157,6 +158,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
             lastSyncedAt: syncedAt,
             errorMessage: null,
             dirty: !latestMatchesSource,
+            reconciliation: null,
           }))
           return { ok: true }
         } catch (error) {
@@ -218,14 +220,15 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
         return false
       }
       try {
-        const cloudData = await runWithBoundedRetry(() => loadFinanceDataFromCloud(userId), RETRY_OPTIONS)
+        const cloudResult = await runWithBoundedRetry(() => loadFinanceDataFromCloudWithReport(userId), RETRY_OPTIONS)
         if (generation !== sessionGenerationRef.current) return false
-        if (!cloudData) {
+        if (!cloudResult) {
           setOperationStatus(operationId, (current) => ({
             ...current,
             state: 'idle',
             message: th.sync.noCloud,
             errorMessage: null,
+            reconciliation: null,
             // A forced recovery load must not claim that local data was
             // acknowledged when Cloud has no dataset to replace it with.
             dirty: hasUnsavedChanges(),
@@ -233,7 +236,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
           return false
         }
         skipNextSaveRef.current = true
-        const loadedData = replaceData(cloudData, th.sync.loadManual)
+        const loadedData = replaceData(cloudResult.data, th.sync.loadManual)
         lastSavedDataRef.current = loadedData
         latestDataRef.current = loadedData
         lastSavedFingerprintRef.current = createFinanceDataFingerprint(loadedData)
@@ -244,6 +247,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
           lastSyncedAt: currentIsoTimestamp(),
           errorMessage: null,
           dirty: false,
+          reconciliation: cloudResult.reconciliation,
         }))
         return true
       } catch (error) {

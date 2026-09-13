@@ -1,11 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { Button } from '../components/ui/Button'
-import { createEmptyFinanceData, getDataSchemaVersion, migrateFinanceData, migrateFinanceDataWithReport, normalizeFinanceData, withUpdatedMeta } from '../lib/dataMigration'
+import { createEmptyFinanceData, getDataSchemaVersion, migrateFinanceDataWithReport, normalizeFinanceData, type FinanceMigrationReport, withUpdatedMeta } from '../lib/dataMigration'
 import { analyzeImportedFinanceData, type ImportDiagnostics } from '../lib/importDiagnostics'
 import { assertValidFinanceImportPayload, FinanceImportValidationError } from '../lib/importValidation'
 import { createJsonDownload } from '../lib/storage'
-import { loadFinanceDataFromCloud } from '../services/firebase/firestoreFinanceRepository'
+import { loadFinanceDataFromCloudWithReport } from '../services/firebase/firestoreFinanceRepository'
 import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
 import * as financeCommands from './financeCommands'
 
@@ -18,6 +18,7 @@ export type FinanceDataStatus = {
   message: string
   errorMessage: string | null
   lastImportDiagnostics: ImportDiagnostics | null
+  lastReconciliation: FinanceMigrationReport | null
 }
 
 export type FinanceImportPreview = {
@@ -69,6 +70,7 @@ const loadingStatus: FinanceDataStatus = {
   message: 'กำลังโหลดข้อมูลจาก Cloud...',
   errorMessage: null,
   lastImportDiagnostics: null,
+  lastReconciliation: null,
 }
 
 function markLoaded(message: string): FinanceDataStatus {
@@ -79,6 +81,7 @@ function markLoaded(message: string): FinanceDataStatus {
     message,
     errorMessage: null,
     lastImportDiagnostics: null,
+    lastReconciliation: null,
   }
 }
 
@@ -152,10 +155,21 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
           setStatus(markLoaded('โหลดข้อมูลทดสอบแล้ว'))
           return
         }
-        const cloudData = await loadFinanceDataFromCloud(userId)
+        const cloudResult = await loadFinanceDataFromCloudWithReport(userId)
         if (cancelled) return
-        setData(cloudData ? migrateFinanceData(cloudData) : createEmptyFinanceData())
-        setStatus(markLoaded(cloudData ? 'โหลดข้อมูลจาก Cloud แล้ว' : 'ยังไม่มีข้อมูลบน Cloud เริ่มเพิ่มรายการแรกได้เลย'))
+        setData(cloudResult?.data ?? createEmptyFinanceData())
+        const reconciliation = cloudResult?.reconciliation ?? null
+        const issueCount = reconciliation?.tripOwnership.issues.length ?? 0
+        const loadedMessage = cloudResult
+          ? 'โหลดข้อมูลจาก Cloud แล้ว'
+          : 'ยังไม่มีข้อมูลบน Cloud เริ่มเพิ่มรายการแรกได้เลย'
+        setStatus({
+          ...markLoaded(loadedMessage),
+          lastReconciliation: reconciliation,
+          message: issueCount
+            ? `โหลดข้อมูลจาก Cloud แล้ว พบ reconciliation ${issueCount} รายการที่ถูก hydrate จาก transaction owner`
+            : loadedMessage,
+        })
       } catch (error) {
         if (cancelled) return
         const errorMessage = error instanceof Error ? error.message : 'โหลดข้อมูลจาก Cloud ไม่สำเร็จ'
@@ -167,6 +181,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
           message: errorMessage,
           errorMessage,
           lastImportDiagnostics: null,
+          lastReconciliation: null,
         })
       }
     }
@@ -263,6 +278,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
       message,
       errorMessage: null,
       lastImportDiagnostics: null,
+      lastReconciliation: null,
     })
     return normalized
   }, [])

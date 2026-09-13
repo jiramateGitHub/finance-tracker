@@ -9,7 +9,7 @@ import {
   type Firestore,
   type Transaction,
 } from 'firebase/firestore'
-import { createExportableFinanceData, migrateFinanceDataWithReport } from '../../lib/dataMigration'
+import { createExportableFinanceData, migrateFinanceDataWithReport, type FinanceMigrationReport } from '../../lib/dataMigration'
 import {
   FinanceDataConflictError,
   type FinanceRepository,
@@ -17,7 +17,9 @@ import {
 } from '../financeRepository'
 import type { FinanceData } from '../../types/finance'
 import { getFirebaseApp } from './firebaseApp'
+import { getChangedFirestoreItems } from './firestoreWritePlan'
 export { documentDataWithId, FinanceDocumentIdentityConflictError } from './firestoreIdentity'
+export { getChangedFirestoreItems } from './firestoreWritePlan'
 import { documentDataWithId } from './firestoreIdentity'
 
 export { FinanceDataConflictError } from '../financeRepository'
@@ -32,6 +34,11 @@ const itemCollectionNames = ['transactions', 'recurringRules', 'installmentPlans
 type SingletonCollectionName = (typeof singletonCollectionNames)[number]
 type ItemCollectionName = (typeof itemCollectionNames)[number]
 type ExportableFinanceData = ReturnType<typeof createExportableFinanceData>
+
+export type FinanceCloudLoadResult = {
+  data: FinanceData
+  reconciliation: FinanceMigrationReport
+}
 
 export type FinanceSaveOptions = FinanceRepositorySaveOptions
 
@@ -78,6 +85,10 @@ function stripUndefined(value: unknown): unknown {
   )
 }
 
+function comparableFirestoreValue(value: unknown): string {
+  return JSON.stringify(stripUndefined(value))
+}
+
 function assertValidExportableData(data: ExportableFinanceData): void {
   for (const collectionName of itemCollectionNames) {
     const hasInvalidId = data[collectionName].some((item) => typeof item.id !== 'string' || !item.id.trim())
@@ -112,7 +123,7 @@ export async function checkCloudDataExists(userId: string): Promise<boolean> {
   return checks.some((snapshot) => ('exists' in snapshot ? snapshot.exists() : snapshot.size > 0))
 }
 
-export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceData | null> {
+export async function loadFinanceDataFromCloudWithReport(userId: string): Promise<FinanceCloudLoadResult | null> {
   const db = requireFirestore()
   const hasCloudData = await checkCloudDataExists(userId)
   if (!hasCloudData) return null
@@ -148,7 +159,7 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
   // longer match the canonical transaction owner. Reconcile that read model
   // from the transaction source and let callers decide when a report must
   // block persistence (imports and export validation remain strict).
-  return migrateFinanceDataWithReport({
+  const migration = migrateFinanceDataWithReport({
     schemaVersion: rootData.schemaVersion ?? meta?.schemaVersion,
     meta: {
       ...(meta ?? {}),
@@ -163,7 +174,16 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
     trips,
     budgets,
     goals,
-  }).data
+  })
+  return {
+    data: migration.data,
+    reconciliation: migration.report,
+  }
+}
+
+export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceData | null> {
+  const result = await loadFinanceDataFromCloudWithReport(userId)
+  return result?.data ?? null
 }
 
 export async function saveFinanceDataToCloud(
@@ -190,6 +210,8 @@ export async function saveFinanceDataToCloud(
   })
 
   for (const collectionName of singletonCollectionNames) {
+    const baseSingleton = baseData?.[collectionName]
+    if (baseData && baseSingleton && comparableFirestoreValue(baseSingleton) === comparableFirestoreValue(exportableData[collectionName])) continue
     mutations.push({
       kind: 'set',
       ref: singletonDocRef(db, userId, collectionName),
@@ -201,20 +223,22 @@ export async function saveFinanceDataToCloud(
     const collectionRef = itemCollectionRef(db, userId, collectionName)
     const nextItems = exportableData[collectionName]
     const nextIds = new Set(nextItems.map((item) => item.id))
-    const baseItems = baseData?.[collectionName] ?? []
+    const baseItems = baseData?.[collectionName]
 
     // Ordinary saves delete only IDs that existed in this client's baseline.
     // Full replacement additionally removes documents left over from older data.
     const idsToDelete = options.replace
       ? (await getDocs(collectionRef)).docs.filter((snapshot) => !nextIds.has(snapshot.id)).map((snapshot) => snapshot.id)
-      : baseItems.filter((item) => !nextIds.has(item.id)).map((item) => item.id)
+      : (baseItems ?? []).filter((item) => !nextIds.has(item.id)).map((item) => item.id)
     idsToDelete.forEach((id) => mutations.push({ kind: 'delete', ref: doc(collectionRef, id) }))
 
-    nextItems.forEach((item) => mutations.push({
-      kind: 'set',
-      ref: doc(collectionRef, item.id),
-      data: stripUndefined(item) as Record<string, unknown>,
-    }))
+    getChangedFirestoreItems(nextItems, baseItems, options.replace).forEach((item) => {
+      mutations.push({
+        kind: 'set',
+        ref: doc(collectionRef, item.id),
+        data: stripUndefined(item) as Record<string, unknown>,
+      })
+    })
   }
 
   if (mutations.length > MAX_TRANSACTION_WRITES) {
