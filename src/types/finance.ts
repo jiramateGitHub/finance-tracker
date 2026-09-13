@@ -33,6 +33,10 @@ export interface TransactionEntry {
   installmentPlanId?: string | null
   recurringRuleId?: string | null
   goalId?: string | null
+  travelDetails?: {
+    destination?: string | null
+    country?: string | null
+  } | null
   createdAt: string
   updatedAt: string
 }
@@ -92,12 +96,14 @@ export interface TripItem {
   id: string
   date: string
   category: string
+  categoryId?: string
   title: string
   amount: number
   destination?: string
   country?: string
   note?: string
   installmentId?: string
+  installmentPlanId?: string | null
   isPaid?: boolean
   createdAt?: string
   updatedAt?: string
@@ -167,7 +173,6 @@ export interface FinanceSettings {
   baseCurrency: 'THB'
   locale: 'th-TH'
   timezone: 'Asia/Bangkok'
-  schemaVersion: number
   defaultView: ViewId
   monthStartsOn: number
   includePendingInMonthlyTotals: boolean
@@ -186,9 +191,13 @@ export interface FinanceMasters {
 }
 
 export interface FinanceMeta {
+  /** Schema version is stored with the export envelope and metadata document. */
+  schemaVersion: number
   createdAt: string
   updatedAt: string
   exportedAt: string | null
+  /** Monotonically increasing Firestore write revision. */
+  revision: number
 }
 
 export interface FinanceData {
@@ -207,12 +216,6 @@ export interface FinanceData {
   trips: Trip[]
   budgets: Budget[]
   goals: Goal[]
-  /**
-   * Compatibility aliases for Phase 1 pages. Future phases can move UI code
-   * to the canonical schema v2 collection names above.
-   */
-  entries: TransactionEntry[]
-  installments: InstallmentPlan[]
 }
 
 export type AppData = FinanceData

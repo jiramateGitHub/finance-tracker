@@ -3,11 +3,12 @@ import { Button } from '../../components/ui/Button'
 import { th } from '../../i18n/th'
 import type { Budget, TransactionEntry } from '../../types/finance'
 import { formatMoney } from '../../utils/formatters'
-import { calculateBudgetProgress, getBudgetCategoryKey, type BudgetStatus } from './budgetGoalCalculations'
+import { calculateBudgetProgress, getBudgetCategoryLabel, type BudgetStatus } from './budgetGoalCalculations'
 
 type BudgetCardProps = {
   budget: Budget
   transactions: TransactionEntry[]
+  includePending?: boolean
   onEdit: (budget: Budget) => void
   onDelete: (budgetId: string) => void
 }
@@ -30,9 +31,9 @@ const progressClassName: Record<BudgetStatus, string> = {
   'over-budget': 'bg-rose-500',
 }
 
-export function BudgetCard({ budget, transactions, onEdit, onDelete }: BudgetCardProps) {
-  const progress = calculateBudgetProgress(budget, transactions)
-  const category = getBudgetCategoryKey(budget)
+export function BudgetCard({ budget, transactions, includePending = true, onEdit, onDelete }: BudgetCardProps) {
+  const progress = calculateBudgetProgress(budget, transactions, { includePending })
+  const category = getBudgetCategoryLabel(budget)
 
   return (
     <article className="grid gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs hover:border-slate-300 hover:shadow-md transition-all">

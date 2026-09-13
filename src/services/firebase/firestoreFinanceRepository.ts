@@ -4,26 +4,45 @@ import {
   getDoc,
   getDocs,
   getFirestore,
-  writeBatch,
+  runTransaction,
   type DocumentReference,
   type Firestore,
-  type WriteBatch,
+  type Transaction,
 } from 'firebase/firestore'
-import { createExportableFinanceData, normalizeFinanceData } from '../../lib/dataMigration'
+import { createExportableFinanceData, migrateFinanceData } from '../../lib/dataMigration'
+import {
+  FinanceDataConflictError,
+  type FinanceRepository,
+  type FinanceRepositorySaveOptions,
+} from '../financeRepository'
 import type { FinanceData } from '../../types/finance'
 import { getFirebaseApp } from './firebaseApp'
+export { documentDataWithId, FinanceDocumentIdentityConflictError } from './firestoreIdentity'
+import { documentDataWithId } from './firestoreIdentity'
+
+export { FinanceDataConflictError } from '../financeRepository'
 
 const META_DOC_ID = 'app'
 const SINGLETON_DOC_ID = 'main'
-const BATCH_CHUNK_SIZE = 400
+const MAX_TRANSACTION_WRITES = 500
 
 const singletonCollectionNames = ['meta', 'profile', 'settings', 'masters'] as const
 const itemCollectionNames = ['transactions', 'recurringRules', 'installmentPlans', 'trips', 'budgets', 'goals'] as const
 
 type SingletonCollectionName = (typeof singletonCollectionNames)[number]
 type ItemCollectionName = (typeof itemCollectionNames)[number]
-type WriteOperation = (batch: WriteBatch) => void
 type ExportableFinanceData = ReturnType<typeof createExportableFinanceData>
+
+export type FinanceSaveOptions = FinanceRepositorySaveOptions
+
+type FirestoreWriter = {
+  set: Transaction['set']
+  delete: Transaction['delete']
+}
+
+type Mutation =
+  | { kind: 'set'; ref: DocumentReference; data: Record<string, unknown>; merge?: boolean }
+  | { kind: 'delete'; ref: DocumentReference }
 
 function requireFirestore(): Firestore {
   const app = getFirebaseApp()
@@ -59,26 +78,10 @@ function stripUndefined(value: unknown): unknown {
   )
 }
 
-function documentDataWithId(docId: string, value: unknown): Record<string, unknown> {
-  const data = isRecord(value) ? value : {}
-  return {
-    id: typeof data.id === 'string' && data.id.trim() ? data.id : docId,
-    ...data,
-  }
-}
-
 function assertValidExportableData(data: ExportableFinanceData): void {
   for (const collectionName of itemCollectionNames) {
     const hasInvalidId = data[collectionName].some((item) => typeof item.id !== 'string' || !item.id.trim())
     if (hasInvalidId) throw new Error(`ไม่สามารถบันทึกขึ้น Cloud เพราะ ${collectionName} มีรายการที่ไม่มี id`)
-  }
-}
-
-async function commitOperations(db: Firestore, operations: WriteOperation[]): Promise<void> {
-  for (let index = 0; index < operations.length; index += BATCH_CHUNK_SIZE) {
-    const batch = writeBatch(db)
-    operations.slice(index, index + BATCH_CHUNK_SIZE).forEach((operation) => operation(batch))
-    await batch.commit()
   }
 }
 
@@ -94,6 +97,8 @@ async function readCollection(db: Firestore, userId: string, collectionName: Ite
 
 export async function checkCloudDataExists(userId: string): Promise<boolean> {
   const db = requireFirestore()
+  const rootSnapshot = await getDoc(userRootRef(db, userId))
+  if (rootSnapshot.exists()) return true
   const metaSnapshot = await getDoc(singletonDocRef(db, userId, 'meta'))
   if (metaSnapshot.exists()) return true
 
@@ -113,6 +118,7 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
   if (!hasCloudData) return null
 
   const [
+    root,
     meta,
     profile,
     settings,
@@ -124,6 +130,7 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
     budgets,
     goals,
   ] = await Promise.all([
+    getDoc(userRootRef(db, userId)),
     readSingleton(db, userId, 'meta'),
     readSingleton(db, userId, 'profile'),
     readSingleton(db, userId, 'settings'),
@@ -136,9 +143,13 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
     readCollection(db, userId, 'goals'),
   ])
 
-  return normalizeFinanceData({
-    schemaVersion: meta?.schemaVersion,
-    meta: meta ?? {},
+  const rootData = root.exists() ? root.data() : {}
+  return migrateFinanceData({
+    schemaVersion: rootData.schemaVersion ?? meta?.schemaVersion,
+    meta: {
+      ...(meta ?? {}),
+      revision: rootData.revision ?? meta?.revision,
+    },
     profile: profile ?? {},
     settings: settings ?? {},
     masters: masters ?? {},
@@ -151,22 +162,34 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
   })
 }
 
-export async function saveFinanceDataToCloud(userId: string, data: FinanceData): Promise<void> {
+export async function saveFinanceDataToCloud(
+  userId: string,
+  data: FinanceData,
+  options: FinanceSaveOptions = {},
+): Promise<number> {
   const db = requireFirestore()
   const exportableData = createExportableFinanceData(data)
   assertValidExportableData(exportableData)
-  const operations: WriteOperation[] = [
-    (batch) => {
-      batch.set(userRootRef(db, userId), {
-        schemaVersion: exportableData.schemaVersion,
-        updatedAt: exportableData.meta.updatedAt,
-      }, { merge: true })
+  const expectedRevision = Math.max(0, Math.floor(options.expectedRevision ?? exportableData.meta.revision ?? 0))
+  const baseData = options.baseData ? createExportableFinanceData(options.baseData) : null
+  const mutations: Mutation[] = []
+
+  mutations.push({
+    kind: 'set',
+    ref: userRootRef(db, userId),
+    merge: true,
+    data: {
+      schemaVersion: exportableData.schemaVersion,
+      updatedAt: exportableData.meta.updatedAt,
+      revision: expectedRevision + 1,
     },
-  ]
+  })
 
   for (const collectionName of singletonCollectionNames) {
-    operations.push((batch) => {
-      batch.set(singletonDocRef(db, userId, collectionName), stripUndefined(exportableData[collectionName]) as Record<string, unknown>)
+    mutations.push({
+      kind: 'set',
+      ref: singletonDocRef(db, userId, collectionName),
+      data: stripUndefined(exportableData[collectionName]) as Record<string, unknown>,
     })
   }
 
@@ -174,21 +197,47 @@ export async function saveFinanceDataToCloud(userId: string, data: FinanceData):
     const collectionRef = itemCollectionRef(db, userId, collectionName)
     const nextItems = exportableData[collectionName]
     const nextIds = new Set(nextItems.map((item) => item.id))
-    const existingSnapshot = await getDocs(collectionRef)
-    existingSnapshot.docs.forEach((snapshot) => {
-      if (!nextIds.has(snapshot.id)) {
-        operations.push((batch) => {
-          batch.delete(snapshot.ref)
-        })
-      }
-    })
+    const baseItems = baseData?.[collectionName] ?? []
 
-    nextItems.forEach((item) => {
-      operations.push((batch) => {
-        batch.set(doc(collectionRef, item.id), stripUndefined(item) as Record<string, unknown>)
-      })
-    })
+    // Ordinary saves delete only IDs that existed in this client's baseline.
+    // Full replacement additionally removes documents left over from older data.
+    const idsToDelete = options.replace
+      ? (await getDocs(collectionRef)).docs.filter((snapshot) => !nextIds.has(snapshot.id)).map((snapshot) => snapshot.id)
+      : baseItems.filter((item) => !nextIds.has(item.id)).map((item) => item.id)
+    idsToDelete.forEach((id) => mutations.push({ kind: 'delete', ref: doc(collectionRef, id) }))
+
+    nextItems.forEach((item) => mutations.push({
+      kind: 'set',
+      ref: doc(collectionRef, item.id),
+      data: stripUndefined(item) as Record<string, unknown>,
+    }))
   }
 
-  await commitOperations(db, operations)
+  if (mutations.length > MAX_TRANSACTION_WRITES) {
+    throw new Error(`ไม่สามารถบันทึกข้อมูลชุดใหญ่แบบ atomic ได้ (${mutations.length} writes; สูงสุด ${MAX_TRANSACTION_WRITES}) กรุณาแบ่งการนำเข้าหรือใช้ bulk migration`)
+  }
+
+  return runTransaction(db, async (transaction) => {
+    const rootSnapshot = await transaction.get(userRootRef(db, userId))
+    const rootData = rootSnapshot.exists() ? rootSnapshot.data() : {}
+    const actualSchemaVersion = Number(rootData.schemaVersion ?? exportableData.schemaVersion)
+    if (Number.isFinite(actualSchemaVersion) && actualSchemaVersion > exportableData.schemaVersion) {
+      throw new Error(`ไม่สามารถเขียนทับข้อมูล schema v${actualSchemaVersion} ด้วย writer v${exportableData.schemaVersion}`)
+    }
+    const actualRevision = Math.max(0, Math.floor(Number(rootData.revision ?? 0) || 0))
+    if (actualRevision !== expectedRevision) throw new FinanceDataConflictError(expectedRevision, actualRevision)
+
+    const writer = transaction as unknown as FirestoreWriter
+    mutations.forEach((mutation) => {
+      if (mutation.kind === 'delete') writer.delete(mutation.ref)
+      else if (mutation.merge) writer.set(mutation.ref, mutation.data, { merge: true })
+      else writer.set(mutation.ref, mutation.data)
+    })
+    return expectedRevision + 1
+  })
+}
+
+export const firestoreFinanceRepository: FinanceRepository = {
+  load: loadFinanceDataFromCloud,
+  save: saveFinanceDataToCloud,
 }

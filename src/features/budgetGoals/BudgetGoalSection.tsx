@@ -72,8 +72,10 @@ export function BudgetGoalSection({
   const categoryOptions = useMemo(() => getBudgetGoalCategoryOptions(data), [data])
   const monthlyBudgets = useMemo(() => getMonthlyBudgets(data.budgets, selectedMonth), [data.budgets, selectedMonth])
   const budgetProgress = useMemo(
-    () => monthlyBudgets.map((budget) => calculateBudgetProgress(budget, data.transactions)),
-    [monthlyBudgets, data.transactions],
+    () => monthlyBudgets.map((budget) => calculateBudgetProgress(budget, data.transactions, {
+      includePending: data.settings.includePendingInMonthlyTotals,
+    })),
+    [monthlyBudgets, data.transactions, data.settings.includePendingInMonthlyTotals],
   )
   const goals = useMemo(
     () => data.goals
@@ -82,8 +84,10 @@ export function BudgetGoalSection({
     [data.goals],
   )
   const insights = useMemo(
-    () => buildBudgetGoalInsights(data.budgets, data.goals, data.transactions, selectedMonth),
-    [data.budgets, data.goals, data.transactions, selectedMonth],
+    () => buildBudgetGoalInsights(data.budgets, data.goals, data.transactions, selectedMonth, {
+      includePending: data.settings.includePendingInMonthlyTotals,
+    }),
+    [data.budgets, data.goals, data.transactions, selectedMonth, data.settings.includePendingInMonthlyTotals],
   )
 
   const totalBudget = budgetProgress.reduce((sum, item) => sum + item.amount, 0)
@@ -281,6 +285,7 @@ export function BudgetGoalSection({
                   key={budget.id}
                   budget={budget}
                   transactions={data.transactions}
+                  includePending={data.settings.includePendingInMonthlyTotals}
                   onEdit={openEditBudget}
                   onDelete={deleteBudget}
                 />

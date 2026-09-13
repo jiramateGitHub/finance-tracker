@@ -1,6 +1,7 @@
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { th } from '../../../i18n/th'
+import { createId } from '../../../lib/id'
 import type { TransactionEntry } from '../../../types/finance'
 import { currentIsoTimestamp } from '../../../utils/formatters'
 import { getQuickAddDate } from '../utils/quickAddParser'
@@ -32,7 +33,7 @@ export function FrequentTransactionShortcuts({ transactions, selectedMonth, onAd
     const date = getQuickAddDate(selectedMonth)
     onAddTransaction({
       ...template,
-      id: crypto.randomUUID(),
+      id: createId(),
       date,
       monthKey: selectedMonth,
       status: template.type === 'income' ? 'cleared' : template.status,

@@ -1,6 +1,40 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
+import { createId } from '../../../lib/id'
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
-import { currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
+import { currentIsoTimestamp, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
+import {
+  addMonths,
+  currentMonthKey,
+  getInstallmentDueDate,
+  getInstallmentDueDay,
+  getInstallmentEndMonth,
+  getInstallmentScheduleMonths,
+  getPaidMonthKeys,
+  monthDiff,
+} from './installmentSchedule'
+import {
+  calculateInstallmentMonthlyInfo,
+  calculateInstallmentProgress,
+} from './installmentProgress'
+
+export {
+  DEFAULT_INSTALLMENT_DUE_DAY,
+  addMonths,
+  currentMonthKey,
+  getInstallmentDueDate,
+  getInstallmentDueDay,
+  getInstallmentEndMonth,
+  getInstallmentScheduleMonths,
+  getPaidMonthKeys,
+  getSafeDateInMonth,
+  monthDiff,
+} from './installmentSchedule'
+export {
+  calculateInstallmentMonthlyInfo,
+  calculateInstallmentProgress,
+  type InstallmentMonthlyInfo,
+  type InstallmentProgress,
+} from './installmentProgress'
 
 export type InstallmentViewMode = 'list' | 'table' | 'calendar'
 export type InstallmentStatusFilter = 'all' | 'dueThisMonth' | 'unpaid' | 'paid' | 'completed' | 'active'
@@ -47,96 +81,12 @@ export type InstallmentFormValues = {
   interestNote: string
 }
 
-export type InstallmentProgress = {
-  totalAmount: number
-  totalPaid: number
-  remainingAmount: number
-  progressPercent: number
-  monthsPaid: number
-  monthsRemaining: number
-  scheduleMonths: string[]
-  paidMonthKeys: string[]
-  endMonth: string
-}
-
 export type InstallmentSummary = {
   planCount: number
   totalPaid: number
   totalRemaining: number
   totalMonthly: number
   monthsRemaining: number
-}
-
-export function addMonths(monthKey: string, count: number): string {
-  const [yearText, monthText] = monthKey.split('-')
-  const date = new Date(Number(yearText), Number(monthText) - 1 + count, 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-export function monthDiff(ym1: string, ym2: string): number {
-  if (!ym1 || !ym2) return 0
-  const [y1, m1] = ym1.split('-').map(Number)
-  const [y2, m2] = ym2.split('-').map(Number)
-  return (y2 - y1) * 12 + (m2 - m1)
-}
-
-export function currentMonthKey(): string {
-  return currentMonthInputValue()
-}
-
-export function getInstallmentScheduleMonths(plan: InstallmentPlan): string[] {
-  const totalMonths = Math.max(0, Number(plan.monthsTotal ?? plan.totalMonths ?? plan.installmentCount ?? 0))
-  if (!plan.startMonth || !totalMonths) return []
-  return Array.from({ length: totalMonths }, (_, index) => addMonths(plan.startMonth, index))
-}
-
-export function getInstallmentEndMonth(plan: InstallmentPlan): string {
-  const scheduleMonths = getInstallmentScheduleMonths(plan)
-  return scheduleMonths.at(-1) ?? ''
-}
-
-export function getPaidMonthKeys(plan: InstallmentPlan): string[] {
-  const scheduleMonths = getInstallmentScheduleMonths(plan)
-  const explicitKeys = Array.isArray(plan.paidMonthKeys)
-    ? Array.from(new Set(plan.paidMonthKeys.filter((monthKey) => scheduleMonths.includes(monthKey))))
-    : []
-  if (explicitKeys.length) {
-    const keySet = new Set(explicitKeys)
-    return scheduleMonths.filter((monthKey) => keySet.has(monthKey))
-  }
-  const paidCount = Math.max(0, Math.min(scheduleMonths.length, Number(plan.monthsPaid ?? plan.paidMonths ?? 0)))
-  return scheduleMonths.slice(0, paidCount)
-}
-
-export function calculateInstallmentProgress(plan: InstallmentPlan): InstallmentProgress {
-  const scheduleMonths = getInstallmentScheduleMonths(plan)
-  const paidMonthKeys = getPaidMonthKeys(plan)
-  const monthlyAmount = Math.max(0, Number(plan.monthlyAmount || plan.paymentAmount || 0))
-  const principalTotal = Number(plan.principal ?? plan.principalAmount)
-  const totalAmount = Number.isFinite(principalTotal) && principalTotal > 0
-    ? principalTotal
-    : monthlyAmount * scheduleMonths.length
-  const monthsPaid = paidMonthKeys.length
-  const totalPaid = Math.min(totalAmount || monthlyAmount * monthsPaid, monthlyAmount * monthsPaid)
-  const bySchedule = Math.max(0, (scheduleMonths.length - monthsPaid) * monthlyAmount)
-  const hasInterest = Number(plan.interestRate || 0) > 0 && plan.interestType !== 'none'
-  const byPrincipal = !hasInterest && totalAmount > 0 ? Math.max(0, totalAmount - totalPaid) : null
-  const computedRemaining = byPrincipal ?? bySchedule
-  const remainingSnapshot = plan.remainingOverride ?? plan.balanceSnapshotAmount
-  const remainingAmount = typeof remainingSnapshot === 'number' ? Math.max(0, remainingSnapshot) : computedRemaining
-  const progressPercent = totalAmount > 0 ? Math.min(100, Math.round((totalPaid / totalAmount) * 100)) : 0
-
-  return {
-    totalAmount,
-    totalPaid,
-    remainingAmount,
-    progressPercent,
-    monthsPaid,
-    monthsRemaining: Math.max(0, scheduleMonths.length - monthsPaid),
-    scheduleMonths,
-    paidMonthKeys,
-    endMonth: scheduleMonths.at(-1) ?? '',
-  }
 }
 
 export function summarizeInstallmentPlans(plans: InstallmentPlan[]): InstallmentSummary {
@@ -154,100 +104,6 @@ export function summarizeInstallmentPlans(plans: InstallmentPlan[]): Installment
   )
 }
 
-export type InstallmentMonthlyInfo = {
-  progress: InstallmentProgress
-  startYM: string
-  endYM: string
-  totalMonths: number
-  paidCount: number
-  remainingMonths: number
-  monthlyPayment: number
-  remainingBalance: number
-  progressPercent: number
-  isActiveInMonth: boolean
-  isPaidInMonth: boolean
-  isCompleted: boolean
-  termInMonth: number
-  dueDay: number
-  actualDueDay: number
-  isOverdue: boolean
-  isDueSoon: boolean
-  daysUntilDue: number | null
-}
-
-export function calculateInstallmentMonthlyInfo(
-  plan: InstallmentPlan,
-  selectedMonth: string,
-  today: Date = new Date(),
-): InstallmentMonthlyInfo {
-  const progress = calculateInstallmentProgress(plan)
-  const startYM = plan.startMonth || currentMonthKey()
-  const totalMonths = progress.scheduleMonths.length
-  const endYM = progress.endMonth || startYM
-  const paidCount = progress.monthsPaid
-  const remainingMonths = progress.monthsRemaining
-  const isCompleted = remainingMonths === 0
-  const monthlyPayment = Math.max(0, Number(plan.monthlyAmount || plan.paymentAmount || 0))
-  const remainingBalance = progress.remainingAmount
-  const progressPercent = progress.progressPercent
-
-  const diff = monthDiff(startYM, selectedMonth)
-  const isActiveInMonth = diff >= 0 && diff < totalMonths
-  const termInMonth = diff + 1
-  const isPaidInMonth = progress.paidMonthKeys.includes(selectedMonth)
-
-  const rawDueDay = Number(plan.dueDay ?? plan.paymentDay ?? 25)
-  const dueDay = Number.isFinite(rawDueDay) && rawDueDay >= 1 && rawDueDay <= 31 ? Math.floor(rawDueDay) : 25
-
-  const [vYear, vMonth] = (selectedMonth || currentMonthKey()).split('-').map(Number)
-  const daysInMonth = Number.isFinite(vYear) && Number.isFinite(vMonth) ? new Date(vYear, vMonth, 0).getDate() : 31
-  const actualDueDay = Math.min(dueDay, daysInMonth)
-
-  const todayYear = today.getFullYear()
-  const todayMonthNum = today.getMonth() + 1
-  const todayDate = today.getDate()
-  const todayMonthStr = `${todayYear}-${String(todayMonthNum).padStart(2, '0')}`
-  const todayStr = `${todayMonthStr}-${String(todayDate).padStart(2, '0')}`
-  const dueDateStr = `${selectedMonth}-${String(actualDueDay).padStart(2, '0')}`
-
-  let isOverdue = false
-  let isDueSoon = false
-  let daysUntilDue: number | null = null
-
-  if (isActiveInMonth && !isPaidInMonth && !isCompleted) {
-    if (dueDateStr < todayStr) {
-      isOverdue = true
-      daysUntilDue = actualDueDay - todayDate
-    } else if (selectedMonth === todayMonthStr) {
-      daysUntilDue = actualDueDay - todayDate
-      if (daysUntilDue >= 0 && daysUntilDue <= 3) {
-        isDueSoon = true
-      }
-    }
-  }
-
-  return {
-    progress,
-    startYM,
-    endYM,
-    totalMonths,
-    paidCount,
-    remainingMonths,
-    monthlyPayment,
-    remainingBalance,
-    progressPercent,
-    isActiveInMonth,
-    isPaidInMonth,
-    isCompleted,
-    termInMonth,
-    dueDay,
-    actualDueDay,
-    isOverdue,
-    isDueSoon,
-    daysUntilDue,
-  }
-}
-
 export type InstallmentDashboardMetrics = {
   selectedMonth: string
   totalDueThisMonth: number
@@ -261,6 +117,7 @@ export type InstallmentDashboardMetrics = {
   activeCountThisMonth: number
   paidCountThisMonth: number
   pendingCountThisMonth: number
+  completedCount: number
   overdueCountThisMonth: number
   dueSoonCountThisMonth: number
   nextPayoffCandidate: {
@@ -287,6 +144,7 @@ export function getInstallmentDashboardMetrics(
   let activeCountThisMonth = 0
   let paidCountThisMonth = 0
   let pendingCountThisMonth = 0
+  let completedCount = 0
   let overdueCountThisMonth = 0
   let dueSoonCountThisMonth = 0
 
@@ -300,6 +158,8 @@ export function getInstallmentDashboardMetrics(
   plans.forEach((plan) => {
     const info = calculateInstallmentMonthlyInfo(plan, selectedMonth, today)
     const { progress } = info
+
+    if (info.isCompleted) completedCount += 1
 
     totalLifetimeOriginal += progress.totalAmount
     totalLifetimePaid += progress.totalPaid
@@ -368,6 +228,7 @@ export function getInstallmentDashboardMetrics(
     activeCountThisMonth,
     paidCountThisMonth,
     pendingCountThisMonth,
+    completedCount,
     overdueCountThisMonth,
     dueSoonCountThisMonth,
     nextPayoffCandidate,
@@ -550,7 +411,8 @@ export function filterInstallmentPlans(plans: InstallmentPlan[], filters: Instal
 }
 
 export function createInstallmentFormValues(plan?: InstallmentPlan): InstallmentFormValues {
-  const totalAmount = plan ? calculateInstallmentProgress(plan).totalAmount : 0
+  const progress = plan ? calculateInstallmentProgress(plan) : null
+  const totalAmount = progress?.totalAmount ?? 0
   const remainingSnapshot = plan?.remainingOverride ?? plan?.balanceSnapshotAmount
   const principal = plan?.principal ?? plan?.principalAmount ?? totalAmount
   return {
@@ -562,7 +424,7 @@ export function createInstallmentFormValues(plan?: InstallmentPlan): Installment
     monthsTotal: String(plan?.monthsTotal ?? plan?.totalMonths ?? plan?.installmentCount ?? 12),
     category: normalizeCategoryId(plan?.categoryId || plan?.category || '', ''),
     note: plan?.note ?? '',
-    paidMonths: String(plan ? calculateInstallmentProgress(plan).monthsPaid : 0),
+    paidMonths: String(progress?.monthsPaid ?? 0),
     principal: principal ? String(principal) : '',
     remainingOverride: typeof remainingSnapshot === 'number' ? String(remainingSnapshot) : '',
     dueDay: plan?.dueDay || plan?.paymentDay ? String(plan.dueDay ?? plan.paymentDay) : '',
@@ -589,13 +451,16 @@ export function buildInstallmentPlanFromForm(values: InstallmentFormValues, exis
   const scheduleMonths = Array.from({ length: monthsTotal }, (_, index) => addMonths(startMonth, index))
   const paidMonthKeys = scheduleMonths.slice(0, paidMonths)
   const category = normalizeCategoryId(values.category, 'ผ่อนสินค้า')
-  const dueDay = values.dueDay ? Math.min(31, Math.max(1, Math.floor(Number(values.dueDay)))) : undefined
+  const parsedDueDay = Number(values.dueDay)
+  const dueDay = values.dueDay && Number.isInteger(parsedDueDay) && parsedDueDay >= 1 && parsedDueDay <= 31
+    ? parsedDueDay
+    : undefined
   const interestRate = values.interestRate ? Math.max(0, parseAmountSafe(values.interestRate, 0)) : null
   const interestType: InterestType = values.interestType
   const remainingOverride = values.remainingOverride.trim() === '' ? undefined : Math.max(0, parseAmountSafe(values.remainingOverride, 0))
 
   return {
-    id: existing?.id ?? crypto.randomUUID(),
+    id: existing?.id ?? createId(),
     name: values.name.trim(),
     category,
     categoryId: category,
@@ -675,6 +540,11 @@ export function setPaidMonth(plan: InstallmentPlan, monthKey: string, isPaid: bo
     paidMonthKeys,
     monthsPaid: paidMonthKeys.length,
     paidMonths: paidMonthKeys.length,
+    // A payment status change invalidates any historical/manual snapshot.
+    // The current balance is always recalculated from the schedule below.
+    remainingOverride: undefined,
+    balanceSnapshotAmount: null,
+    balanceSnapshotMonth: null,
     updatedAt: currentIsoTimestamp(),
   }
 }
@@ -687,8 +557,11 @@ export function setAllMonthsPaid(plan: InstallmentPlan, isPaid: boolean): Instal
     paidMonthKeys,
     monthsPaid: paidMonthKeys.length,
     paidMonths: paidMonthKeys.length,
-    remainingOverride: isPaid ? 0 : undefined,
-    balanceSnapshotAmount: isPaid ? 0 : null,
+    // Settlement is a schedule state transition, not a frozen balance.
+    // Clearing snapshot fields prevents settle → unpay from staying at 0.
+    remainingOverride: undefined,
+    balanceSnapshotAmount: null,
+    balanceSnapshotMonth: null,
     updatedAt: currentIsoTimestamp(),
   }
 }
@@ -716,8 +589,8 @@ export function compareInstallmentPlans(a: InstallmentPlan, b: InstallmentPlan, 
   const bProgress = calculateInstallmentProgress(b)
   const aMonthly = Number(a.monthlyAmount || 0)
   const bMonthly = Number(b.monthlyAmount || 0)
-  const aDueDay = Number(a.dueDay ?? a.paymentDay ?? 25)
-  const bDueDay = Number(b.dueDay ?? b.paymentDay ?? 25)
+  const aDueDay = getInstallmentDueDay(a)
+  const bDueDay = getInstallmentDueDay(b)
 
   if (sortOrder === 'dueDay') return aDueDay - bDueDay || baseCompare
   if (sortOrder === 'amountDesc' || sortOrder === 'monthly-desc') return bMonthly - aMonthly || baseCompare
@@ -753,26 +626,33 @@ export function getInstallmentCalendarMonths(plans: InstallmentPlan[], filters?:
   return Array.from(monthSet).sort().slice(0, 12)
 }
 
-export function getSafeDateInMonth(monthKey: string, dayText: string): string {
-  const [yearText, monthText] = monthKey.split('-')
-  const year = Number(yearText)
-  const month = Number(monthText)
-  const requestedDay = Number(dayText)
-  const day = Number.isFinite(requestedDay) && requestedDay >= 1 ? Math.floor(requestedDay) : 1
-  const lastDay = Number.isFinite(year) && Number.isFinite(month)
-    ? new Date(year, month, 0).getDate()
-    : 1
-  return `${monthKey}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
+export type InstallmentDerivationStats = {
+  scheduleLookups: number
 }
 
-export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey?: string): TransactionEntry[] {
-  return plans.flatMap((plan) => {
-    const paidMonthKeys = new Set(getPaidMonthKeys(plan))
-    return getInstallmentScheduleMonths(plan)
-      .filter((scheduleMonth) => !monthKey || scheduleMonth === monthKey)
-      .map((scheduleMonth) => {
-        const date = getSafeDateInMonth(scheduleMonth, String(plan.dueDay ?? plan.paymentDay ?? 1))
-        return {
+/**
+ * Derive occurrences for a month range while calculating each plan schedule
+ * once. The optional stats object makes the performance contract observable in
+ * focused fixtures without adding side effects to the selector itself.
+ */
+export function deriveInstallmentTransactionsForMonths(
+  plans: InstallmentPlan[],
+  monthKeys?: string[],
+  stats?: InstallmentDerivationStats,
+): TransactionEntry[] {
+  const allowedMonths = monthKeys === undefined ? null : new Set(monthKeys)
+  const rowsByMonth = new Map<string, TransactionEntry[]>()
+  const allRows: TransactionEntry[] = []
+
+  plans.forEach((plan) => {
+    if (stats) stats.scheduleLookups += 1
+    const scheduleMonths = getInstallmentScheduleMonths(plan)
+    const paidMonthKeys = new Set(getPaidMonthKeys(plan, scheduleMonths))
+    scheduleMonths
+      .filter((scheduleMonth) => !allowedMonths || allowedMonths.has(scheduleMonth))
+      .forEach((scheduleMonth) => {
+        const date = getInstallmentDueDate(plan, scheduleMonth)
+        const row = {
           id: `installment-${plan.id}-${scheduleMonth}`,
           type: 'expense',
           date,
@@ -794,6 +674,17 @@ export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey
           createdAt: plan.createdAt,
           updatedAt: plan.updatedAt,
         } satisfies TransactionEntry
+        allRows.push(row)
+        const monthRows = rowsByMonth.get(scheduleMonth) ?? []
+        monthRows.push(row)
+        rowsByMonth.set(scheduleMonth, monthRows)
       })
   })
+
+  if (monthKeys === undefined) return allRows
+  return monthKeys.flatMap((monthKey) => rowsByMonth.get(monthKey) ?? [])
+}
+
+export function deriveInstallmentTransactions(plans: InstallmentPlan[], monthKey?: string): TransactionEntry[] {
+  return deriveInstallmentTransactionsForMonths(plans, monthKey ? [monthKey] : undefined)
 }

@@ -1,4 +1,6 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
+import { getBudgetAllocatedAmount, getBudgetStatus, getBudgetThresholds } from '../../budgetGoals/budgetGoalCalculations'
+import { createId } from '../../../lib/id'
 import type { AppData, Budget, BudgetLine, InstallmentPlan, TransactionEntry, Trip, TripItem, TripStatus } from '../../../types/finance'
 import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
@@ -76,6 +78,12 @@ export type TripBudgetLineFormValues = {
   note: string
 }
 
+function optionalAmount(value: unknown): number | null {
+  if (value == null || (typeof value === 'string' && !value.trim())) return null
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : null
+}
+
 export function createEmptyTripFilters(): TripFilters {
   const currentYear = currentMonthInputValue().slice(0, 4)
   return {
@@ -100,26 +108,26 @@ export function getTripDayCount(trip: Trip): number {
   return Math.max(1, Math.round((endTime - startTime) / 86400000) + 1)
 }
 
-export function getTripBudgetRecord(data: AppData, tripId: string): Budget | null {
+export function getTripBudgetRecord(data: Pick<AppData, 'budgets'>, tripId: string): Budget | null {
   return data.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId && budget.enabled !== false) ?? null
 }
 
-export function getTripBudgetLines(data: AppData, tripId: string): BudgetLine[] {
+export function getTripBudgetLines(data: Pick<AppData, 'budgets'>, tripId: string): BudgetLine[] {
   const budget = getTripBudgetRecord(data, tripId)
   if (!budget) return []
   if (budget.lines?.length) return budget.lines
   return [{
     id: budget.id,
     categoryId: normalizeCategoryId(budget.categoryId || budget.category, 'ท่องเที่ยว'),
-    amount: Number(budget.amount || 0),
+    amount: Math.max(0, optionalAmount(budget.amount) ?? 0),
     note: budget.note,
   }]
 }
 
-export function getTripPlannedBudget(data: AppData, trip: Trip): number {
-  const budgetLines = getTripBudgetLines(data, trip.id)
-  const budgetLineTotal = budgetLines.reduce((total, line) => total + Number(line.amount || 0), 0)
-  return budgetLineTotal || Number(trip.budget || 0)
+export function getTripPlannedBudget(data: Pick<AppData, 'budgets'>, trip: Trip): number {
+  const budget = getTripBudgetRecord(data, trip.id)
+  if (!budget) return Math.max(0, optionalAmount(trip.budget) ?? 0)
+  return getBudgetAllocatedAmount(budget)
 }
 
 export function getTripActualByCategory(trip: Trip): Map<string, number> {
@@ -133,13 +141,15 @@ export function getTripActualByCategory(trip: Trip): Map<string, number> {
 
 export function getTripBudgetLineViews(data: AppData, trip: Trip): TripBudgetLineView[] {
   const actualByCategory = getTripActualByCategory(trip)
+  const budgetRecord = getTripBudgetRecord(data, trip.id)
+  const thresholds = getBudgetThresholds(budgetRecord ?? undefined)
   return getTripBudgetLines(data, trip.id)
     .map((line) => {
-      const planned = Math.max(0, Number(line.amount || 0))
+      const planned = Number.isFinite(Number(line.amount)) ? Math.max(0, Number(line.amount)) : 0
       const actual = actualByCategory.get(normalizeCategoryId(line.categoryId, 'ท่องเที่ยว')) ?? 0
       const remaining = planned - actual
-      const usagePercent = planned > 0 ? Math.min(100, Math.round((actual / planned) * 100)) : 0
-      const status: TripBudgetStatus = actual >= planned ? 'over-budget' : actual / planned >= 0.8 ? 'near-limit' : 'safe'
+      const usagePercent = planned > 0 ? Math.min(100, Math.round((actual / planned) * 100)) : actual > 0 ? 100 : 0
+      const status = getBudgetStatus(actual, planned, thresholds) as TripBudgetStatus
       return {
         line,
         categoryId: normalizeCategoryId(line.categoryId, 'ท่องเที่ยว'),
@@ -215,7 +225,7 @@ function tripMatchesMonthRange(trip: Trip, rangeStartMonth: string, rangeEndMont
   return tripOverlapsRange || itemMatches
 }
 
-export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
+export function filterTrips(trips: Trip[], filters: TripFilters, data?: Pick<AppData, 'budgets'>): Trip[] {
   const keyword = filters.keyword.trim().toLocaleLowerCase()
   return trips
     .filter((trip) => filters.status === 'all' || getTripStatus(trip) === filters.status)
@@ -229,10 +239,10 @@ export function filterTrips(trips: Trip[], filters: TripFilters): Trip[] {
         ...trip.items.flatMap((item) => [item.title, item.category, item.destination, item.country, item.note]),
       ].some((value) => String(value ?? '').toLocaleLowerCase().includes(keyword))
     })
-    .sort((a, b) => compareTrips(a, b, filters.sortOrder))
+    .sort((a, b) => compareTrips(a, b, filters.sortOrder, data))
 }
 
-function compareTrips(a: Trip, b: Trip, sortOrder: TripSortOrder): number {
+function compareTrips(a: Trip, b: Trip, sortOrder: TripSortOrder, data?: Pick<AppData, 'budgets'>): number {
   if (sortOrder === 'start-asc') return String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name), 'th-TH')
   if (sortOrder === 'name-asc') return String(a.name).localeCompare(String(b.name), 'th-TH') || String(b.startDate).localeCompare(String(a.startDate))
   if (sortOrder === 'actual-desc') {
@@ -240,7 +250,11 @@ function compareTrips(a: Trip, b: Trip, sortOrder: TripSortOrder): number {
     const bActual = b.items.reduce((total, item) => total + Number(item.amount || 0), 0)
     return bActual - aActual || String(b.startDate).localeCompare(String(a.startDate))
   }
-  if (sortOrder === 'budget-desc') return Number(b.budget || 0) - Number(a.budget || 0) || String(b.startDate).localeCompare(String(a.startDate))
+  if (sortOrder === 'budget-desc') {
+    const aBudget = data ? getTripPlannedBudget(data, a) : Number(a.budget ?? 0)
+    const bBudget = data ? getTripPlannedBudget(data, b) : Number(b.budget ?? 0)
+    return bBudget - aBudget || String(b.startDate).localeCompare(String(a.startDate))
+  }
   return String(b.startDate).localeCompare(String(a.startDate)) || String(a.name).localeCompare(String(b.name), 'th-TH')
 }
 
@@ -271,7 +285,7 @@ export function createTripFormValues(trip?: Trip): TripFormValues {
 export function buildTripFromForm(values: TripFormValues, existing?: Trip): Trip {
   const now = currentIsoTimestamp()
   return {
-    id: existing?.id ?? crypto.randomUUID(),
+    id: existing?.id ?? createId(),
     name: values.name.trim(),
     destination: values.destination.trim() || undefined,
     budget: values.budget.trim() ? Math.max(0, parseAmountSafe(values.budget, 0)) : undefined,
@@ -304,7 +318,7 @@ export function createTripItemFormValues(item?: TripItem, trip?: Trip): TripItem
     category: normalizeCategoryId(item?.category || '', 'ท่องเที่ยว'),
     destination: item?.destination ?? trip?.destination ?? '',
     country: item?.country ?? '',
-    installmentId: item?.installmentId ?? '',
+    installmentId: item?.installmentPlanId ?? item?.installmentId ?? '',
     isPaid: item?.isPaid ?? false,
     note: item?.note ?? '',
   }
@@ -313,16 +327,18 @@ export function createTripItemFormValues(item?: TripItem, trip?: Trip): TripItem
 export function buildTripItemFromForm(values: TripItemFormValues, existing?: TripItem): TripItem {
   const now = currentIsoTimestamp()
   return {
-    id: existing?.id ?? crypto.randomUUID(),
+    id: existing?.id ?? createId(),
     title: values.title.trim(),
     amount: Math.max(0, parseAmountSafe(values.amount, 0)),
     date: values.date,
     category: normalizeCategoryId(values.category, 'ท่องเที่ยว'),
+    categoryId: normalizeCategoryId(values.category, 'ท่องเที่ยว'),
     destination: values.destination.trim() || undefined,
     country: values.country.trim() || undefined,
     isPaid: values.isPaid,
     note: values.note.trim() || undefined,
     installmentId: values.installmentId || undefined,
+    installmentPlanId: values.installmentId || null,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   }
@@ -400,16 +416,154 @@ export function getInstallmentOptionsForTrip(items: InstallmentPlan[]): Array<{ 
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
-export function deriveTripTransactions(trips: Trip[], monthKey?: string): TransactionEntry[] {
-  return trips.flatMap((trip) => trip.items
-    .filter((item) => !monthKey || getMonthKey(item.date) === monthKey)
-    .map((item) => ({
+function isTripOwnedTransaction(transaction: TransactionEntry, tripId: string): boolean {
+  return transaction.type === 'expense'
+    && transaction.tripId === tripId
+    && (transaction.sourceModule === 'trip' || transaction.id.startsWith('tx-trip-'))
+}
+
+function getTripItemReference(transaction: TransactionEntry): string {
+  return transaction.sourceRefId || transaction.id
+}
+
+/**
+ * Keep one persisted legacy trip transaction in sync with its nested item.
+ * Manual transactions that merely reference a trip are intentionally left
+ * alone because they are not owned by the trip item migration.
+ */
+export function reconcileTripTransactions(
+  transactions: TransactionEntry[],
+  previousTrip: Trip,
+  nextTrip: Trip,
+  updatedAt = currentIsoTimestamp(),
+): TransactionEntry[] {
+  const nextItems = new Map(nextTrip.items.map((item) => [item.id, item]))
+  const reconciledItemIds = new Set<string>()
+  const reconciled = transactions.flatMap((transaction): TransactionEntry[] => {
+    if (!isTripOwnedTransaction(transaction, previousTrip.id)) return [transaction]
+    const item = nextItems.get(getTripItemReference(transaction))
+    if (!item) return []
+    reconciledItemIds.add(item.id)
+    const category = normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว')
+    const installmentPlanId = item.installmentPlanId ?? item.installmentId ?? null
+    return [{
+      ...transaction,
+      date: item.date,
+      monthKey: getMonthKey(item.date),
+      category,
+      categoryId: category,
+      title: item.title,
+      amount: Math.max(0, Number(item.amount || 0)),
+      note: item.note,
+      status: item.isPaid === false ? 'pending' : 'cleared',
+      source: transaction.source ?? 'manual',
+      sourceModule: 'trip',
+      sourceRefId: item.id,
+      tripId: nextTrip.id,
+      installmentId: installmentPlanId ?? undefined,
+      installmentPlanId,
+      travelDetails: {
+        destination: item.destination ?? null,
+        country: item.country ?? null,
+      },
+      updatedAt,
+    } satisfies TransactionEntry]
+  })
+  const createdTransactions = nextTrip.items
+    .filter((item) => !reconciledItemIds.has(item.id))
+    .map((item): TransactionEntry => {
+      const date = item.date || nextTrip.startDate
+      const category = normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว')
+      const installmentPlanId = item.installmentPlanId ?? item.installmentId ?? null
+      return {
+        id: `tx-trip-${nextTrip.id}-${item.id}`,
+        type: 'expense',
+        date,
+        monthKey: getMonthKey(date),
+        category,
+        categoryId: category,
+        title: item.title,
+        amount: Math.max(0, Number(item.amount || 0)),
+        currency: 'THB',
+        note: item.note,
+        status: item.isPaid === false ? 'pending' : 'cleared',
+        source: 'manual',
+        sourceModule: 'trip',
+        sourceRefId: item.id,
+        tripId: nextTrip.id,
+        installmentId: installmentPlanId ?? undefined,
+        installmentPlanId,
+        recurringRuleId: null,
+        goalId: null,
+        travelDetails: {
+          destination: item.destination ?? null,
+          country: item.country ?? null,
+        },
+        createdAt: item.createdAt ?? nextTrip.createdAt,
+        updatedAt,
+      }
+    })
+  return [...reconciled, ...createdTransactions]
+}
+
+/**
+ * Remove transactions created from trip items with the trip. A transaction
+ * that only has a manual trip relation is retained and detached, preventing
+ * deleting a trip from deleting an independent cashflow record.
+ */
+export function detachTripTransactions(
+  transactions: TransactionEntry[],
+  tripId: string,
+  updatedAt = currentIsoTimestamp(),
+): TransactionEntry[] {
+  let changed = false
+  const nextTransactions = transactions.flatMap((transaction) => {
+    if (transaction.tripId !== tripId) return [transaction]
+    if (isTripOwnedTransaction(transaction, tripId)) {
+      changed = true
+      return []
+    }
+    changed = true
+    return [{
+      ...transaction,
+      tripId: null,
+      sourceRefId: null,
+      updatedAt,
+    }]
+  })
+  return changed ? nextTransactions : transactions
+}
+
+export type TripDerivationStats = {
+  itemLookups: number
+}
+
+export function deriveTripTransactionsForMonths(
+  trips: Trip[],
+  monthKeys?: string[],
+  persistedTransactions: TransactionEntry[] = [],
+  stats?: TripDerivationStats,
+): TransactionEntry[] {
+  const persistedTripItems = new Set(
+    persistedTransactions
+      .filter((transaction) => transaction.tripId && isTripOwnedTransaction(transaction, transaction.tripId))
+      .map((transaction) => `${transaction.tripId}:${getTripItemReference(transaction)}`),
+  )
+  const allowedMonths = monthKeys === undefined ? null : new Set(monthKeys)
+  const rowsByMonth = new Map<string, TransactionEntry[]>()
+  const derived = trips.flatMap((trip) => trip.items.flatMap((item) => {
+    if (stats) stats.itemLookups += 1
+    const itemMonth = getMonthKey(item.date)
+    if (allowedMonths && !allowedMonths.has(itemMonth)) return []
+    if (persistedTripItems.has(`${trip.id}:${item.id}`)) return []
+    const installmentPlanId = item.installmentPlanId ?? item.installmentId ?? null
+    return [{
       id: `trip-${trip.id}-${item.id}`,
       type: 'expense',
       date: item.date,
-      monthKey: getMonthKey(item.date),
-      category: normalizeCategoryId(item.category, 'ท่องเที่ยว'),
-      categoryId: normalizeCategoryId(item.category, 'ท่องเที่ยว'),
+      monthKey: itemMonth,
+      category: normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว'),
+      categoryId: normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว'),
       title: item.title,
       amount: Math.max(0, Number(item.amount || 0)),
       currency: 'THB',
@@ -419,11 +573,32 @@ export function deriveTripTransactions(trips: Trip[], monthKey?: string): Transa
       sourceModule: 'trip',
       sourceRefId: item.id,
       tripId: trip.id,
-      installmentId: item.installmentId,
-      installmentPlanId: item.installmentId ?? null,
+      installmentId: installmentPlanId ?? undefined,
+      installmentPlanId,
+      travelDetails: {
+        destination: item.destination ?? null,
+        country: item.country ?? null,
+      },
       recurringRuleId: null,
       goalId: null,
       createdAt: trip.createdAt,
       updatedAt: trip.updatedAt,
-    } satisfies TransactionEntry)))
+    } satisfies TransactionEntry]
+  }))
+
+  if (monthKeys === undefined) return derived
+  derived.forEach((row) => {
+    const monthRows = rowsByMonth.get(row.monthKey) ?? []
+    monthRows.push(row)
+    rowsByMonth.set(row.monthKey, monthRows)
+  })
+  return monthKeys.flatMap((monthKey) => rowsByMonth.get(monthKey) ?? [])
+}
+
+export function deriveTripTransactions(
+  trips: Trip[],
+  monthKey?: string,
+  persistedTransactions: TransactionEntry[] = [],
+): TransactionEntry[] {
+  return deriveTripTransactionsForMonths(trips, monthKey ? [monthKey] : undefined, persistedTransactions)
 }

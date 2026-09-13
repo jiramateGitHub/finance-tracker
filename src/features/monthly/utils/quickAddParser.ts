@@ -1,4 +1,5 @@
 import { SMART_CATEGORY_RULES, normalizeCategoryId } from '../../../data/categories'
+import { createId } from '../../../lib/id'
 import type { TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { currentDateInputValue, currentIsoTimestamp, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
@@ -87,7 +88,7 @@ export function buildQuickAddTransaction(input: string, selectedMonth: string): 
   const now = currentIsoTimestamp()
   const date = getQuickAddDate(selectedMonth)
   return {
-    id: crypto.randomUUID(),
+    id: createId(),
     type: parsed.type,
     date,
     monthKey: getMonthKey(date),

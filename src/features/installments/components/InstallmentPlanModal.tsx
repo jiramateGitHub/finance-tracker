@@ -193,7 +193,7 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
             </FormField>
 
             {/* Section 2: Amounts & Terms */}
-            <FormField label="ยอดรวมทั้งสิ้น (บาท)">
+            <FormField label="ยอดชำระตามสัญญา (บาท)">
               <TextInput
                 inputMode="decimal"
                 value={values.totalAmount}
@@ -277,13 +277,16 @@ export function InstallmentPlanModal({ open, plan, categoryOptions, onClose, onS
               />
             </FormField>
 
-            <FormField label="ยอดคงเหลือกำหนดเอง">
+            <FormField label="ยอดคงเหลือ snapshot (อ้างอิง)">
               <TextInput
                 inputMode="decimal"
                 value={values.remainingOverride}
-                placeholder="ยอดคงเหลือปัจจุบัน ถ้ามี"
+                placeholder="ยอดคงเหลือ ณ เดือนที่บันทึก ถ้ามี"
                 onChange={(event) => updateField('remainingOverride', event.target.value)}
               />
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                ใช้เป็นข้อมูลอ้างอิงตามวันที่บันทึก ยอดปัจจุบันจะคำนวณจากตารางงวด และจะล้าง snapshot เมื่อเปลี่ยนสถานะการจ่าย
+              </p>
             </FormField>
 
             {/* Due Day & Paid Months */}

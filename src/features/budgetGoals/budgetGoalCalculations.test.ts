@@ -2,6 +2,9 @@ import {
   calculateBudgetProgress,
   calculateBudgetUsage,
   calculateGoalProgress,
+  getBudgetAmount,
+  getBudgetCategoryKeys,
+  getBudgetThresholds,
   getBudgetStatus,
   getMonthlyBudgets,
   hasDuplicateMonthlyBudget,
@@ -127,6 +130,49 @@ assert.equal(getBudgetStatus(8000, 10000), 'near-limit')
 assert.equal(getBudgetStatus(10000, 10000), 'over-budget')
 assert.equal(getBudgetStatus(12000, 10000), 'over-budget')
 console.log('✓ calculateBudgetProgress & getBudgetStatus passed')
+
+// 2b. PR-08 shared budget selectors: multi-line categories, pending policy,
+// explicit zero totals and custom thresholds.
+const multiLineBudget: Budget = {
+  ...sampleBudgets[0],
+  id: 'b-multi',
+  amount: 3000,
+  category: 'อาหาร',
+  lines: [
+    { id: 'line-food', categoryId: 'อาหาร', amount: 1000 },
+    { id: 'line-travel', categoryId: 'ท่องเที่ยว', amount: 2000 },
+  ],
+  alertThresholds: [0.7, 0.95],
+}
+const multiLineTransactions: TransactionEntry[] = [
+  { ...sampleTransactions[0], id: 'tx-multi-food', amount: 900, status: 'cleared' },
+  { ...sampleTransactions[0], id: 'tx-multi-travel', category: 'ท่องเที่ยว', amount: 500, status: 'pending' },
+]
+assert.equal(getBudgetCategoryKeys(multiLineBudget).join('|'), 'ของกิน|ท่องเที่ยว', 'All line categories should be selected')
+assert.equal(calculateBudgetUsage(multiLineBudget, multiLineTransactions), 1400, 'Usage should include every budget line category')
+assert.equal(calculateBudgetUsage(multiLineBudget, multiLineTransactions, { includePending: false }), 900, 'Pending setting should apply to budget usage')
+assert.equal(getBudgetThresholds(multiLineBudget).nearLimit, 0.7)
+assert.equal(getBudgetThresholds(multiLineBudget).overBudget, 0.95)
+assert.equal(getBudgetStatus(2100, 3000, getBudgetThresholds(multiLineBudget)), 'near-limit')
+assert.equal(getBudgetStatus(2850, 3000, getBudgetThresholds(multiLineBudget)), 'over-budget')
+assert.equal(getBudgetAmount({ ...multiLineBudget, amount: 0 }), 0, 'Explicit zero total must remain zero')
+const preservedMultiLine = buildBudgetFromForm({
+  month: '2026-09',
+  category: 'ของกิน',
+  amount: '4000',
+  note: '',
+  enabled: true,
+}, multiLineBudget)
+assert.equal(preservedMultiLine.lines?.length, 2, 'Editing a multi-line budget must preserve all lines')
+assert.equal(preservedMultiLine.lines?.[1]?.categoryId, 'ท่องเที่ยว', 'Editing must not drop the second line')
+assert.equal(validateBudgetForm({
+  month: '2026-09',
+  category: 'ท่องเที่ยว',
+  amount: '4000',
+  note: '',
+  enabled: true,
+}, [multiLineBudget], multiLineBudget.id), 'หมวดหมู่ซ้ำกับรายการย่อยเดิมของงบนี้', 'Line category collision must be reported')
+console.log('✓ PR-08 shared budget selector regressions passed')
 
 // 3. hasDuplicateMonthlyBudget & validateBudgetForm
 assert.equal(hasDuplicateMonthlyBudget(sampleBudgets, {

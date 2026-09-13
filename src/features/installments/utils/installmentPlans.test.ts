@@ -7,6 +7,8 @@ import {
   filterInstallmentPlans,
   getInstallment12MonthProjection,
   getInstallmentDashboardMetrics,
+  getInstallmentDueDate,
+  getInstallmentDueDay,
   monthDiff,
   setAllMonthsPaid,
   setPaidMonth,
@@ -93,6 +95,20 @@ assert.equal(p1Progress.monthsPaid, 2)
 assert.equal(p1Progress.monthsRemaining, 8)
 assert.equal(p1Progress.progressPercent, 20)
 assert.equal(p1Progress.endMonth, '2026-10')
+const explicitEmptyPaid = calculateInstallmentProgress({ ...plan1, paidMonthKeys: [], monthsPaid: 2 })
+assert.equal(explicitEmptyPaid.monthsPaid, 0, 'explicit empty paidMonthKeys should mean no paid months')
+const legacyCountPaid = calculateInstallmentProgress({ ...plan1, paidMonthKeys: undefined, monthsPaid: 2 })
+assert.equal(legacyCountPaid.monthsPaid, 2, 'missing paidMonthKeys should fall back to legacy count')
+const mismatchedNoInterest = calculateInstallmentProgress({
+  ...plan1,
+  monthlyAmount: 100,
+  monthsTotal: 12,
+  principal: 1000,
+  principalAmount: 1000,
+  monthsPaid: 0,
+  paidMonthKeys: [],
+})
+assert.equal(mismatchedNoInterest.totalAmount, 1200, 'schedule total prevents a low principal snapshot from ending early')
 console.log('✓ calculateInstallmentProgress passed')
 
 // Test 4: calculateInstallmentMonthlyInfo for selectedMonth
@@ -122,6 +138,18 @@ const infoPastOverdue = calculateInstallmentMonthlyInfo(planUnpaidPast, '2026-02
 assert.equal(infoPastOverdue.isPaidInMonth, false)
 assert.equal(infoPastOverdue.isOverdue, true, 'unpaid plan in past month 2026-02 should be overdue')
 
+const crossYearPlan: InstallmentPlan = {
+  ...plan1,
+  id: 'cross-year',
+  startMonth: '2026-12',
+  dueDay: 31,
+  monthsPaid: 0,
+  paidMonthKeys: [],
+}
+const crossYearOverdue = calculateInstallmentMonthlyInfo(crossYearPlan, '2026-12', new Date(2027, 0, 2))
+assert.equal(crossYearOverdue.isOverdue, true, 'overdue should compare full calendar dates across years')
+assert.equal(crossYearOverdue.daysUntilDue, -2, 'overdue days should be negative across month/year boundaries')
+
 // Due-soon check
 const fixedMarch3 = new Date(2026, 2, 3)
 const infoDueSoon = calculateInstallmentMonthlyInfo(plan2, '2026-03', fixedMarch3)
@@ -140,6 +168,11 @@ const infoLeap = calculateInstallmentMonthlyInfo(planLeapYear, '2024-02')
 assert.equal(infoLeap.actualDueDay, 29, 'dueDay 31 in leap year Feb 2024 should clamp to 29')
 const infoNonLeap = calculateInstallmentMonthlyInfo(planLeapYear, '2025-02')
 assert.equal(infoNonLeap.actualDueDay, 28, 'dueDay 31 in non-leap year Feb 2025 should clamp to 28')
+assert.equal(getInstallmentDueDay({ ...plan1, dueDay: undefined, paymentDay: undefined }), 25, 'missing due day should use one fallback')
+assert.equal(getInstallmentDueDay({ ...plan1, dueDay: 0, paymentDay: 32 }), 25, 'invalid due day should use one fallback')
+assert.equal(getInstallmentDueDate({ ...plan1, dueDay: undefined, paymentDay: undefined }, '2026-09'), '2026-09-25', 'derived rows should use the same fallback due date')
+assert.equal(getInstallmentDueDate({ ...plan1, dueDay: 31 }, '2024-02'), '2024-02-29', 'due date should clamp to leap-year month end')
+assert.equal(getInstallmentDueDate({ ...plan1, dueDay: 31 }, '2025-02'), '2025-02-28', 'due date should clamp to non-leap month end')
 console.log('✓ Overdue, Due-soon, and Leap-year date clamping passed')
 
 // Test 6: getInstallmentDashboardMetrics
@@ -162,7 +195,7 @@ const novMonth = proj.months.find((m) => m.monthKey === '2026-11')
 assert.ok(novMonth && novMonth.totalDue === 12000)
 console.log('✓ getInstallment12MonthProjection passed')
 
-// Test 8: setPaidMonth & setAllMonthsPaid with balance override clearance
+// Test 8: setPaidMonth & setAllMonthsPaid with balance snapshot invalidation
 const paidMarch = setPaidMonth(plan1, '2026-03', true)
 assert.ok(paidMarch.paidMonthKeys?.includes('2026-03'))
 assert.equal(paidMarch.monthsPaid, 3)
@@ -173,15 +206,47 @@ assert.equal(allPaid.paidMonthKeys?.length, 10)
 
 const planWithOverride: InstallmentPlan = { ...plan1, remainingOverride: 15000 }
 const settledPlan = setAllMonthsPaid(planWithOverride, true)
-assert.equal(settledPlan.remainingOverride, 0, 'early settlement should clear remainingOverride to 0')
+assert.equal(settledPlan.remainingOverride, undefined, 'settlement should not create a permanent remainingOverride')
+assert.equal(settledPlan.balanceSnapshotAmount, null, 'settlement should clear stale balance snapshots')
 assert.equal(calculateInstallmentProgress(settledPlan).remainingAmount, 0, 'settled plan progress remainingAmount should be 0')
+const unpayOneAfterSettlement = setPaidMonth(settledPlan, '2026-01', false)
+assert.equal(unpayOneAfterSettlement.monthsPaid, 9, 'unpaying one settled month should restore one unpaid month')
+assert.equal(calculateInstallmentProgress(unpayOneAfterSettlement).remainingAmount, 4890, 'unpaying one settled month should restore its balance')
+const resetAfterSettlement = setAllMonthsPaid(settledPlan, false)
+assert.equal(calculateInstallmentProgress(resetAfterSettlement).remainingAmount, 48900, 'unpay-all should restore schedule-based remaining amount')
+
+const planWithSnapshot: InstallmentPlan = {
+  ...plan1,
+  balanceSnapshotAmount: 15000,
+  balanceSnapshotMonth: '2026-02',
+}
+const snapshotProgress = calculateInstallmentProgress(planWithSnapshot)
+assert.equal(snapshotProgress.remainingAmount, 39120, 'current remaining amount should be calculated from the schedule')
+assert.equal(snapshotProgress.snapshotRemainingAmount, 15000, 'historical snapshot should remain visible separately')
+const toggledSnapshot = setPaidMonth(planWithSnapshot, '2026-02', false)
+assert.equal(toggledSnapshot.balanceSnapshotAmount, null, 'changing one paid month should invalidate stale snapshot')
+assert.equal(calculateInstallmentProgress(toggledSnapshot).remainingAmount, 44010, 'unpay should recalculate remaining from paid month keys')
 
 const resetPaid = setAllMonthsPaid(plan1, false)
 assert.equal(resetPaid.monthsPaid, 0)
 assert.equal(resetPaid.paidMonthKeys?.length, 0)
 console.log('✓ setPaidMonth and setAllMonthsPaid passed')
 
-// Test 9: filterInstallmentPlans with rigorous status checks
+// Test 9: interest plans use contractual payment total, not principal as total paid
+const interestProgress = calculateInstallmentProgress({
+  ...plan2,
+  principal: 10000,
+  principalAmount: 10000,
+  monthsPaid: 1,
+  paidMonthKeys: ['2025-05'],
+})
+assert.equal(interestProgress.totalAmount, 576000, 'interest plan total should represent scheduled payments')
+assert.equal(interestProgress.totalPaid, 12000, 'interest plan paid total should retain cash payment amount')
+assert.equal(interestProgress.remainingAmount, 564000, 'interest plan remaining should follow contractual schedule')
+assert.equal(interestProgress.principalAmount, 10000, 'principal remains available as a separate field')
+console.log('✓ Interest and principal accounting passed')
+
+// Test 10: filterInstallmentPlans with rigorous status checks
 const filteredDue = filterInstallmentPlans([plan1, plan2, plan3Completed], {
   keyword: '',
   status: 'dueThisMonth',
@@ -228,16 +293,17 @@ assert.equal(filteredCompleted.length, 1)
 assert.equal(filteredCompleted[0].id, 'p3')
 console.log('✓ filterInstallmentPlans passed')
 
-// Test 10: deriveInstallmentTransactions backward compatibility
+// Test 11: deriveInstallmentTransactions backward compatibility
 const txs = deriveInstallmentTransactions([plan1], '2026-01')
 assert.equal(txs.length, 1)
 assert.equal(txs[0].amount, 4890)
+assert.equal(txs[0].date, '2026-01-25', 'derived transaction should use canonical due date')
 assert.equal(txs[0].status, 'cleared') // paid in 2026-01
 const txsMarch = deriveInstallmentTransactions([plan1], '2026-03')
 assert.equal(txsMarch[0].status, 'pending') // not paid in 2026-03
 console.log('✓ deriveInstallmentTransactions passed')
 
-// Test 11: getInstallmentCategoryDistribution
+// Test 12: getInstallmentCategoryDistribution
 import { getInstallmentCategoryDistribution } from './installmentPlans'
 const catDist = getInstallmentCategoryDistribution([plan1, plan2, plan3Completed], '2026-03')
 assert.equal(catDist.totalMonthlyDue, 4890 + 12000)
@@ -248,4 +314,4 @@ assert.equal(catDist.slices[1].category, 'ผ่อนสินค้า')
 assert.equal(catDist.slices[1].totalAmount, 4890)
 console.log('✓ getInstallmentCategoryDistribution passed')
 
-console.log('ALL 11 TESTS PASSED SUCCESSFULLY! 🎉')
+console.log('ALL 12 TESTS PASSED SUCCESSFULLY! 🎉')

@@ -3,7 +3,7 @@ import { Card } from '../../../components/ui/Card'
 import { th } from '../../../i18n/th'
 import type { Budget, Goal, TransactionEntry } from '../../../types/finance'
 import { formatMoney } from '../../../utils/formatters'
-import { calculateBudgetProgress, calculateGoalProgress, getMonthlyBudgets } from '../../budgetGoals/budgetGoalCalculations'
+import { calculateBudgetProgress, calculateGoalProgress, getBudgetCategoryLabel, getMonthlyBudgets } from '../../budgetGoals/budgetGoalCalculations'
 import type { SyncStatus } from '../../sync/syncTypes'
 
 type ActionNeededPanelProps = {
@@ -11,22 +11,23 @@ type ActionNeededPanelProps = {
   transactions: TransactionEntry[]
   budgets: Budget[]
   goals: Goal[]
+  includePending?: boolean
   syncStatus?: SyncStatus
 }
 
-export function ActionNeededPanel({ month, transactions, budgets, goals, syncStatus }: ActionNeededPanelProps) {
+export function ActionNeededPanel({ month, transactions, budgets, goals, includePending = true, syncStatus }: ActionNeededPanelProps) {
   const unpaid = transactions
     .filter((transaction) => transaction.type === 'expense' && transaction.status === 'pending')
     .slice(0, 5)
   const budgetAlerts = getMonthlyBudgets(budgets, month)
-    .map((budget) => ({ budget, progress: calculateBudgetProgress(budget, transactions) }))
+    .map((budget) => ({ budget, progress: calculateBudgetProgress(budget, transactions, { includePending }) }))
     .filter((item) => item.progress.status !== 'safe')
     .slice(0, 4)
   const goalAlerts = goals
     .map((goal) => ({ goal, progress: calculateGoalProgress(goal) }))
     .filter((item) => item.goal.status === 'active' && !item.progress.isCompleted && item.progress.percent >= 80)
     .slice(0, 3)
-  const syncNeedsAction = syncStatus?.state === 'error'
+  const syncNeedsAction = syncStatus?.state === 'error' || syncStatus?.state === 'conflict'
   const hasItems = unpaid.length || budgetAlerts.length || goalAlerts.length || syncNeedsAction
 
   return (
@@ -49,7 +50,7 @@ export function ActionNeededPanel({ month, transactions, budgets, goals, syncSta
           ))}
           {budgetAlerts.map(({ budget, progress }) => (
             <div key={budget.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
-              {budget.category}: {progress.status === 'over-budget' ? th.budget.over : th.budget.near} ({progress.percent}%)
+              {getBudgetCategoryLabel(budget)}: {progress.status === 'over-budget' ? th.budget.over : th.budget.near} ({progress.percent}%)
             </div>
           ))}
           {goalAlerts.map(({ goal, progress }) => (

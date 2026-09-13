@@ -1,14 +1,16 @@
+import { lazy, Suspense } from 'react'
 import { AppShell } from './components/layout/AppShell'
-import { InstallmentsPage } from './features/installments/InstallmentsPage'
-import { MonthlyPage } from './features/monthly/MonthlyPage'
-import { MorePage } from './features/more/MorePage'
 import { useAutoFinanceSync } from './features/sync/useAutoFinanceSync'
-import { TripsPage } from './features/trips/TripsPage'
-import { YearlyPage } from './features/yearly/YearlyPage'
 import { useFinanceStore } from './hooks/useFinanceStore'
 import { th } from './i18n/th'
 import { createJsonDownload } from './lib/storage'
 import type { FinanceImportPreview } from './state/FinanceDataProvider'
+
+const MonthlyPage = lazy(() => import('./features/monthly/MonthlyPage').then((module) => ({ default: module.MonthlyPage })))
+const YearlyPage = lazy(() => import('./features/yearly/YearlyPage').then((module) => ({ default: module.YearlyPage })))
+const InstallmentsPage = lazy(() => import('./features/installments/InstallmentsPage').then((module) => ({ default: module.InstallmentsPage })))
+const TripsPage = lazy(() => import('./features/trips/TripsPage').then((module) => ({ default: module.TripsPage })))
+const MorePage = lazy(() => import('./features/more/MorePage').then((module) => ({ default: module.MorePage })))
 
 type AppProps = {
   currentUserId: string
@@ -28,18 +30,23 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
     await sync.saveNow(store.data, th.sync.savedManual)
   }
 
-  async function handleLoadFromCloud(): Promise<void> {
-    await sync.loadNow()
+  async function handleLoadFromCloud(discardDirty = false): Promise<void> {
+    await sync.loadNow({ discardDirty })
   }
 
   async function handlePreviewImportJson(file: File): Promise<FinanceImportPreview | null> {
     return store.previewImportJson(file)
   }
 
-  async function handleConfirmImportJson(preview: FinanceImportPreview): Promise<void> {
+  async function handleConfirmImportJson(preview: FinanceImportPreview): Promise<boolean> {
     createJsonDownload(store.data, 'finance-backup-before-import')
-    const importedData = store.applyImportedJson(preview)
-    await sync.saveNow(importedData, th.sync.cloudImport)
+    const result = await sync.saveNow(preview.data, th.sync.cloudImport, { replace: true })
+    if (result.ok) {
+      store.markImportSucceeded(preview)
+    } else {
+      store.markImportFailed(preview, result.errorMessage ?? 'บันทึกข้อมูลนำเข้าไม่สำเร็จ')
+    }
+    return result.ok
   }
 
   function renderActiveView() {
@@ -119,7 +126,13 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
       onChangeView={store.setActiveView}
       syncStatus={sync.status}
     >
-      {renderActiveView()}
+      <Suspense fallback={(
+        <div className="grid min-h-[24rem] place-items-center rounded-3xl border border-blue-100 bg-white p-6 text-sm font-extrabold text-finance-muted shadow-finance-sm">
+          กำลังโหลดหน้าจอ...
+        </div>
+      )}>
+        {renderActiveView()}
+      </Suspense>
     </AppShell>
   )
 }

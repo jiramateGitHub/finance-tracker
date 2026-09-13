@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { calculateEntryTotals } from '../lib/finance-calculations'
+import { createMemoizedFinanceTotalsSelector } from '../state/financeSelectors'
 import { useFinanceData, type FinanceDataStatus, type FinanceImportPreview } from '../state/FinanceDataProvider'
 import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
 import { currentMonthInputValue } from '../utils/formatters'
+import { isViewId, resolveInitialView } from '../lib/viewSettings'
 
 export interface FinanceStore {
   activeView: ViewId
@@ -31,24 +33,32 @@ export interface FinanceStore {
   deleteGoal: (goalId: string) => void
   exportJson: () => void
   previewImportJson: (file: File) => Promise<FinanceImportPreview | null>
-  applyImportedJson: (preview: FinanceImportPreview) => FinanceData
+  markImportSucceeded: (preview: FinanceImportPreview) => void
+  markImportFailed: (preview: FinanceImportPreview, errorMessage: string) => void
   replaceData: (data: AppData, message?: string) => FinanceData
 }
 
 export function useFinanceStore(): FinanceStore {
   const financeData = useFinanceData()
+  const hasUrlView = typeof window !== 'undefined' && isViewId(new URLSearchParams(window.location.search).get('view'))
+  const userSelectedView = useRef(hasUrlView)
   const [activeView, setActiveViewState] = useState<ViewId>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const v = params.get('view') as ViewId | null
-      if (v && ['monthly', 'yearly', 'installments', 'trips', 'more'].includes(v)) {
-        return v
-      }
+      return resolveInitialView(v, financeData.data.settings.defaultView)
     }
-    return 'monthly'
+    return resolveInitialView(null, financeData.data.settings.defaultView)
   })
 
+  useEffect(() => {
+    if (userSelectedView.current) return
+    const configuredView = resolveInitialView(null, financeData.data.settings.defaultView)
+    setActiveViewState((current) => current === configuredView ? current : configuredView)
+  }, [financeData.data.settings.defaultView])
+
   const setActiveView = (viewId: ViewId) => {
+    userSelectedView.current = true
     setActiveViewState(viewId)
     if (typeof window !== 'undefined' && window.history) {
       const url = new URL(window.location.href)
@@ -60,14 +70,14 @@ export function useFinanceStore(): FinanceStore {
   const [selectedMonth, setSelectedMonth] = useState(() => currentMonthInputValue())
   const { data } = financeData
 
-  const totals = useMemo(() => calculateEntryTotals(data.entries), [data.entries])
+  const selectTotals = useMemo(() => createMemoizedFinanceTotalsSelector(), [])
+  const totals = useMemo(
+    () => selectTotals(data),
+    [data, selectTotals],
+  )
 
   async function previewImportJson(file: File): Promise<FinanceImportPreview | null> {
     return financeData.previewImportDataFromJson(file)
-  }
-
-  function applyImportedJson(preview: FinanceImportPreview): FinanceData {
-    return financeData.applyImportedData(preview)
   }
 
   function exportJson(): void {
@@ -101,7 +111,8 @@ export function useFinanceStore(): FinanceStore {
     deleteGoal: financeData.deleteGoal,
     exportJson,
     previewImportJson,
-    applyImportedJson,
+    markImportSucceeded: financeData.markImportSucceeded,
+    markImportFailed: financeData.markImportFailed,
     replaceData: financeData.replaceData,
   }
 }

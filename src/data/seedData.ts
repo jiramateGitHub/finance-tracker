@@ -12,7 +12,7 @@ export const seedData = normalizeFinanceData({
     timezone: 'Asia/Bangkok',
     schemaVersion: 2,
   },
-  entries: [
+  transactions: [
     {
       id: 'entry-salary-may',
       type: 'income',
@@ -50,7 +50,7 @@ export const seedData = normalizeFinanceData({
       updatedAt: now,
     },
   ],
-  installments: [
+  installmentPlans: [
     {
       id: 'loan-phone',
       name: 'โทรศัพท์มือถือ',
@@ -133,5 +133,4 @@ export const seedData = normalizeFinanceData({
     },
   ],
 })
-
 

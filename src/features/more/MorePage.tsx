@@ -13,12 +13,12 @@ type MorePageProps = {
   dataStatus: FinanceDataStatus
   onExportJson: () => void
   onPreviewImportJson: (file: File) => Promise<FinanceImportPreview | null>
-  onConfirmImportJson: (preview: FinanceImportPreview) => Promise<void>
+  onConfirmImportJson: (preview: FinanceImportPreview) => Promise<boolean>
   currentUserId: string
   currentUserEmail: string
   onLogout: () => Promise<void>
   syncStatus: SyncStatus
-  onLoadFromCloud: () => Promise<void>
+  onLoadFromCloud: (discardDirty?: boolean) => Promise<void>
   onSaveToCloud: () => Promise<void>
 }
 
@@ -71,6 +71,7 @@ export function MorePage({
 }: MorePageProps) {
   const [pendingImport, setPendingImport] = useState<FinanceImportPreview | null>(null)
   const [confirmingImport, setConfirmingImport] = useState(false)
+  const [confirmingCloudLoad, setConfirmingCloudLoad] = useState(false)
 
   const currentCounts = useMemo(() => getDataCounts(data), [data])
   const pendingCounts = useMemo(() => (pendingImport ? getDataCounts(pendingImport.data) : null), [pendingImport])
@@ -94,21 +95,30 @@ export function MorePage({
     setConfirmingImport(true)
     setPendingImport(null)
     try {
-      await onConfirmImportJson(preview)
+      const succeeded = await onConfirmImportJson(preview)
+      if (!succeeded) setPendingImport(preview)
+    } catch {
+      setPendingImport(preview)
     } finally {
       setConfirmingImport(false)
     }
   }
 
-  const statusTone = dataStatus.saveState === 'error' || dataStatus.importState === 'error'
+  const statusTone = dataStatus.importState === 'error' || syncStatus.state === 'error' || syncStatus.state === 'conflict'
     ? 'border-rose-200 bg-rose-50 text-rose-700'
-    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : dataStatus.importState === 'success' || syncStatus.state === 'saved'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : 'border-blue-200 bg-blue-50 text-blue-700'
   const cloudStatusTone = syncStatus.state === 'error'
     ? 'border-rose-200 bg-rose-50 text-rose-700'
+    : syncStatus.state === 'conflict'
+      ? 'border-amber-200 bg-amber-50 text-amber-800'
     : syncStatus.state === 'saved'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
       : 'border-blue-200 bg-blue-50 text-blue-700'
-  const isCloudBusy = syncStatus.state === 'loading' || syncStatus.state === 'saving' || confirmingImport
+  const isCloudBusy = syncStatus.state === 'loading' || syncStatus.state === 'saving' || syncStatus.state === 'pending' || confirmingImport
+  const isLoadBlockedByDirty = syncStatus.dirty && syncStatus.state !== 'conflict'
+  const isSaveBlockedByConflict = syncStatus.state === 'conflict'
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'ไม่ได้ตั้งค่า'
   const importPreviewDiagnostics = pendingImport?.diagnostics ?? dataStatus.lastImportDiagnostics
 
@@ -140,7 +150,7 @@ export function MorePage({
           {/* Right: Cloud Sync Status & Quick Actions */}
           <div className="finance-command-actions items-center">
             <SyncStatusBadge status={syncStatus} />
-            <Button type="button" size="sm" onClick={onLogout} disabled={isCloudBusy}>
+            <Button type="button" size="sm" onClick={onLogout} disabled={isCloudBusy || syncStatus.dirty}>
               <span className="flex items-center gap-1.5">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -207,7 +217,7 @@ export function MorePage({
           </div>
 
           <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
-            <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy}>
+            <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy || isSaveBlockedByConflict}>
               <span className="flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
@@ -217,7 +227,15 @@ export function MorePage({
                 <span>{th.sync.saveToCloud}</span>
               </span>
             </Button>
-            <Button className="w-full sm:w-auto" type="button" onClick={onLoadFromCloud} disabled={isCloudBusy}>
+            <Button
+              className="w-full sm:w-auto"
+              type="button"
+              onClick={() => {
+                if (syncStatus.dirty && syncStatus.state === 'conflict') setConfirmingCloudLoad(true)
+                else void onLoadFromCloud()
+              }}
+              disabled={isCloudBusy || isLoadBlockedByDirty}
+            >
               <span className="flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
@@ -315,6 +333,20 @@ export function MorePage({
         }}
         onClose={() => setPendingImport(null)}
       />
+
+      <ConfirmModal
+        open={confirmingCloudLoad}
+        title="โหลดข้อมูล Cloud และทิ้งการแก้ไขในเครื่อง?"
+        description="ข้อมูลในเครื่องมีการแก้ไขที่ยังไม่ซิงก์และเกิด conflict ระบบจะดาวน์โหลด backup ปัจจุบันให้ก่อน แล้วโหลดข้อมูลจาก Cloud เพื่อเริ่มแก้ conflict ใหม่"
+        confirmLabel="สำรองและโหลด Cloud"
+        cancelLabel="ยกเลิก"
+        destructive
+        onConfirm={() => {
+          onExportJson()
+          void onLoadFromCloud(true)
+        }}
+        onClose={() => setConfirmingCloudLoad(false)}
+      />
     </div>
   )
 }
@@ -340,12 +372,34 @@ function ImportDiagnosticsPanel({
         <ImportDiagnosticItem label="ยอดผ่อน" value={`${diagnostics.counts.installmentPlans} แผน`} />
         <ImportDiagnosticItem label="ทริป / รายการทริป" value={`${diagnostics.counts.trips} / ${diagnostics.counts.tripItems}`} />
         <ImportDiagnosticItem label="งบ / เป้าหมาย" value={`${diagnostics.counts.budgets} / ${diagnostics.counts.goals}`} />
+        <ImportDiagnosticItem
+          label="ย้ายรายการทริป"
+          value={diagnostics.reconciliation ? `${diagnostics.reconciliation.tripOwnership.createdTransactionIds.length} ใหม่ / ${diagnostics.reconciliation.tripOwnership.reusedTransactionIds.length} เดิม` : 'ไม่มีรายงาน'}
+        />
+        <ImportDiagnosticItem
+          label="อ้างอิงทริปที่หาไม่พบ"
+          value={diagnostics.referenceSummary.orphanTripIds.length
+            ? `${diagnostics.referenceSummary.orphanTripTransactionIds.length} รายการ / ${diagnostics.referenceSummary.orphanTripIds.length} ทริป`
+            : 'ไม่มี'}
+        />
       </div>
       <div className="mt-2 text-xs font-bold text-blue-800">
         หมวดหมู่ที่แปลง: {diagnostics.categorySummary.aliasMappingsApplied.length
           ? diagnostics.categorySummary.aliasMappingsApplied.map((item) => `${item.from} → ${item.to} (${item.count})`).join(', ')
           : 'ไม่มี'}
       </div>
+      {diagnostics.reconciliation?.tripOwnership.issues.length ? (
+        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
+          รายการที่ต้องตรวจสอบก่อนยืนยัน:
+          <ul className="mt-1 grid gap-1">
+            {diagnostics.reconciliation.tripOwnership.issues.map((issue) => (
+              <li key={`${issue.code}-${issue.tripId}-${issue.itemId}-${issue.transactionId ?? ''}`}>
+                • {issue.message} ({issue.tripId}{issue.itemId ? ` / ${issue.itemId}` : ''}{issue.transactionId ? ` / ${issue.transactionId}` : ''})
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {dropWarnings.length ? (
         <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-extrabold leading-5 text-amber-800">
           ไฟล์นี้มีจำนวนข้อมูลน้อยกว่าข้อมูลปัจจุบันมาก อาจทำให้ข้อมูลบน Cloud ถูกลบตาม

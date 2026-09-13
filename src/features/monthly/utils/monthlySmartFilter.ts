@@ -4,7 +4,9 @@ export type MonthlySmartFilter = {
   status?: 'paid' | 'unpaid'
   monthOffset?: number
   minAmount?: number
+  minInclusive?: boolean
   maxAmount?: number
+  maxInclusive?: boolean
   exactAmount?: number
 }
 
@@ -42,11 +44,18 @@ export function parseMonthlySmartKeyword(keyword: string): MonthlySmartFilter {
   consume(/เดือนก่อน/iu, () => {
     result.monthOffset = -1
   })
+  // Match the longer phrase before its shorter `เกิน` suffix.
+  consume(/ไม่เกิน\s*([0-9][0-9,]*(?:\.\d+)?)/iu, (match) => {
+    result.maxAmount = parseAmount(match[1])
+    result.maxInclusive = true
+  })
   consume(/(?:เกิน|มากกว่า)\s*([0-9][0-9,]*(?:\.\d+)?)/iu, (match) => {
     result.minAmount = parseAmount(match[1])
+    result.minInclusive = false
   })
-  consume(/(?:ต่ำกว่า|น้อยกว่า|ไม่เกิน)\s*([0-9][0-9,]*(?:\.\d+)?)/iu, (match) => {
+  consume(/(?:ต่ำกว่า|น้อยกว่า)\s*([0-9][0-9,]*(?:\.\d+)?)/iu, (match) => {
     result.maxAmount = parseAmount(match[1])
+    result.maxInclusive = false
   })
 
   const trailingAmount = text.match(/^(.*?)(?:\s+)([0-9][0-9,]*(?:\.\d+)?)$/u)

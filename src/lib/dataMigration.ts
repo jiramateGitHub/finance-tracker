@@ -34,16 +34,86 @@ import {
   FINANCE_SCHEMA_VERSION,
 } from '../types/finance'
 import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey } from '../utils/formatters'
+import { isViewId } from './viewSettings'
 
 const validTransactionTypes = new Set<TransactionType>(['income', 'expense'])
 const validTransactionStatuses = new Set<TransactionStatus>(['cleared', 'pending'])
 const validInterestTypes = new Set<InterestType>(['none', 'flat', 'reducing'])
 const validGoalStatuses = new Set<GoalStatus>(['active', 'paused', 'completed'])
-const validViews = new Set<ViewId>(['monthly', 'yearly', 'installments', 'trips', 'more'])
 const validCategoryKinds = new Set<CategoryKind>(['income', 'expense', 'mixed'])
 
 type RawRecord = Record<string, unknown>
 type KindHintMap = Map<string, Set<CategoryKind>>
+
+export type FinanceMigrationConflict = {
+  path: string
+  fields: string[]
+  message: string
+}
+
+export class FinanceMigrationConflictError extends Error {
+  readonly conflicts: FinanceMigrationConflict[]
+
+  constructor(conflicts: FinanceMigrationConflict[]) {
+    const detail = conflicts
+      .slice(0, 4)
+      .map((conflict) => `${conflict.path}: ${conflict.message}`)
+      .join(' · ')
+    super(`ข้อมูลมี field aliases ที่ขัดแย้งกัน${detail ? ` (${detail})` : ''}`)
+    this.name = 'FinanceMigrationConflictError'
+    this.conflicts = conflicts
+  }
+}
+
+export type TripMigrationIssue = {
+  tripId: string
+  itemId: string
+  transactionId?: string
+  code: 'duplicate-source' | 'field-mismatch' | 'orphan-transaction'
+  message: string
+}
+
+export type TripMigrationReport = {
+  createdTransactionIds: string[]
+  reusedTransactionIds: string[]
+  hydratedItemIds: string[]
+  orphanTransactionIds: string[]
+  issues: TripMigrationIssue[]
+}
+
+export type FinanceMigrationReport = {
+  tripOwnership: TripMigrationReport
+  money: {
+    converted: boolean
+    rounding: 'none'
+    message: string
+  }
+}
+
+export class FinanceTripMigrationConflictError extends Error {
+  readonly issues: TripMigrationIssue[]
+
+  constructor(issues: TripMigrationIssue[]) {
+    super(`ไม่สามารถย้ายรายการทริปอัตโนมัติได้ ${issues.length} รายการ กรุณาตรวจ reconciliation report ก่อนบันทึก`)
+    this.name = 'FinanceTripMigrationConflictError'
+    this.issues = issues
+  }
+}
+
+function createEmptyTripMigrationReport(): TripMigrationReport {
+  return {
+    createdTransactionIds: [],
+    reusedTransactionIds: [],
+    hydratedItemIds: [],
+    orphanTransactionIds: [],
+    issues: [],
+  }
+}
+
+function assertTripMigrationSafe(report: TripMigrationReport): void {
+  const blockingIssues = report.issues.filter((issue) => issue.code !== 'orphan-transaction')
+  if (blockingIssues.length) throw new FinanceTripMigrationConflictError(blockingIssues)
+}
 
 function isRecord(value: unknown): value is RawRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -55,6 +125,162 @@ function asArray(value: unknown): unknown[] {
 
 function readRecord(value: unknown): RawRecord {
   return isRecord(value) ? value : {}
+}
+
+function hasMeaningfulValue(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== ''
+}
+
+function canonicalComparable(value: unknown): unknown {
+  if (typeof value === 'string') return value.trim()
+  if (Array.isArray(value)) return value.map(canonicalComparable)
+  if (isRecord(value)) return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalComparable(value[key])]))
+  return value
+}
+
+function valuesConflict(left: unknown, right: unknown): boolean {
+  return JSON.stringify(canonicalComparable(left)) !== JSON.stringify(canonicalComparable(right))
+}
+
+function collectFieldConflict(
+  record: RawRecord,
+  path: string,
+  fields: string[],
+  conflicts: FinanceMigrationConflict[],
+  normalize?: (value: unknown) => unknown,
+): void {
+  const present = fields.filter((field) => hasMeaningfulValue(record[field]))
+  if (present.length < 2) return
+  const first = normalize ? normalize(record[present[0]]) : canonicalComparable(record[present[0]])
+  if (present.slice(1).some((field) => {
+    const next = normalize ? normalize(record[field]) : canonicalComparable(record[field])
+    return valuesConflict(first, next)
+  })) {
+    conflicts.push({
+      path,
+      fields: present,
+      message: `ค่า ${present.join(', ')} ไม่ตรงกัน; ต้องแก้ให้เหลือค่าที่สอดคล้องก่อนนำเข้า`,
+    })
+  }
+}
+
+function collectCollectionConflict(record: RawRecord, canonical: string, alias: string, conflicts: FinanceMigrationConflict[]): void {
+  if (!Array.isArray(record[canonical]) || !Array.isArray(record[alias])) return
+  if (valuesConflict(record[canonical], record[alias])) {
+    conflicts.push({
+      path: `$.${alias}`,
+      fields: [canonical, alias],
+      message: `collection ขัดแย้งกับ ${canonical}; ไม่เลือกชุดข้อมูลใดชุดหนึ่งโดยอัตโนมัติ`,
+    })
+  }
+}
+
+function collectMigrationConflicts(data: unknown): FinanceMigrationConflict[] {
+  const record = readRecord(data)
+  const conflicts: FinanceMigrationConflict[] = []
+  collectCollectionConflict(record, 'transactions', 'entries', conflicts)
+  collectCollectionConflict(record, 'installmentPlans', 'installments', conflicts)
+
+  const inspect = (values: unknown, collection: string, checks: Array<{ fields: string[]; normalize?: (value: unknown) => unknown }>) => {
+    asArray(values).forEach((value, index) => {
+      const item = readRecord(value)
+      checks.forEach(({ fields, normalize }) => collectFieldConflict(item, `$.${collection}[${index}]`, fields, conflicts, normalize))
+    })
+  }
+  const normalizeCategory = (value: unknown) => normalizeCategoryId(value, '')
+  inspect(record.transactions ?? record.entries, 'transactions', [
+    { fields: ['categoryId', 'category'], normalize: normalizeCategory },
+    { fields: ['installmentPlanId', 'installmentId'], normalize: (value) => readNullableString({ value }, 'value') },
+  ])
+  inspect(record.recurringRules, 'recurringRules', [
+    { fields: ['categoryId', 'category'], normalize: normalizeCategory },
+  ])
+  inspect(record.installmentPlans ?? record.installments, 'installmentPlans', [
+    { fields: ['categoryId', 'category'], normalize: normalizeCategory },
+    { fields: ['monthlyAmount', 'paymentAmount'], normalize: (value) => readNumber({ value }, 'value', Number.NaN) },
+    { fields: ['monthsTotal', 'totalMonths', 'installmentCount'], normalize: (value) => readNumber({ value }, 'value', Number.NaN) },
+    { fields: ['dueDay', 'paymentDay'], normalize: (value) => value == null || value === '' ? null : Number(value) },
+    { fields: ['principalAmount', 'principal'], normalize: (value) => readNumber({ value }, 'value', Number.NaN) },
+  ])
+  asArray(record.installmentPlans ?? record.installments).forEach((value, index) => {
+    const plan = readRecord(value)
+    if (Array.isArray(plan.paidMonthKeys)) {
+      const keyCount = plan.paidMonthKeys.length
+      const paidCountFields = ['monthsPaid', 'paidMonths']
+      paidCountFields.forEach((field) => {
+        if (!hasMeaningfulValue(plan[field])) return
+        const count = Number(plan[field])
+        // An explicit empty array is a supported legacy signal meaning that
+        // no installments are paid, even when an old count says otherwise.
+        if (keyCount > 0 && Number.isFinite(count) && count !== keyCount) {
+          conflicts.push({
+            path: `$.installmentPlans[${index}]`,
+            fields: ['paidMonthKeys', field],
+            message: `จำนวน ${field} ไม่ตรงกับ paidMonthKeys.length`,
+          })
+        }
+      })
+    }
+    const snapshot = readRecord(plan.balanceSnapshot)
+    if (hasMeaningfulValue(snapshot.amountMinor) && hasMeaningfulValue(plan.balanceSnapshotAmount)) {
+      if (valuesConflict(snapshot.amountMinor, plan.balanceSnapshotAmount)) {
+        conflicts.push({
+          path: `$.installmentPlans[${index}]`,
+          fields: ['balanceSnapshot.amountMinor', 'balanceSnapshotAmount'],
+          message: 'ยอด snapshot ไม่ตรงกัน',
+        })
+      }
+    }
+  })
+  inspect(record.budgets, 'budgets', [
+    { fields: ['categoryId', 'category'], normalize: normalizeCategory },
+  ])
+  asArray(record.budgets).forEach((value, index) => {
+    const budget = readRecord(value)
+    if (budget.scope !== 'monthly' || !Array.isArray(budget.lines) || budget.lines.length === 0 || !hasMeaningfulValue(budget.amount)) return
+    const amount = readNumber(budget, 'amount', Number.NaN)
+    const lineTotal = budget.lines.reduce((sum, line) => sum + readNumber(readRecord(line), 'amount', 0), 0)
+    if (Number.isFinite(amount) && Math.abs(amount - lineTotal) > 1e-9) {
+      conflicts.push({
+        path: `$.budgets[${index}]`,
+        fields: ['amount', 'lines[].amount'],
+        message: 'ยอดรวม monthly budget ไม่ตรงกับผลรวม lines',
+      })
+    }
+  })
+  inspect(record.goals, 'goals', [
+    { fields: ['kind', 'type'], normalize: (value) => typeof value === 'string' ? value.trim() : value },
+  ])
+  asArray(record.trips).forEach((tripValue, tripIndex) => {
+    const trip = readRecord(tripValue)
+    inspect(trip.items, `trips[${tripIndex}].items`, [
+      { fields: ['categoryId', 'category'], normalize: normalizeCategory },
+      { fields: ['installmentPlanId', 'installmentId'], normalize: (value) => readNullableString({ value }, 'value') },
+    ])
+  })
+  const rootVersion = record.schemaVersion
+  const metaVersion = readRecord(record.meta).schemaVersion
+  const settingsVersion = readRecord(record.settings).schemaVersion
+  const versions = [rootVersion, metaVersion, settingsVersion]
+    .filter(hasMeaningfulValue)
+    .map((version) => typeof version === 'string' ? Number(version) : version)
+  if (versions.length > 1 && versions.some((version) => valuesConflict(version, versions[0]))) {
+    conflicts.push({
+      path: '$.schemaVersion',
+      fields: ['schemaVersion', 'meta.schemaVersion', 'settings.schemaVersion'],
+      message: 'schemaVersion ใน envelope, meta และ settings ไม่ตรงกัน',
+    })
+  }
+  return conflicts
+}
+
+export function getMigrationConflicts(data: unknown): FinanceMigrationConflict[] {
+  return collectMigrationConflicts(data)
+}
+
+export function assertNoMigrationConflicts(data: unknown): void {
+  const conflicts = getMigrationConflicts(data)
+  if (conflicts.length) throw new FinanceMigrationConflictError(conflicts)
 }
 
 function readString(record: RawRecord, key: string, fallback = ''): string {
@@ -82,7 +308,17 @@ function readBoolean(record: RawRecord, key: string, fallback = false): boolean 
 
 function readId(record: RawRecord, fallbackPrefix: string): string {
   const rawId = readString(record, 'id')
-  return rawId || `${fallbackPrefix}-${crypto.randomUUID()}`
+  if (rawId) return rawId
+  // Import validation rejects missing IDs. This deterministic fallback only
+  // protects legacy in-memory callers and must never create a new ID on every
+  // normalization pass.
+  const source = JSON.stringify(canonicalComparable(Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'id'))))
+  let hash = 2166136261
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `${fallbackPrefix}-${(hash >>> 0).toString(36)}`
 }
 
 function isValidDate(value: string): boolean {
@@ -130,7 +366,7 @@ function normalizeGoalStatus(value: unknown): GoalStatus {
 }
 
 function normalizeDefaultView(value: unknown): ViewId {
-  return typeof value === 'string' && validViews.has(value as ViewId) ? value as ViewId : 'monthly'
+  return isViewId(value) ? value : 'monthly'
 }
 
 function normalizeCategoryKind(value: unknown, fallback: CategoryKind): CategoryKind {
@@ -168,20 +404,24 @@ function normalizeSettings(rawSettings: unknown): FinanceSettings {
     baseCurrency: DEFAULT_BASE_CURRENCY,
     locale: DEFAULT_LOCALE,
     timezone: DEFAULT_TIMEZONE,
-    schemaVersion: FINANCE_SCHEMA_VERSION,
     defaultView: normalizeDefaultView(settings.defaultView),
-    monthStartsOn: Math.max(0, Math.min(6, Math.floor(readNumber(settings, 'monthStartsOn', 1)))) || 1,
+    // Keep an explicit zero. The setting is reserved until a calendar consumer
+    // is implemented, but normalization must not silently change its value.
+    monthStartsOn: Math.max(0, Math.min(6, Math.floor(readNumber(settings, 'monthStartsOn', 1)))),
     includePendingInMonthlyTotals: readBoolean(settings, 'includePendingInMonthlyTotals', true),
   }
 }
 
-function normalizeMeta(rawMeta: unknown): FinanceMeta {
+function normalizeMeta(rawMeta: unknown, schemaVersion = FINANCE_SCHEMA_VERSION): FinanceMeta {
   const now = currentIsoTimestamp()
   const meta = readRecord(rawMeta)
+  const revision = Math.max(0, Math.floor(readNumber(meta, 'revision', 0)))
   return {
+    schemaVersion,
     createdAt: normalizeTimestamp(meta.createdAt, now),
     updatedAt: normalizeTimestamp(meta.updatedAt, now),
     exportedAt: typeof meta.exportedAt === 'string' && meta.exportedAt.trim() ? meta.exportedAt.trim() : null,
+    revision,
   }
 }
 
@@ -204,6 +444,7 @@ function normalizeTransaction(value: unknown): TransactionEntry {
   const type = normalizeTransactionType(record.type)
   const date = normalizeDate(record.date)
   const category = normalizeCategoryId(record.categoryId ?? record.category, 'อื่นๆ')
+  const travelDetails = readRecord(record.travelDetails)
   return {
     id: readId(record, 'transaction'),
     type,
@@ -224,6 +465,12 @@ function normalizeTransaction(value: unknown): TransactionEntry {
     installmentPlanId: readNullableString(record, 'installmentPlanId'),
     recurringRuleId: readNullableString(record, 'recurringRuleId'),
     goalId: readNullableString(record, 'goalId'),
+    travelDetails: (travelDetails.destination || travelDetails.country)
+      ? {
+          destination: readNullableString(travelDetails, 'destination'),
+          country: readNullableString(travelDetails, 'country'),
+        }
+      : null,
     createdAt: normalizeTimestamp(record.createdAt, now),
     updatedAt: normalizeTimestamp(record.updatedAt, now),
   }
@@ -260,13 +507,29 @@ function normalizeInstallmentPlan(value: unknown): InstallmentPlan {
   const record = readRecord(value)
   const now = currentIsoTimestamp()
   const monthlyAmount = Math.max(0, readNumber(record, 'monthlyAmount', readNumber(record, 'paymentAmount', 0)))
-  const monthsTotal = Math.max(1, Math.floor(readNumber(record, 'monthsTotal', readNumber(record, 'totalMonths', readNumber(record, 'installmentCount', 1)))))
+  const monthsTotal = Math.max(1, Math.floor(readNumber(record, 'installmentCount', readNumber(record, 'monthsTotal', readNumber(record, 'totalMonths', 1)))))
   const monthsPaid = Math.max(0, Math.min(monthsTotal, Math.floor(readNumber(record, 'monthsPaid', readNumber(record, 'paidMonths', 0)))))
   const category = normalizeCategoryId(record.categoryId ?? record.category, 'ผ่อนสินค้า')
-  const paidMonthKeys = asArray(record.paidMonthKeys).filter((item): item is string => typeof item === 'string' && isValidMonth(item))
+  const hasPaidMonthKeys = Array.isArray(record.paidMonthKeys)
+  const paidMonthKeys = hasPaidMonthKeys
+    ? asArray(record.paidMonthKeys).filter((item): item is string => typeof item === 'string' && isValidMonth(item))
+    : undefined
   const dueDay = record.dueDay ?? record.paymentDay
-  const normalizedDueDay = dueDay == null ? undefined : Math.max(1, Math.min(31, Math.floor(Number(dueDay) || 1)))
-  const remainingOverride = record.remainingOverride == null ? undefined : Math.max(0, readNumber(record, 'remainingOverride', 0))
+  const parsedDueDay = Number(dueDay)
+  const normalizedDueDay = dueDay == null || dueDay === ''
+    ? undefined
+    : Number.isInteger(parsedDueDay) && parsedDueDay >= 1 && parsedDueDay <= 31
+      ? parsedDueDay
+      : undefined
+  const balanceSnapshotRecord = readRecord(record.balanceSnapshot)
+  const rawSnapshotAmount = record.balanceSnapshotAmount ?? balanceSnapshotRecord.amountMinor
+  const rawSnapshotMonth = record.balanceSnapshotMonth ?? balanceSnapshotRecord.asOfMonth
+  const remainingOverride = record.remainingOverride == null && balanceSnapshotRecord.basis === 'override'
+    ? Math.max(0, readNumber({ value: rawSnapshotAmount }, 'value', 0))
+    : record.remainingOverride == null
+      ? undefined
+      : Math.max(0, readNumber(record, 'remainingOverride', 0))
+  const normalizedMonthsPaid = paidMonthKeys ? paidMonthKeys.length : monthsPaid
   return {
     id: readId(record, 'installment-plan'),
     name: readString(record, 'name') || readString(record, 'title') || 'แผนผ่อนนำเข้า',
@@ -277,8 +540,8 @@ function normalizeInstallmentPlan(value: unknown): InstallmentPlan {
     monthsTotal,
     totalMonths: monthsTotal,
     installmentCount: monthsTotal,
-    monthsPaid,
-    paidMonths: monthsPaid,
+    monthsPaid: normalizedMonthsPaid,
+    paidMonths: normalizedMonthsPaid,
     paidMonthKeys,
     startMonth: normalizeMonth(record.startMonth),
     dueDay: normalizedDueDay,
@@ -286,8 +549,8 @@ function normalizeInstallmentPlan(value: unknown): InstallmentPlan {
     principal: Math.max(0, readNumber(record, 'principal', readNumber(record, 'principalAmount', monthlyAmount * monthsTotal))),
     principalAmount: Math.max(0, readNumber(record, 'principalAmount', readNumber(record, 'principal', monthlyAmount * monthsTotal))),
     remainingOverride,
-    balanceSnapshotAmount: record.balanceSnapshotAmount == null ? remainingOverride ?? null : Math.max(0, readNumber(record, 'balanceSnapshotAmount', 0)),
-    balanceSnapshotMonth: readNullableString(record, 'balanceSnapshotMonth'),
+    balanceSnapshotAmount: rawSnapshotAmount == null ? remainingOverride ?? null : Math.max(0, readNumber({ value: rawSnapshotAmount }, 'value', 0)),
+    balanceSnapshotMonth: typeof rawSnapshotMonth === 'string' ? rawSnapshotMonth.trim() || null : null,
     interestType: normalizeInterestType(record.interestType),
     interestRate: record.interestRate == null ? null : Math.max(0, readNumber(record, 'interestRate', 0)),
     interestNote: readNullableString(record, 'interestNote') ?? undefined,
@@ -306,12 +569,14 @@ function normalizeTripItem(value: unknown): TripItem {
     id: readId(record, 'trip-item'),
     date: normalizeDate(record.date),
     category,
+    categoryId: category,
     title: readString(record, 'title') || readString(record, 'name') || 'รายการทริปนำเข้า',
     amount: Math.max(0, readNumber(record, 'amount', 0)),
     destination: readNullableString(record, 'destination') ?? undefined,
     country: readNullableString(record, 'country') ?? undefined,
     note: readNullableString(record, 'note') ?? undefined,
     installmentId: readNullableString(record, 'installmentId') ?? undefined,
+    installmentPlanId: readNullableString(record, 'installmentPlanId') ?? readNullableString(record, 'installmentId'),
     isPaid: readBoolean(record, 'isPaid', true),
     createdAt: normalizeTimestamp(record.createdAt, now),
     updatedAt: normalizeTimestamp(record.updatedAt, now),
@@ -324,14 +589,19 @@ function createTripItemFromTripTransaction(transaction: TransactionEntry): TripI
   if (!transaction.tripId) return null
   const looksLikeTripTransaction = transaction.sourceModule === 'trip' || transaction.id.startsWith('tx-trip-')
   if (!looksLikeTripTransaction || transaction.type !== 'expense') return null
+  const travelDetails = transaction.travelDetails ?? {}
   return {
     id: transaction.sourceRefId || transaction.id,
     date: normalizeDate(transaction.date),
     category: normalizeCategoryId(transaction.categoryId ?? transaction.category, 'ท่องเที่ยว'),
+    categoryId: normalizeCategoryId(transaction.categoryId ?? transaction.category, 'ท่องเที่ยว'),
     title: transaction.title || 'รายการทริปนำเข้า',
     amount: Math.max(0, Number(transaction.amount || 0)),
+    destination: travelDetails.destination ?? undefined,
+    country: travelDetails.country ?? undefined,
     note: transaction.note,
     installmentId: transaction.installmentPlanId ?? transaction.installmentId ?? undefined,
+    installmentPlanId: transaction.installmentPlanId ?? transaction.installmentId ?? null,
     isPaid: transaction.status !== 'pending',
     createdAt: normalizeTimestamp(transaction.createdAt, now),
     updatedAt: normalizeTimestamp(transaction.updatedAt, now),
@@ -344,7 +614,147 @@ function extractTripNameFromTransactionNote(note: string | undefined): string {
   return match?.[1]?.trim() || 'ทริปนำเข้า'
 }
 
-function hydrateTripsFromTripTransactions(trips: Trip[], transactions: TransactionEntry[]): Trip[] {
+function tripSourceKey(tripId: string, itemId: string): string {
+  return `${tripId}:${itemId}`
+}
+
+function isTripOwnedTransaction(transaction: TransactionEntry): boolean {
+  return Boolean(transaction.tripId)
+    && transaction.type === 'expense'
+    && (transaction.sourceModule === 'trip' || transaction.id.startsWith('tx-trip-'))
+}
+
+function createTripTransactionFromItem(trip: Trip, item: TripItem): TransactionEntry {
+  const now = currentIsoTimestamp()
+  const date = normalizeDate(item.date, trip.startDate)
+  const categoryId = normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว')
+  const installmentPlanId = item.installmentPlanId ?? item.installmentId ?? null
+  return {
+    id: `tx-trip-${trip.id}-${item.id}`,
+    type: 'expense',
+    date,
+    monthKey: getMonthKey(date),
+    category: categoryId,
+    categoryId,
+    title: item.title || 'รายการทริปนำเข้า',
+    amount: Math.max(0, Number(item.amount || 0)),
+    currency: 'THB',
+    note: item.note,
+    status: item.isPaid === false ? 'pending' : 'cleared',
+    source: 'import',
+    sourceModule: 'trip',
+    sourceRefId: item.id,
+    tripId: trip.id,
+    installmentId: installmentPlanId ?? undefined,
+    installmentPlanId,
+    recurringRuleId: null,
+    goalId: null,
+    travelDetails: {
+      destination: item.destination ?? null,
+      country: item.country ?? null,
+    },
+    createdAt: item.createdAt ?? trip.createdAt ?? now,
+    updatedAt: item.updatedAt ?? trip.updatedAt ?? now,
+  }
+}
+
+function tripItemMatchesTransaction(item: TripItem, transaction: TransactionEntry): boolean {
+  const itemCategoryId = normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว')
+  const transactionCategoryId = normalizeCategoryId(transaction.categoryId ?? transaction.category, 'ท่องเที่ยว')
+  const travelDetails = transaction.travelDetails ?? {}
+  return normalizeDate(item.date) === normalizeDate(transaction.date)
+    && itemCategoryId === transactionCategoryId
+    && item.title === transaction.title
+    && Math.abs(Number(item.amount || 0) - Number(transaction.amount || 0)) < 1e-9
+    && (item.isPaid === false ? 'pending' : 'cleared') === transaction.status
+    && (item.note ?? null) === (transaction.note ?? null)
+    && (item.destination ?? null) === (travelDetails.destination ?? null)
+    && (item.country ?? null) === (travelDetails.country ?? null)
+    && (item.installmentPlanId ?? item.installmentId ?? null) === (transaction.installmentPlanId ?? transaction.installmentId ?? null)
+}
+
+function materializeTripTransactions(
+  trips: Trip[],
+  transactions: TransactionEntry[],
+  report: TripMigrationReport,
+): TransactionEntry[] {
+  const tripIds = new Set(trips.map((trip) => trip.id))
+  const bySource = new Map<string, TransactionEntry[]>()
+  transactions.forEach((transaction) => {
+    if (!isTripOwnedTransaction(transaction) || !transaction.tripId) return
+    const sourceId = transaction.sourceRefId || transaction.id
+    const key = tripSourceKey(transaction.tripId, sourceId)
+    bySource.set(key, [...(bySource.get(key) ?? []), transaction])
+    if (!tripIds.has(transaction.tripId)) {
+      report.orphanTransactionIds.push(transaction.id)
+      report.issues.push({
+        tripId: transaction.tripId,
+        itemId: sourceId,
+        transactionId: transaction.id,
+        code: 'orphan-transaction',
+        message: 'transaction อ้างอิงทริปที่ไม่มีอยู่ในชุดข้อมูล',
+      })
+    }
+  })
+
+  const nextTransactions = [...transactions]
+  const nestedSourceKeys = new Set<string>()
+  const materializedBySource = new Map<string, string>()
+  trips.forEach((trip) => {
+    trip.items.forEach((item) => {
+      const key = tripSourceKey(trip.id, item.id)
+      if (nestedSourceKeys.has(key)) {
+        report.issues.push({
+          tripId: trip.id,
+          itemId: item.id,
+          transactionId: materializedBySource.get(key),
+          code: 'duplicate-source',
+          message: 'มี nested trip item มากกว่าหนึ่งรายการสำหรับ source เดียวกัน',
+        })
+        return
+      }
+      nestedSourceKeys.add(key)
+      const matches = bySource.get(key) ?? []
+      if (matches.length > 1) {
+        report.issues.push({
+          tripId: trip.id,
+          itemId: item.id,
+          transactionId: matches[0]?.id,
+          code: 'duplicate-source',
+          message: 'มี transaction มากกว่าหนึ่งรายการสำหรับ trip item เดียวกัน',
+        })
+      }
+      const existing = matches[0]
+      if (existing) {
+        report.reusedTransactionIds.push(existing.id)
+        materializedBySource.set(key, existing.id)
+        report.hydratedItemIds.push(item.id)
+        if (!tripItemMatchesTransaction(item, existing)) {
+          report.issues.push({
+            tripId: trip.id,
+            itemId: item.id,
+            transactionId: existing.id,
+            code: 'field-mismatch',
+            message: 'ข้อมูล nested trip item ไม่ตรงกับ transaction เจ้าของ; ใช้ transaction เป็น source หลัก',
+          })
+        }
+        return
+      }
+      const created = createTripTransactionFromItem(trip, item)
+      nextTransactions.push(created)
+      report.createdTransactionIds.push(created.id)
+      materializedBySource.set(key, created.id)
+      report.hydratedItemIds.push(item.id)
+    })
+  })
+  return nextTransactions
+}
+
+function hydrateTripsFromTripTransactions(
+  trips: Trip[],
+  transactions: TransactionEntry[],
+  report?: TripMigrationReport,
+): Trip[] {
   const tripMap = new Map<string, Trip>()
   trips.forEach((trip) => tripMap.set(trip.id, { ...trip, items: [...trip.items] }))
 
@@ -355,6 +765,7 @@ function hydrateTripsFromTripTransactions(trips: Trip[], transactions: Transacti
     if (!transaction.tripId) return
     const tripItem = createTripItemFromTripTransaction(transaction)
     if (!tripItem) return
+    if (report && !report.hydratedItemIds.includes(tripItem.id)) report.hydratedItemIds.push(tripItem.id)
     const items = itemsByTripId.get(transaction.tripId) ?? []
     items.push(tripItem)
     itemsByTripId.set(transaction.tripId, items)
@@ -366,10 +777,10 @@ function hydrateTripsFromTripTransactions(trips: Trip[], transactions: Transacti
   itemsByTripId.forEach((items, tripId) => {
     const existingTrip = tripMap.get(tripId)
     const existingItems = existingTrip?.items ?? []
-    const existingIds = new Set(existingItems.map((item) => item.id))
+    const transactionItemIds = new Set(items.map((item) => item.id))
     const mergedItems = [
-      ...existingItems,
-      ...items.filter((item) => !existingIds.has(item.id)),
+      ...existingItems.filter((item) => !transactionItemIds.has(item.id)),
+      ...items,
     ].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.title || '').localeCompare(String(b.title || ''), 'th-TH'))
 
     if (existingTrip) {
@@ -451,7 +862,10 @@ function normalizeBudget(value: unknown): Budget {
     categoryId: category,
     amount,
     lines: lines.length ? lines : [{ id: `${budgetId}-line`, categoryId: category, amount, note: readNullableString(record, 'note') ?? undefined }],
-    alertThresholds: asArray(record.alertThresholds).map(Number).filter(Number.isFinite),
+    alertThresholds: asArray(record.alertThresholds)
+      .map(Number)
+      .filter((threshold) => Number.isFinite(threshold) && threshold >= 0 && threshold <= 1)
+      .slice(0, 2),
     enabled: readBoolean(record, 'enabled', true),
     note: readNullableString(record, 'note') ?? undefined,
     createdAt: normalizeTimestamp(record.createdAt, now),
@@ -479,6 +893,20 @@ function normalizeGoal(value: unknown): Goal {
     createdAt: normalizeTimestamp(record.createdAt, now),
     updatedAt: normalizeTimestamp(record.updatedAt, now),
   }
+}
+
+function splitMonthlyBudgetLines(budgets: Budget[]): Budget[] {
+  return budgets.flatMap((budget) => {
+    if (budget.scope !== 'monthly' || !budget.lines || budget.lines.length <= 1) return [budget]
+    return budget.lines.map((line, index) => ({
+      ...budget,
+      id: index === 0 ? budget.id : `${budget.id}--${line.id}`,
+      category: line.categoryId,
+      categoryId: line.categoryId,
+      amount: line.amount,
+      lines: [{ ...line }],
+    }))
+  })
 }
 
 function createDefaultMasters(rawMasters: unknown, normalized: {
@@ -539,17 +967,21 @@ function createDefaultMasters(rawMasters: unknown, normalized: {
 
 export function getDataSchemaVersion(data: unknown): number | null {
   const record = readRecord(data)
-  const schemaVersion = record.schemaVersion ?? readRecord(record.settings).schemaVersion
+  const schemaVersion = record.schemaVersion ?? readRecord(record.meta).schemaVersion ?? readRecord(record.settings).schemaVersion
   const parsed = typeof schemaVersion === 'number' ? schemaVersion : typeof schemaVersion === 'string' ? Number(schemaVersion) : Number.NaN
   return Number.isFinite(parsed) ? parsed : null
 }
 
 export function normalizeFinanceData(data: unknown): FinanceData {
+  assertNoMigrationConflicts(data)
   const record = readRecord(data)
   const transactions = asArray(record.transactions ?? record.entries).map(normalizeTransaction)
   const recurringRules = asArray(record.recurringRules).map(normalizeRecurringRule)
   const installmentPlans = asArray(record.installmentPlans ?? record.installments).map(normalizeInstallmentPlan)
-  const trips = hydrateTripsFromTripTransactions(asArray(record.trips).map(normalizeTrip), transactions)
+  // Legacy trip transactions are hydrated by `migrateFinanceData` at an
+  // import/load boundary. Runtime normalization must stay side-effect free:
+  // otherwise deleting a trip or item would recreate it on the next mutation.
+  const trips = asArray(record.trips).map(normalizeTrip)
   const budgets = asArray(record.budgets).map(normalizeBudget)
   const goals = asArray(record.goals).map(normalizeGoal)
   const masters = createDefaultMasters(record.masters, { transactions, recurringRules, installmentPlans, trips, budgets, goals })
@@ -558,17 +990,68 @@ export function normalizeFinanceData(data: unknown): FinanceData {
     profile: normalizeProfile(record.profile),
     settings: normalizeSettings(record.settings),
     masters,
-    meta: normalizeMeta(record.meta),
+    meta: normalizeMeta(record.meta, FINANCE_SCHEMA_VERSION),
     transactions,
     recurringRules,
     installmentPlans,
     trips,
     budgets,
     goals,
-    entries: transactions,
-    installments: installmentPlans,
   }
   return normalized
+}
+
+/**
+ * Apply one-time compatibility transforms before data enters the runtime
+ * store. This is deliberately separate from normalizeFinanceData so every
+ * CRUD mutation cannot re-hydrate deleted legacy entities.
+ */
+export function migrateFinanceDataWithReport(data: unknown): { data: FinanceData; report: FinanceMigrationReport } {
+  assertNoMigrationConflicts(data)
+  const schemaVersion = getDataSchemaVersion(data)
+  if (schemaVersion !== null && (!Number.isInteger(schemaVersion) || schemaVersion < 1 || schemaVersion > FINANCE_SCHEMA_VERSION)) {
+    throw new Error(schemaVersion > FINANCE_SCHEMA_VERSION
+      ? `ยังไม่รองรับ schema v${schemaVersion}`
+      : `ไม่รองรับ schema v${schemaVersion}`)
+  }
+
+  // Keep the dispatch explicit even while v1 and v2 share the same
+  // compatibility transforms. Future schema versions must never be silently
+  // downgraded by the normalizer.
+  switch (schemaVersion) {
+    case null:
+    case 1:
+    case FINANCE_SCHEMA_VERSION: {
+      const normalized = normalizeFinanceData(data)
+      const tripOwnership = createEmptyTripMigrationReport()
+      const transactions = materializeTripTransactions(normalized.trips, normalized.transactions, tripOwnership)
+      const migratedTrips = hydrateTripsFromTripTransactions(normalized.trips, transactions, tripOwnership)
+      return {
+        data: {
+          ...normalized,
+          transactions,
+          budgets: splitMonthlyBudgetLines(normalized.budgets),
+          trips: migratedTrips,
+        },
+        report: {
+          tripOwnership,
+          money: {
+            converted: false,
+            rounding: 'none',
+            message: 'PR-10 เพิ่ม safe minor-unit utilities แต่ยังไม่เปลี่ยนหน่วยเงินของข้อมูลเดิมจนกว่า money release จะผ่าน dry-run',
+          },
+        },
+      }
+    }
+    default:
+      throw new Error(`ไม่รองรับ schema v${schemaVersion}`)
+  }
+}
+
+export function migrateFinanceData(data: unknown): FinanceData {
+  const migration = migrateFinanceDataWithReport(data)
+  assertTripMigrationSafe(migration.report.tripOwnership)
+  return migration.data
 }
 
 export function createEmptyFinanceData(): FinanceData {
@@ -588,34 +1071,176 @@ export function createEmptyFinanceData(): FinanceData {
 }
 
 export function withUpdatedMeta(data: FinanceData): FinanceData {
-  const normalized = normalizeFinanceData(data)
   const now = currentIsoTimestamp()
   return {
-    ...normalized,
+    ...data,
     meta: {
-      ...normalized.meta,
-      createdAt: normalized.meta.createdAt || now,
+      ...data.meta,
+      createdAt: data.meta.createdAt || now,
       updatedAt: now,
     },
   }
 }
 
+function serializeTransaction(transaction: TransactionEntry) {
+  return {
+    id: transaction.id,
+    type: transaction.type,
+    date: transaction.date,
+    categoryId: transaction.categoryId ?? normalizeCategoryId(transaction.category, 'อื่นๆ'),
+    title: transaction.title,
+    amount: transaction.amount,
+    currency: transaction.currency,
+    note: transaction.note,
+    status: transaction.status,
+    source: transaction.source,
+    sourceModule: transaction.sourceModule,
+    sourceRefId: transaction.sourceRefId,
+    tripId: transaction.tripId,
+    installmentPlanId: transaction.installmentPlanId ?? transaction.installmentId ?? null,
+    recurringRuleId: transaction.recurringRuleId,
+    goalId: transaction.goalId,
+    travelDetails: transaction.travelDetails,
+    createdAt: transaction.createdAt,
+    updatedAt: transaction.updatedAt,
+  }
+}
+
+function serializeRecurringRule(rule: RecurringRule) {
+  return {
+    id: rule.id,
+    isActive: rule.isActive,
+    type: rule.type,
+    title: rule.title,
+    categoryId: rule.categoryId ?? normalizeCategoryId(rule.category, 'อื่นๆ'),
+    amount: rule.amount,
+    currency: rule.currency,
+    cadence: rule.cadence,
+    interval: rule.interval,
+    dayOfMonth: rule.dayOfMonth,
+    startDate: rule.startDate,
+    endDate: rule.endDate,
+    note: rule.note,
+    tripId: rule.tripId,
+    goalId: rule.goalId,
+    createdAt: rule.createdAt,
+    updatedAt: rule.updatedAt,
+  }
+}
+
+function serializeInstallmentPlan(plan: InstallmentPlan) {
+  const paidMonthKeys = plan.paidMonthKeys ?? []
+  const installmentCount = plan.installmentCount ?? plan.monthsTotal ?? plan.totalMonths ?? 1
+  const principalAmount = plan.principalAmount ?? plan.principal ?? plan.monthlyAmount * installmentCount
+  const balanceAmount = plan.balanceSnapshotAmount ?? plan.remainingOverride ?? null
+  const balanceMonth = plan.balanceSnapshotMonth ?? null
+  const snapshotBasis: 'override' | 'reported' = plan.remainingOverride != null ? 'override' : 'reported'
+  const balanceSnapshot = balanceAmount === null && balanceMonth === null
+    ? null
+    : { amountMinor: Math.max(0, Number(balanceAmount ?? 0)), asOfMonth: balanceMonth, basis: snapshotBasis }
+  return {
+    id: plan.id,
+    name: plan.name,
+    categoryId: plan.categoryId ?? normalizeCategoryId(plan.category, 'ผ่อนสินค้า'),
+    monthlyAmount: plan.monthlyAmount,
+    installmentCount,
+    paidMonthKeys,
+    startMonth: plan.startMonth,
+    dueDay: plan.dueDay ?? plan.paymentDay ?? null,
+    principalAmount,
+    balanceSnapshot,
+    interestType: plan.interestType,
+    interestRate: plan.interestRate ?? null,
+    interestNote: plan.interestNote ?? null,
+    note: plan.note ?? null,
+    tripId: plan.tripId ?? null,
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt,
+  }
+}
+
+function serializeTrip(trip: Trip) {
+  return {
+    id: trip.id,
+    name: trip.name,
+    destination: trip.destination,
+    budget: trip.budget,
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    note: trip.note,
+    createdAt: trip.createdAt,
+    updatedAt: trip.updatedAt,
+  }
+}
+
+function serializeBudget(budget: Budget) {
+  return {
+    id: budget.id,
+    scope: budget.scope,
+    name: budget.name,
+    month: budget.month,
+    tripId: budget.tripId,
+    categoryId: budget.categoryId ?? normalizeCategoryId(budget.category, budget.scope === 'trip' ? 'ท่องเที่ยว' : 'อื่นๆ'),
+    amount: budget.amount,
+    lines: budget.lines?.map((line) => ({
+      id: line.id,
+      categoryId: line.categoryId,
+      amount: line.amount,
+      note: line.note,
+    })),
+    alertThresholds: budget.alertThresholds,
+    enabled: budget.enabled,
+    note: budget.note,
+    createdAt: budget.createdAt,
+    updatedAt: budget.updatedAt,
+  }
+}
+
+function serializeGoal(goal: Goal) {
+  return {
+    id: goal.id,
+    name: goal.name,
+    kind: goal.kind ?? goal.type ?? 'savings',
+    targetAmount: goal.targetAmount,
+    currentAmount: goal.currentAmount,
+    targetDate: goal.targetDate,
+    linkedCategoryId: goal.linkedCategoryId,
+    status: goal.status,
+    note: goal.note,
+    createdAt: goal.createdAt,
+    updatedAt: goal.updatedAt,
+  }
+}
+
 export function createExportableFinanceData(data: FinanceData) {
+  assertNoMigrationConflicts(data)
   const normalized = normalizeFinanceData(data)
+  const exportTripReport = createEmptyTripMigrationReport()
+  const transactions = materializeTripTransactions(normalized.trips, normalized.transactions, exportTripReport)
+  assertTripMigrationSafe(exportTripReport)
+  const budgets = splitMonthlyBudgetLines(normalized.budgets)
   return {
     schemaVersion: normalized.schemaVersion,
     profile: normalized.profile,
-    settings: normalized.settings,
+    settings: {
+      baseCurrency: normalized.settings.baseCurrency,
+      locale: normalized.settings.locale,
+      timezone: normalized.settings.timezone,
+      defaultView: normalized.settings.defaultView,
+      monthStartsOn: normalized.settings.monthStartsOn,
+      includePendingInMonthlyTotals: normalized.settings.includePendingInMonthlyTotals,
+    },
     masters: normalized.masters,
     meta: {
       ...normalized.meta,
+      schemaVersion: normalized.schemaVersion,
       exportedAt: currentIsoTimestamp(),
     },
-    transactions: normalized.transactions,
-    recurringRules: normalized.recurringRules,
-    installmentPlans: normalized.installmentPlans,
-    trips: normalized.trips,
-    budgets: normalized.budgets,
-    goals: normalized.goals,
+    transactions: transactions.map(serializeTransaction),
+    recurringRules: normalized.recurringRules.map(serializeRecurringRule),
+    installmentPlans: normalized.installmentPlans.map(serializeInstallmentPlan),
+    trips: normalized.trips.map(serializeTrip),
+    budgets: budgets.map(serializeBudget),
+    goals: normalized.goals.map(serializeGoal),
   }
 }

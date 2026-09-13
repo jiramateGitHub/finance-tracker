@@ -4,16 +4,16 @@ Checklist นี้อิงจากโครงสร้างโค้ดป�
 
 ## Build / Static Gates
 
-- [ ] `npm run lint` ผ่าน
-- [ ] `npm run build` ผ่าน
-- [ ] `npm run preview` เปิด production bundle ได้เมื่อจำเป็น
-- [ ] ไม่มี TypeScript errors
-- [ ] ไม่มี unused imports/variables
-- [ ] ไม่มี visible TODO/debug placeholder บน production UI
+- [x] `npm run lint` ผ่าน
+- [x] `npm run build` ผ่าน
+- [x] `npm run preview` เปิด production bundle ได้เมื่อจำเป็น
+- [x] ไม่มี TypeScript errors
+- [x] ไม่มี unused imports/variables
+- [x] ไม่มี visible TODO/debug placeholder บน production UI
 - [ ] ไม่เปลี่ยน Firestore paths โดยไม่ตั้งใจ
 - [ ] ไม่เปลี่ยน schema โดยไม่ตั้งใจ
 - [ ] ไม่ reintroduce local-only persistence
-- [ ] bundle warning จาก Vite ถูกพิจารณาแล้วว่าไม่ใช่ build failure
+- [x] bundle warning จาก Vite ถูกพิจารณาแล้วว่าไม่ใช่ build failure
 
 ## Files / Structure Sanity
 
@@ -77,38 +77,38 @@ Repository behavior:
 - [ ] Auth loading state แสดงถูกต้อง
 - [ ] LoginScreen แสดงเมื่อไม่มี user
 - [ ] register สำเร็จ
-- [ ] login สำเร็จ
+- [x] login สำเร็จ
 - [ ] login ผิดรหัสแสดง error ภาษาไทย
 - [ ] reset password ส่ง email ได้
-- [ ] logout กลับไป LoginScreen
-- [ ] refresh แล้วยังรักษา auth state ถูกต้อง
+- [x] logout กลับไป LoginScreen
+- [x] refresh แล้วยังรักษา auth state ถูกต้อง
 
 ## Cloud-First Data QA
 
-- [ ] หลัง login provider แสดง loading Cloud ก่อนเข้า app
-- [ ] Cloud มีข้อมูลแล้ว app load ข้อมูลนั้นทันที
-- [ ] Cloud ไม่มีข้อมูลแล้ว app เริ่มด้วย empty normalized data
+- [x] หลัง login provider แสดง loading Cloud ก่อนเข้า app
+- [x] Cloud มีข้อมูลแล้ว app load ข้อมูลนั้นทันที
+- [x] Cloud ไม่มีข้อมูลแล้ว app เริ่มด้วย empty normalized data
 - [ ] Cloud load fail แสดง error screen + retry ไม่ fallback เป็น seed/demo
 - [ ] user A logout/login user B แล้วไม่เห็น runtime data ของ user A
 - [ ] ไม่มี local-only/localStorage persistence เป็น main source
-- [ ] manual Load from Cloud replace runtime state
-- [ ] manual Save to Cloud เขียนข้อมูลปัจจุบันขึ้น Cloud
+- [x] manual Load from Cloud replace runtime state
+- [x] manual Save to Cloud เขียนข้อมูลปัจจุบันขึ้น Cloud
 - [ ] autosave ทำงานหลัง CRUD changes
 - [ ] autosave ไม่ยิงทุก keystroke ทันที เพราะมี debounce
 
 ## Sync QA
 
-- [ ] `SyncStatusBadge` แสดง idle/loading/saving/saved/error เป็นภาษาไทย
+- [x] `SyncStatusBadge` แสดง idle/loading/saving/saved/error เป็นภาษาไทย
 - [ ] add transaction แล้วสถานะเปลี่ยนเป็น pending/saving/saved ตาม flow
 - [ ] edit/delete transaction แล้ว stale Firestore doc ถูกลบหลัง save
-- [ ] manual Save to Cloud แสดง success/error ถูกต้อง
-- [ ] manual Load from Cloud แสดง success/error/no cloud ถูกต้อง
+- [x] manual Save to Cloud แสดง success/error ถูกต้อง
+- [x] manual Load from Cloud แสดง success/error/no cloud ถูกต้อง
 - [ ] same account ในอีก browser/device load ข้อมูลเดียวกันจาก Cloud
 - [ ] fingerprint guard ไม่ save ซ้ำเมื่อข้อมูลไม่เปลี่ยน
 
 ## JSON Export QA
 
-- [ ] Export JSON ได้ schema v2
+- [x] Export JSON ได้ schema v2
 - [ ] Export ใช้ normalized/exportable data shape
 - [ ] filename ปกติเป็น `finance-data-YYYY-MM-DD-HH-mm-ss.json`
 - [ ] export ไม่ต้องใช้ localStorage
@@ -146,21 +146,21 @@ Repository behavior:
 
 ## Monthly QA
 
-- [ ] MonthlyPage แสดง summary cards รายรับ/รายจ่าย/คงเหลือ/ยังไม่จ่าย
+- [x] MonthlyPage แสดง summary cards รายรับ/รายจ่าย/คงเหลือ/ยังไม่จ่าย
 - [ ] MonthlyFilters ใช้ start/end month, keyword, sort, category, type, status, min/max amount
 - [ ] filter type `all/income/expense/installment/trip` ทำงาน
 - [ ] filter status `all/paid/unpaid` ทำงาน
 - [ ] smart keyword ทำงาน: ยังไม่จ่าย, ค้างจ่าย, จ่ายแล้ว, รายรับ, รายจ่าย, เดือนนี้, เดือนก่อน
-- [ ] add income transaction
-- [ ] add expense transaction
-- [ ] edit manual transaction
+- [x] add income transaction
+- [x] add expense transaction
+- [x] edit manual transaction
 - [ ] delete manual transaction ผ่าน ConfirmModal
 - [ ] toggle paid/unpaid manual expense
 - [ ] duplicate transaction
 - [ ] use as template เปิด modal ด้วยค่าเดิม
 - [ ] repeat monthly 1-60 months
 - [ ] repeat วันที่ 31 clamp วันในเดือนสั้นถูกต้อง
-- [ ] QuickAddBar parse ตัวอย่างหลักได้
+- [x] QuickAddBar parse ตัวอย่างหลักได้
 - [ ] ActionNeededPanel แสดง unpaid/manual/installment/trip/budget/goal/sync issues
 - [ ] RecentTransactionPanel ใช้ manual transactions เท่านั้น
 - [ ] FrequentTransactionShortcuts ไม่ใช้ readonly derived rows เป็น template
@@ -169,8 +169,8 @@ Repository behavior:
 
 ## Budget / Goal QA
 
-- [ ] BudgetGoalSection แสดงใน MonthlyPage
-- [ ] add monthly budget
+- [x] BudgetGoalSection แสดงใน MonthlyPage
+- [x] add monthly budget
 - [ ] edit monthly budget
 - [ ] delete monthly budget ผ่าน ConfirmModal
 - [ ] duplicate guard block same month+category
@@ -178,7 +178,7 @@ Repository behavior:
 - [ ] budget usage รวม derived rows ถ้าแสดงเป็น expense ใน ledger
 - [ ] status safe/near-limit/over-budget ถูกต้อง
 - [ ] soft insight แสดงภาษาไทย ไม่มี internal tone labels หลุด
-- [ ] add goal
+- [x] add goal
 - [ ] edit goal
 - [ ] delete goal ผ่าน ConfirmModal
 - [ ] update current amount
@@ -186,15 +186,15 @@ Repository behavior:
 
 ## Installments QA
 
-- [ ] InstallmentsPage เปิดได้จาก bottom nav
-- [ ] summary cards แสดงจำนวน/ยอดผ่อน/คงเหลือ/รายเดือน
+- [x] InstallmentsPage เปิดได้จาก bottom nav
+- [x] summary cards แสดงจำนวน/ยอดผ่อน/คงเหลือ/รายเดือน
 - [ ] filters keyword/status/start month/end month/sort order ทำงาน
-- [ ] list/calendar view switch ทำงาน
+- [x] list/calendar view switch ทำงาน
 - [ ] add installment plan
 - [ ] edit installment plan
 - [ ] delete installment plan ผ่าน ConfirmModal
 - [ ] fields รองรับ principal, remainingOverride, dueDay, interestType, interestRate, interestNote/note
-- [ ] calculate progress/paid/remaining/months remaining ถูกต้อง
+- [x] calculate progress/paid/remaining/months remaining ถูกต้อง
 - [ ] toggle paid month จาก calendar/list
 - [ ] paid month update แล้ว Monthly derived row status เปลี่ยน
 - [ ] dueDay 31 ใน `2026-02` ได้ `2026-02-28`
@@ -203,25 +203,25 @@ Repository behavior:
 
 ## Trips QA
 
-- [ ] TripsPage เปิดได้จาก bottom nav
+- [x] TripsPage เปิดได้จาก bottom nav
 - [ ] TripFilters keyword/year/month/category/status ทำงาน
-- [ ] list/calendar view switch ทำงาน
-- [ ] TripCalendar group ตาม startDate month
+- [x] list/calendar view switch ทำงาน
+- [x] TripCalendar group ตาม startDate month
 - [ ] list/calendar ใช้ filtered trips ชุดเดียวกัน
-- [ ] add trip
+- [x] add trip
 - [ ] edit trip
 - [ ] delete trip ผ่าน ConfirmModal
 - [ ] selecting trip จาก list/calendar เปิด TripDetail ถูก trip
 - [ ] mobile มีทางกลับไป list/calendar
-- [ ] overview tab แสดง totals
+- [x] overview tab แสดง totals
 - [ ] actual tab แสดง trip items
-- [ ] plan tab แสดง planned vs actual by category
-- [ ] add trip item
+- [x] plan tab แสดง planned vs actual by category
+- [x] add trip item
 - [ ] edit trip item
 - [ ] delete trip item ผ่าน ConfirmModal
 - [ ] trip item optional installmentId select ทำงานเมื่อมี plans
 - [ ] toggle paid/unpaid trip item
-- [ ] add trip budget line
+- [x] add trip budget line
 - [ ] edit trip budget line
 - [ ] delete trip budget line
 - [ ] trip budget line เก็บเป็น budget scope `trip`
@@ -230,22 +230,22 @@ Repository behavior:
 
 ## Yearly QA
 
-- [ ] YearlyPage เปิดได้จาก bottom nav
-- [ ] summary รายปีคำนวณจาก data ปัจจุบัน
-- [ ] month grid/overview ไม่ overflow
-- [ ] navigation กลับ Monthly ยังทำงานตาม selected month behavior ที่มีอยู่
+- [x] YearlyPage เปิดได้จาก bottom nav
+- [x] summary รายปีคำนวณจาก data ปัจจุบัน
+- [x] month grid/overview ไม่ overflow
+- [x] navigation กลับ Monthly ยังทำงานตาม selected month behavior ที่มีอยู่
 
 ## MorePage QA
 
-- [ ] แสดง current user email
-- [ ] แสดง sync status badge
-- [ ] manual Save to Cloud button ทำงาน
-- [ ] manual Load from Cloud button ทำงาน
-- [ ] Logout button ทำงาน
-- [ ] Export JSON button ทำงาน
-- [ ] Import JSON file input เปิด preview
-- [ ] technical info panel แสดง UID, project id, sync state, last synced, counts
-- [ ] copy สื่อว่า Firestore เป็นข้อมูลหลัก และ JSON ใช้ backup/migration
+- [x] แสดง current user email
+- [x] แสดง sync status badge
+- [x] manual Save to Cloud button ทำงาน
+- [x] manual Load from Cloud button ทำงาน
+- [x] Logout button ทำงาน
+- [x] Export JSON button ทำงาน
+- [x] Import JSON file input เปิด preview
+- [x] technical info panel แสดง UID, project id, sync state, last synced, counts
+- [x] copy สื่อว่า Firestore เป็นข้อมูลหลัก และ JSON ใช้ backup/migration
 
 ## Responsive / UI QA
 
@@ -295,3 +295,18 @@ Repository behavior:
 - [ ] Import JSON แล้วเห็น preview
 - [ ] Confirm import แล้ว backup download ก่อน overwrite
 - [ ] Logout/login อีกครั้งข้อมูลยังถูกต้อง
+
+## PR-12 smoke evidence (2026-09-13)
+
+- `?demo=true` บน dev และ production preview ตรวจ Monthly quick-add/add/edit/filter, Yearly drilldown, Installment card/table/calendar/schedule, Trip create/detail/item/budget/calendar, Monthly budget/goal และ More demo sync/import preview/export/technical disclosure แล้ว; production preview ทุก route ไม่มี console error
+- เพิ่ม browser-compatible ID fallback หลังพบว่า runtime browser ไม่มี `crypto.randomUUID`; regression test อยู่ใน `src/lib/id.test.ts`
+- ตรวจ horizontal overflow ที่ viewport 1280×720 แล้วไม่พบ; CUA browser รอบนี้ไม่มี viewport override จึงยังไม่ได้ยืนยัน mobile 390–430px
+- ไม่กด settlement, delete และ confirm import ที่มี side effect ระหว่าง smoke; รายการเหล่านี้ต้องทำต่อบน browser/device หรือ test project ที่เหมาะสมก่อน release production
+
+## Live Auth / Firestore smoke evidence (2026-09-13)
+
+- บัญชีที่ผู้ใช้ระบุ login สำเร็จ; provider แสดง Cloud bootstrap loading, โหลดข้อมูลว่าง, logout และ login ซ้ำสำเร็จ
+- manual Load แสดงสถานะไม่มีข้อมูลบน Cloud; manual Save ชุดข้อมูลว่างสำเร็จ; reload แล้วโหลดข้อมูลจาก Cloud กลับมาได้ พร้อมเวลา sync ล่าสุด
+- technical panel แสดง UID/project/counts โดยไม่พบ console error หรือ warning
+- ไม่สร้าง transaction/budget/goal ในบัญชีจริง และไม่กด delete/settlement/confirm import เพราะเป็น side effect ต่อข้อมูลการเงิน
+- Export แสดง toast ว่า “ส่งออก JSON แล้ว”; CUA backend ไม่ส่ง download event ให้ตรวจไฟล์ที่ดาวน์โหลด จึงยังต้องยืนยัน filename/schema ด้วย browser/device หรือ test harness ที่รองรับ download capture

@@ -1,6 +1,6 @@
 import { CATEGORY_ALIAS_MAP, LEGACY_CATEGORY_OPTIONS, normalizeCategoryId } from '../data/categories'
 import type { FinanceData } from '../types/finance'
-import { getDataSchemaVersion } from './dataMigration'
+import { getDataSchemaVersion, type FinanceMigrationReport } from './dataMigration'
 
 export type ImportDiagnostics = {
   fileName?: string
@@ -21,6 +21,11 @@ export type ImportDiagnostics = {
     aliasMappingsApplied: Array<{ from: string; to: string; count: number }>
     unknownCategories: string[]
   }
+  referenceSummary: {
+    orphanTripIds: string[]
+    orphanTripTransactionIds: string[]
+  }
+  reconciliation?: FinanceMigrationReport
   warnings: string[]
 }
 
@@ -129,7 +134,29 @@ function createAliasSummary(rawCategories: Map<string, number>): Array<{ from: s
     .sort((a, b) => a.from.localeCompare(b.from, 'th-TH'))
 }
 
-export function analyzeImportedFinanceData(raw: unknown, normalized: FinanceData, fileName?: string): ImportDiagnostics {
+function collectReferenceDiagnostics(raw: unknown, normalized: FinanceData): ImportDiagnostics['referenceSummary'] {
+  const record = readRawRecord(raw)
+  const rawTransactions = asArray(record.transactions ?? record.entries)
+  const normalizedTripIds = new Set(normalized.trips.map((trip) => trip.id))
+  const orphanTripIds = new Set<string>()
+  const orphanTripTransactionIds = new Set<string>()
+
+  rawTransactions.forEach((value) => {
+    const transaction = readRawRecord(value)
+    const tripId = typeof transaction.tripId === 'string' ? transaction.tripId.trim() : ''
+    if (!tripId || normalizedTripIds.has(tripId)) return
+    orphanTripIds.add(tripId)
+    const transactionId = typeof transaction.id === 'string' ? transaction.id.trim() : ''
+    if (transactionId) orphanTripTransactionIds.add(transactionId)
+  })
+
+  return {
+    orphanTripIds: Array.from(orphanTripIds).sort((a, b) => a.localeCompare(b, 'th-TH')),
+    orphanTripTransactionIds: Array.from(orphanTripTransactionIds).sort((a, b) => a.localeCompare(b, 'th-TH')),
+  }
+}
+
+export function analyzeImportedFinanceData(raw: unknown, normalized: FinanceData, fileName?: string, reconciliation?: FinanceMigrationReport): ImportDiagnostics {
   const rawSummary = collectRawDiagnostics(raw)
   const normalizedCategories = new Set<string>()
   normalized.masters.categories.forEach((category) => normalizedCategories.add(category.id))
@@ -151,6 +178,7 @@ export function analyzeImportedFinanceData(raw: unknown, normalized: FinanceData
     .sort((a, b) => a.localeCompare(b, 'th-TH'))
 
   const aliasMappingsApplied = createAliasSummary(rawSummary.rawCategories)
+  const referenceSummary = collectReferenceDiagnostics(raw, normalized)
   const warnings: string[] = []
   if (rawSummary.legacyIsPaidCount > 0) warnings.push(`แปลงสถานะ isPaid เดิมเป็น status แล้ว ${rawSummary.legacyIsPaidCount} รายการ`)
   if (aliasMappingsApplied.length > 0) warnings.push(`แปลงชื่อหมวดหมู่ alias แล้ว ${aliasMappingsApplied.reduce((sum, item) => sum + item.count, 0)} จุด`)
@@ -158,6 +186,15 @@ export function analyzeImportedFinanceData(raw: unknown, normalized: FinanceData
   if (rawSummary.invalidDateCount > 0) warnings.push(`พบวันที่ไม่ถูกต้อง ใช้วันที่ fallback แล้ว ${rawSummary.invalidDateCount} จุด`)
   if (rawSummary.zeroAmountCount > 0) warnings.push(`พบรายการยอด 0 บาท ระบบยังเก็บไว้ตามพฤติกรรมปัจจุบัน ${rawSummary.zeroAmountCount} จุด`)
   if (rawSummary.tripTransactionItemCount > 0) warnings.push(`แปลง transaction ของทริปกลับเป็นรายการทริปแล้ว ${rawSummary.tripTransactionItemCount} รายการ`)
+  if (reconciliation?.tripOwnership.createdTransactionIds.length) {
+    warnings.push(`ย้าย nested trip items เป็น transaction เจ้าของแล้ว ${reconciliation.tripOwnership.createdTransactionIds.length} รายการ`)
+  }
+  if (reconciliation?.tripOwnership.issues.length) {
+    warnings.push(`พบประเด็น reconciliation ของทริป ${reconciliation.tripOwnership.issues.length} รายการ กรุณาตรวจ mapping ก่อนยืนยัน`)
+  }
+  if (referenceSummary.orphanTripIds.length > 0) {
+    warnings.push(`พบ transaction อ้างอิงทริปที่ไม่พบ ${referenceSummary.orphanTripTransactionIds.length} รายการ (${referenceSummary.orphanTripIds.join(', ')}) ระบบเก็บรายการไว้และไม่ลบอัตโนมัติ`)
+  }
   if (unknownCategories.length > 0) warnings.push(`พบหมวดหมู่นอก master เดิม ${unknownCategories.length} หมวด ระบบเก็บไว้ไม่ลบทิ้ง`)
   if (warnings.length === 0) warnings.push('ไม่พบความเสี่ยงสำคัญจากไฟล์นำเข้า')
 
@@ -171,6 +208,8 @@ export function analyzeImportedFinanceData(raw: unknown, normalized: FinanceData
       aliasMappingsApplied,
       unknownCategories,
     },
+    referenceSummary,
+    reconciliation,
     warnings,
   }
 }

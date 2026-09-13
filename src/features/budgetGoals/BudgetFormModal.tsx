@@ -89,6 +89,12 @@ export function BudgetFormModal({
 
         {error && <div className="finance-error">{error}</div>}
 
+        {budget?.lines && budget.lines.length > 1 && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-sm font-semibold leading-6 text-blue-800">
+            งบนี้มี {budget.lines.length} รายการย่อยจากการนำเข้า การแก้ไขจะเก็บรายการย่อยทั้งหมดไว้ และจะแจ้งเตือนหากเลือกหมวดหมู่ซ้ำ
+          </div>
+        )}
+
         <div className="finance-modal-body">
           <div className="finance-form-grid">
             <FormField label="เดือน">
@@ -135,4 +141,3 @@ export function BudgetFormModal({
     </div>
   )
 }
-

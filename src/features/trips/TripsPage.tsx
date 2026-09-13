@@ -83,7 +83,7 @@ export function TripsPage({
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [detailTripId, setDetailTripId] = useState<string | null>(null)
 
-  const filteredTrips = useMemo(() => filterTrips(data.trips, filters), [data.trips, filters])
+  const filteredTrips = useMemo(() => filterTrips(data.trips, filters, data), [data, filters])
   const effectiveActiveTripId = filteredTrips.some((trip) => trip.id === activeTripId)
     ? activeTripId
     : filteredTrips[0]?.id ?? null

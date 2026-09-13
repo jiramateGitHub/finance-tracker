@@ -16,7 +16,6 @@ import { InstallmentProjectionChart } from './components/InstallmentProjectionCh
 import { InstallmentSummaryCards } from './components/InstallmentSummaryCards'
 import {
   addMonths,
-  calculateInstallmentMonthlyInfo,
   createDefaultInstallmentFilters,
   filterInstallmentPlans,
   getCategoryOptions,
@@ -72,29 +71,14 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
 
   // Filter counts for quick status pills
   const filterCounts = useMemo(() => {
-    let dueThisMonth = 0
-    let unpaid = 0
-    let paid = 0
-    let completed = 0
-
-    plans.forEach((plan) => {
-      const info = calculateInstallmentMonthlyInfo(plan, selectedMonth)
-      if (info.isCompleted) completed += 1
-      if (info.isActiveInMonth) {
-        dueThisMonth += 1
-        if (info.isPaidInMonth) paid += 1
-        else if (!info.isCompleted) unpaid += 1
-      }
-    })
-
     return {
       all: plans.length,
-      dueThisMonth,
-      unpaid,
-      paid,
-      completed,
+      dueThisMonth: metrics.activeCountThisMonth,
+      unpaid: metrics.pendingCountThisMonth,
+      paid: metrics.paidCountThisMonth,
+      completed: metrics.completedCount,
     }
-  }, [plans, selectedMonth])
+  }, [metrics, plans.length])
 
   // 12-Month Debt Relief Projection data
   const projection = useMemo(

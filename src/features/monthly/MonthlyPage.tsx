@@ -3,12 +3,11 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { th } from '../../i18n/th'
+import { createId } from '../../lib/id'
 import type { AppData, Budget, Goal, TransactionEntry } from '../../types/finance'
 import { addMonths, currentIsoTimestamp, currentMonthInputValue, formatMonth } from '../../utils/formatters'
 import { BudgetGoalSection } from '../budgetGoals/BudgetGoalSection'
-import { deriveInstallmentTransactions } from '../installments/utils/installmentPlans'
 import type { SyncStatus } from '../sync/syncTypes'
-import { deriveTripTransactions } from '../trips/utils/tripUtils'
 import { ActionNeededPanel } from './components/ActionNeededPanel'
 import { FrequentTransactionShortcuts } from './components/FrequentTransactionShortcuts'
 import { MonthlyFilters } from './components/MonthlyFilters'
@@ -19,12 +18,12 @@ import { TransactionFormModal } from './components/TransactionFormModal'
 import { TransactionList } from './components/TransactionList'
 import {
   calculateMonthlyTotals,
+  createMemoizedLedgerSelector,
   createEmptyMonthlyFilters,
   filterMonthlyTransactions,
   getCategoryOptions,
-  getMonthKeysInRange,
   groupTransactionsByMonth,
-  isInstallmentTransaction,
+  resolveMonthlyFilterRange,
   type MonthlyFilters as MonthlyFiltersState,
   type TransactionFormValues,
 } from './utils/monthlyLedger'
@@ -82,30 +81,39 @@ export function MonthlyPage({
   const [highlightedIds, setHighlightedIds] = useState<string[]>([])
 
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
-  const rangeMonths = useMemo(
-    () => getMonthKeysInRange(filters.rangeStartMonth, filters.rangeEndMonth),
-    [filters.rangeEndMonth, filters.rangeStartMonth],
+  const selectLedger = useMemo(() => createMemoizedLedgerSelector(), [])
+  const resolvedRange = useMemo(() => resolveMonthlyFilterRange(filters), [filters])
+  const ledgerTransactions = useMemo(
+    () => selectLedger(data, {
+      startMonth: resolvedRange[0],
+      endMonth: resolvedRange[1],
+    }),
+    [data, resolvedRange, selectLedger],
   )
-  const ledgerTransactions = useMemo(() => [
-    ...data.transactions.filter((transaction) => !isInstallmentTransaction(transaction) && !transaction.tripId && transaction.sourceModule !== 'trip'),
-    ...rangeMonths.flatMap((month) => deriveInstallmentTransactions(data.installmentPlans, month)),
-    ...rangeMonths.flatMap((month) => deriveTripTransactions(data.trips, month)),
-  ], [data.transactions, data.installmentPlans, data.trips, rangeMonths])
   const monthlyData = useMemo(() => ({
     ...data,
     transactions: ledgerTransactions,
-    entries: ledgerTransactions,
   }), [data, ledgerTransactions])
   const filteredTransactions = useMemo(() => filterMonthlyTransactions(ledgerTransactions, filters), [ledgerTransactions, filters])
-  const transactionGroups = useMemo(() => groupTransactionsByMonth(filteredTransactions), [filteredTransactions])
-  const filteredTotals = useMemo(() => calculateMonthlyTotals(filteredTransactions), [filteredTransactions])
-  const monthTotals = useMemo(
-    () => calculateMonthlyTotals(ledgerTransactions.filter((transaction) => rangeMonths.includes(transaction.date.slice(0, 7)))),
-    [ledgerTransactions, rangeMonths],
+  const totalsOptions = useMemo(
+    () => ({ includePending: data.settings.includePendingInMonthlyTotals }),
+    [data.settings.includePendingInMonthlyTotals],
   )
-  const rangeLabel = filters.rangeStartMonth === filters.rangeEndMonth
-    ? formatMonth(filters.rangeStartMonth)
-    : `${formatMonth(filters.rangeStartMonth)} - ${formatMonth(filters.rangeEndMonth)}`
+  const transactionGroups = useMemo(
+    () => groupTransactionsByMonth(filteredTransactions, totalsOptions),
+    [filteredTransactions, totalsOptions],
+  )
+  const filteredTotals = useMemo(
+    () => calculateMonthlyTotals(filteredTransactions, totalsOptions),
+    [filteredTransactions, totalsOptions],
+  )
+  const monthTotals = useMemo(
+    () => calculateMonthlyTotals(ledgerTransactions, totalsOptions),
+    [ledgerTransactions, totalsOptions],
+  )
+  const rangeLabel = resolvedRange[0] === resolvedRange[1]
+    ? formatMonth(resolvedRange[0])
+    : `${formatMonth(resolvedRange[0])} - ${formatMonth(resolvedRange[1])}`
 
   useEffect(() => {
     if (!highlightedIds.length) return undefined
@@ -160,7 +168,7 @@ export function MonthlyPage({
     const now = currentIsoTimestamp()
     const duplicated: TransactionEntry = {
       ...transaction,
-      id: crypto.randomUUID(),
+      id: createId(),
       source: 'manual',
       sourceModule: 'manual',
       sourceRefId: null,
@@ -360,6 +368,7 @@ export function MonthlyPage({
           transactions={ledgerTransactions}
           budgets={data.budgets}
           goals={data.goals}
+          includePending={data.settings.includePendingInMonthlyTotals}
           syncStatus={syncStatus}
         />
         <div className="grid gap-4">

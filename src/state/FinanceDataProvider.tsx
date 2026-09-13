@@ -1,18 +1,19 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useState, type Dispatch, type PropsWithChildren, type SetStateAction } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { Button } from '../components/ui/Button'
-import { createEmptyFinanceData, getDataSchemaVersion, normalizeFinanceData, withUpdatedMeta } from '../lib/dataMigration'
+import { createEmptyFinanceData, getDataSchemaVersion, migrateFinanceData, migrateFinanceDataWithReport, normalizeFinanceData, withUpdatedMeta } from '../lib/dataMigration'
 import { analyzeImportedFinanceData, type ImportDiagnostics } from '../lib/importDiagnostics'
+import { assertValidFinanceImportPayload, FinanceImportValidationError } from '../lib/importValidation'
 import { createJsonDownload } from '../lib/storage'
 import { loadFinanceDataFromCloud } from '../services/firebase/firestoreFinanceRepository'
 import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
-import { currentIsoTimestamp } from '../utils/formatters'
+import * as financeCommands from './financeCommands'
 
 export type FinanceDataLoadState = 'loading' | 'ready' | 'error'
 
 export type FinanceDataStatus = {
   loadState: FinanceDataLoadState
-  saveState: 'idle' | 'saved' | 'error'
+  saveState: 'idle' | 'pending' | 'saved' | 'error'
   importState: 'idle' | 'success' | 'error'
   message: string
   errorMessage: string | null
@@ -21,6 +22,8 @@ export type FinanceDataStatus = {
 
 export type FinanceImportPreview = {
   fileName: string
+  /** Keep the original JSON in memory so a failed save can be retried without re-reading the file. */
+  sourceText: string
   schemaVersion: number | null
   data: FinanceData
   diagnostics: ImportDiagnostics
@@ -29,10 +32,10 @@ export type FinanceImportPreview = {
 export type FinanceDataContextValue = {
   data: FinanceData
   status: FinanceDataStatus
-  setData: Dispatch<SetStateAction<FinanceData>>
   replaceData: (nextData: FinanceData, message?: string) => FinanceData
   previewImportDataFromJson: (file: File) => Promise<FinanceImportPreview | null>
-  applyImportedData: (preview: FinanceImportPreview) => FinanceData
+  markImportSucceeded: (preview: FinanceImportPreview) => void
+  markImportFailed: (preview: FinanceImportPreview, errorMessage: string) => void
   exportDataAsJson: () => void
   addTransaction: (transaction: TransactionEntry) => void
   updateTransaction: (transactionId: string, patch: Partial<TransactionEntry>) => void
@@ -151,7 +154,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         }
         const cloudData = await loadFinanceDataFromCloud(userId)
         if (cancelled) return
-        setData(cloudData ? normalizeFinanceData(cloudData) : createEmptyFinanceData())
+        setData(cloudData ? migrateFinanceData(cloudData) : createEmptyFinanceData())
         setStatus(markLoaded(cloudData ? 'โหลดข้อมูลจาก Cloud แล้ว' : 'ยังไม่มีข้อมูลบน Cloud เริ่มเพิ่มรายการแรกได้เลย'))
       } catch (error) {
         if (cancelled) return
@@ -180,11 +183,14 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     try {
       const rawText = await file.text()
       const parsed = JSON.parse(rawText) as unknown
-      const schemaVersion = getDataSchemaVersion(parsed)
-      const importedData = withUpdatedMeta(normalizeFinanceData(parsed))
-      const diagnostics = analyzeImportedFinanceData(parsed, importedData, file.name)
+      const validation = assertValidFinanceImportPayload(parsed)
+      const schemaVersion = validation.schemaVersion ?? getDataSchemaVersion(parsed)
+      const migration = migrateFinanceDataWithReport(parsed)
+      const importedData = withUpdatedMeta(migration.data)
+      const diagnostics = analyzeImportedFinanceData(parsed, importedData, file.name, migration.report)
       const preview: FinanceImportPreview = {
         fileName: file.name,
+        sourceText: rawText,
         schemaVersion,
         data: importedData,
         diagnostics,
@@ -198,29 +204,45 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         lastImportDiagnostics: diagnostics,
       }))
       return preview
-    } catch {
+    } catch (error) {
+      const errorMessage = error instanceof FinanceImportValidationError
+        ? error.message
+        : error instanceof Error
+          ? `นำเข้าไม่สำเร็จ: ${error.message}`
+          : 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้'
       setStatus((current) => ({
         ...current,
         importState: 'error',
-        message: 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้',
-        errorMessage: 'นำเข้าไม่สำเร็จ กรุณาเลือกไฟล์ JSON ของแอปนี้',
+        message: errorMessage,
+        errorMessage,
         lastImportDiagnostics: null,
       }))
       return null
     }
   }
 
-  function applyImportedData(preview: FinanceImportPreview): FinanceData {
-    setData(preview.data)
-    setStatus({
+  function markImportSucceeded(preview: FinanceImportPreview): void {
+    setStatus((current) => ({
+      ...current,
       loadState: 'ready',
       saveState: 'saved',
       importState: 'success',
-      message: `นำเข้า ${preview.fileName} เป็น schema v${preview.schemaVersion || preview.data.schemaVersion} แล้ว`,
+      message: `นำเข้า ${preview.fileName} เป็น schema v${preview.schemaVersion || preview.data.schemaVersion} และบันทึกขึ้น Cloud แล้ว`,
       errorMessage: null,
       lastImportDiagnostics: preview.diagnostics,
-    })
-    return preview.data
+    }))
+  }
+
+  function markImportFailed(preview: FinanceImportPreview, errorMessage: string): void {
+    setStatus((current) => ({
+      ...current,
+      loadState: 'ready',
+      saveState: 'error',
+      importState: 'error',
+      message: `นำเข้า ${preview.fileName} ยังไม่เสร็จ: ${errorMessage} สามารถลองยืนยันอีกครั้งได้`,
+      errorMessage,
+      lastImportDiagnostics: preview.diagnostics,
+    }))
   }
 
   function exportDataAsJson(): void {
@@ -231,7 +253,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     }))
   }
 
-  function replaceData(nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud แล้ว'): FinanceData {
+  const replaceData = useCallback((nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud แล้ว'): FinanceData => {
     const normalized = withUpdatedMeta(nextData)
     setData(normalized)
     setStatus({
@@ -243,14 +265,14 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
       lastImportDiagnostics: null,
     })
     return normalized
-  }
+  }, [])
 
-  function updateData(updater: (current: FinanceData) => FinanceData, message: string): void {
-    setData((current) => withUpdatedMeta(updater(current)))
+  function applyCommand(command: financeCommands.FinanceCommand, message: string): void {
+    setData((current) => withUpdatedMeta(command(current)))
     setStatus((current) => ({
       ...current,
       loadState: 'ready',
-      saveState: 'saved',
+      saveState: 'pending',
       importState: 'idle',
       message,
       errorMessage: null,
@@ -258,158 +280,71 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   }
 
   function addTransaction(transaction: TransactionEntry): void {
-    updateData((current) => ({
-      ...current,
-      transactions: [transaction, ...current.transactions],
-      entries: [transaction, ...current.transactions],
-    }), 'เพิ่มรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.addTransaction(current, transaction), 'เพิ่มรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateTransaction(transactionId: string, patch: Partial<TransactionEntry>): void {
-    updateData((current) => {
-      const transactions = current.transactions.map((transaction) => (
-        transaction.id === transactionId ? { ...transaction, ...patch, updatedAt: currentIsoTimestamp() } : transaction
-      ))
-      return { ...current, transactions, entries: transactions }
-    }, 'แก้ไขรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.updateTransaction(current, transactionId, patch), 'แก้ไขรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteTransaction(transactionId: string): void {
-    updateData((current) => {
-      const transactions = current.transactions.filter((transaction) => transaction.id !== transactionId)
-      return { ...current, transactions, entries: transactions }
-    }, 'ลบรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.deleteTransaction(current, transactionId), 'ลบรายการแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addInstallmentPlan(plan: InstallmentPlan): void {
-    updateData((current) => ({
-      ...current,
-      installmentPlans: [plan, ...current.installmentPlans],
-      installments: [plan, ...current.installmentPlans],
-    }), 'เพิ่มแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.addInstallmentPlan(current, plan), 'เพิ่มแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateInstallmentPlan(planId: string, patch: Partial<InstallmentPlan>): void {
-    updateData((current) => {
-      const installmentPlans = current.installmentPlans.map((plan) => (
-        plan.id === planId ? { ...plan, ...patch, updatedAt: currentIsoTimestamp() } : plan
-      ))
-      return { ...current, installmentPlans, installments: installmentPlans }
-    }, 'แก้ไขแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.updateInstallmentPlan(current, planId, patch), 'แก้ไขแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteInstallmentPlan(planId: string): void {
-    updateData((current) => {
-      const installmentPlans = current.installmentPlans.filter((plan) => plan.id !== planId)
-      return { ...current, installmentPlans, installments: installmentPlans }
-    }, 'ลบแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.deleteInstallmentPlan(current, planId), 'ลบแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addTrip(trip: Trip): void {
-    updateData((current) => ({ ...current, trips: [trip, ...current.trips] }), 'เพิ่มทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.addTrip(current, trip), 'เพิ่มทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateTrip(tripId: string, patch: Partial<Trip>): void {
-    updateData((current) => ({
-      ...current,
-      trips: current.trips.map((trip) => trip.id === tripId ? { ...trip, ...patch, updatedAt: currentIsoTimestamp() } : trip),
-    }), 'แก้ไขทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.updateTrip(current, tripId, patch), 'แก้ไขทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteTrip(tripId: string): void {
-    updateData((current) => ({
-      ...current,
-      trips: current.trips.filter((trip) => trip.id !== tripId),
-      budgets: current.budgets.filter((budget) => budget.tripId !== tripId),
-    }), 'ลบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.deleteTrip(current, tripId), 'ลบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addOrUpdateTripBudgetLine(tripId: string, categoryId: string, amount: number, note?: string): void {
-    const now = currentIsoTimestamp()
-    updateData((current) => {
-      const existingBudget = current.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId)
-      const existingLines = existingBudget?.lines?.length
-        ? existingBudget.lines
-        : existingBudget
-          ? [{ id: existingBudget.id, categoryId: existingBudget.categoryId || existingBudget.category || categoryId, amount: existingBudget.amount, note: existingBudget.note }]
-          : []
-      const lineExists = existingLines.some((line) => line.categoryId === categoryId)
-      const lines = lineExists
-        ? existingLines.map((line) => line.categoryId === categoryId ? { ...line, amount, note } : line)
-        : [...existingLines, { id: crypto.randomUUID(), categoryId, amount, note }]
-      const totalAmount = lines.reduce((total, line) => total + Number(line.amount || 0), 0)
-      const nextBudget: Budget = {
-        id: existingBudget?.id ?? crypto.randomUUID(),
-        scope: 'trip',
-        name: 'งบทริป',
-        tripId,
-        category: lines[0]?.categoryId ?? categoryId,
-        categoryId: lines[0]?.categoryId ?? categoryId,
-        amount: totalAmount,
-        lines,
-        alertThresholds: existingBudget?.alertThresholds?.length ? existingBudget.alertThresholds : [0.8, 1],
-        enabled: existingBudget?.enabled !== false,
-        note: existingBudget?.note,
-        createdAt: existingBudget?.createdAt ?? now,
-        updatedAt: now,
-      }
-      return {
-        ...current,
-        budgets: existingBudget
-          ? current.budgets.map((budget) => budget.id === existingBudget.id ? nextBudget : budget)
-          : [nextBudget, ...current.budgets],
-      }
-    }, 'อัปเดตงบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.addOrUpdateTripBudgetLine(current, tripId, categoryId, amount, note), 'อัปเดตงบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteTripBudgetLine(tripId: string, categoryId: string): void {
-    const now = currentIsoTimestamp()
-    updateData((current) => {
-      const existingBudget = current.budgets.find((budget) => budget.scope === 'trip' && budget.tripId === tripId)
-      if (!existingBudget) return current
-      const lines = (existingBudget.lines ?? []).filter((line) => line.categoryId !== categoryId)
-      if (!lines.length) return { ...current, budgets: current.budgets.filter((budget) => budget.id !== existingBudget.id) }
-      const totalAmount = lines.reduce((total, line) => total + Number(line.amount || 0), 0)
-      const nextBudget: Budget = {
-        ...existingBudget,
-        category: lines[0]?.categoryId ?? existingBudget.category,
-        categoryId: lines[0]?.categoryId ?? existingBudget.categoryId,
-        amount: totalAmount,
-        lines,
-        updatedAt: now,
-      }
-      return { ...current, budgets: current.budgets.map((budget) => budget.id === existingBudget.id ? nextBudget : budget) }
-    }, 'ลบงบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.deleteTripBudgetLine(current, tripId, categoryId), 'ลบงบทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addBudget(budget: Budget): void {
-    updateData((current) => ({ ...current, budgets: [budget, ...current.budgets] }), 'เพิ่มงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.addBudget(current, budget), 'เพิ่มงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateBudget(budgetId: string, patch: Partial<Budget>): void {
-    updateData((current) => ({
-      ...current,
-      budgets: current.budgets.map((budget) => budget.id === budgetId ? { ...budget, ...patch, updatedAt: currentIsoTimestamp() } : budget),
-    }), 'แก้ไขงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.updateBudget(current, budgetId, patch), 'แก้ไขงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteBudget(budgetId: string): void {
-    updateData((current) => ({ ...current, budgets: current.budgets.filter((budget) => budget.id !== budgetId) }), 'ลบงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.deleteBudget(current, budgetId), 'ลบงบรายเดือนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function addGoal(goal: Goal): void {
-    updateData((current) => ({ ...current, goals: [goal, ...current.goals] }), 'เพิ่มเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.addGoal(current, goal), 'เพิ่มเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function updateGoal(goalId: string, patch: Partial<Goal>): void {
-    updateData((current) => ({
-      ...current,
-      goals: current.goals.map((goal) => goal.id === goalId ? { ...goal, ...patch, updatedAt: currentIsoTimestamp() } : goal),
-    }), 'แก้ไขเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.updateGoal(current, goalId, patch), 'แก้ไขเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   function deleteGoal(goalId: string): void {
-    updateData((current) => ({ ...current, goals: current.goals.filter((goal) => goal.id !== goalId) }), 'ลบเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
+    applyCommand((current) => financeCommands.deleteGoal(current, goalId), 'ลบเป้าหมายแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
   if (status.loadState === 'loading') {
@@ -438,10 +373,10 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
   const value: FinanceDataContextValue = {
     data,
     status,
-    setData,
     replaceData,
     previewImportDataFromJson,
-    applyImportedData,
+    markImportSucceeded,
+    markImportFailed,
     exportDataAsJson,
     addTransaction,
     updateTransaction,
@@ -470,4 +405,3 @@ export function useFinanceData(): FinanceDataContextValue {
   if (!context) throw new Error('useFinanceData must be used within FinanceDataProvider')
   return context
 }
-

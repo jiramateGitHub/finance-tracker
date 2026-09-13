@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { SummaryCard } from '../../components/ui/SummaryCard'
-import { calculateEntryTotals } from '../../lib/finance-calculations'
 import type { AppData } from '../../types/finance'
 import { formatMoney } from '../../utils/formatters'
-import { deriveInstallmentTransactions, getInstallmentScheduleMonths } from '../installments/utils/installmentPlans'
-import { deriveTripTransactions } from '../trips/utils/tripUtils'
-import { isInstallmentTransaction } from '../monthly/utils/monthlyLedger'
+import { getInstallmentScheduleMonths } from '../installments/utils/installmentPlans'
+import { calculateMonthlyTotals, createMemoizedLedgerSelector } from '../monthly/utils/monthlyLedger'
 
 type YearlyPageProps = {
   data: AppData
@@ -89,24 +87,21 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
     return Array.from(years).sort((a, b) => b - a)
   }, [currentRealYear, data.budgets, data.installmentPlans, data.transactions, data.trips])
 
-  const yearMonths = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => `${selectedYear}-${String(i + 1).padStart(2, '0')}`),
-    [selectedYear],
+  // Unified ledger selector shared with MonthlyPage.
+  const selectLedger = useMemo(() => createMemoizedLedgerSelector(), [])
+  const yearLedgerTransactions = useMemo(
+    () => selectLedger(data, {
+      startMonth: `${selectedYear}-01`,
+      endMonth: `${selectedYear}-12`,
+    }),
+    [data, selectedYear, selectLedger],
   )
 
-  // Unified ledger transactions matching MonthlyPage calculation
-  const yearLedgerTransactions = useMemo(() => [
-    ...data.transactions.filter((tx) => {
-      if (isInstallmentTransaction(tx) || tx.tripId || tx.sourceModule === 'trip') {
-        return false
-      }
-      return tx.date.startsWith(String(selectedYear))
-    }),
-    ...yearMonths.flatMap((month) => deriveInstallmentTransactions(data.installmentPlans, month)),
-    ...yearMonths.flatMap((month) => deriveTripTransactions(data.trips, month)),
-  ], [data.transactions, data.installmentPlans, data.trips, selectedYear, yearMonths])
-
-  const totals = useMemo(() => calculateEntryTotals(yearLedgerTransactions), [yearLedgerTransactions])
+  const totalsOptions = useMemo(
+    () => ({ includePending: data.settings.includePendingInMonthlyTotals }),
+    [data.settings.includePendingInMonthlyTotals],
+  )
+  const totals = useMemo(() => calculateMonthlyTotals(yearLedgerTransactions, totalsOptions), [yearLedgerTransactions, totalsOptions])
 
   const expenseRatio = totals.income > 0 ? Math.min(100, Math.round((totals.expense / totals.income) * 100)) : undefined
 
@@ -254,7 +249,7 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
 
           <SummaryCard
             label="จำนวนรายการ"
-            value={`${totals.entryCount} รายการ`}
+            value={`${totals.count} รายการ`}
             icon={
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6" />
@@ -294,8 +289,8 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
           {monthNames.map(({ short, full }, index) => {
             const monthKey = `${selectedYear}-${String(index + 1).padStart(2, '0')}`
             const isCurrentMonth = monthKey === currentMonthPrefix
-            const monthTotals = calculateEntryTotals(yearLedgerTransactions.filter((entry) => entry.date.startsWith(monthKey)))
-            const hasData = monthTotals.entryCount > 0
+            const monthTotals = calculateMonthlyTotals(yearLedgerTransactions.filter((entry) => entry.date.startsWith(monthKey)), totalsOptions)
+            const hasData = monthTotals.count > 0
 
             return (
               <article
@@ -331,7 +326,7 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
                     )}
                   </div>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
-                    {monthTotals.entryCount} รายการ
+                    {monthTotals.count} รายการ
                   </span>
                 </div>
 

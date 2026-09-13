@@ -116,6 +116,12 @@ export function InstallmentScheduleModal({
               </div>
             </div>
           </div>
+          {progress.snapshotRemainingAmount !== null && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-800">
+              Snapshot อ้างอิง: <strong>{formatMoney(progress.snapshotRemainingAmount)}</strong>
+              {progress.snapshotMonth ? ` ณ ${formatMonth(progress.snapshotMonth)}` : ''} · ยอดคงเหลือปัจจุบันคำนวณจากงวด
+            </div>
+          )}
 
           {/* 1. Mobile Schedule List (sm:hidden - naturally scrolls inside modal body) */}
           <div className="space-y-2 sm:hidden pr-0.5">
