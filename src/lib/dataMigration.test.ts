@@ -253,6 +253,7 @@ const mismatchedTrip = migrateFinanceDataWithReport({
 })
 assert(mismatchedTrip.report.tripOwnership.issues.some((issue) => issue.code === 'field-mismatch'), 'Trip field mismatch must be included in the reconciliation report')
 assert(mismatchedTrip.data.trips[0]?.items[0]?.amount === 999, 'Transaction owner must win when hydrating a mismatched trip item')
+assert(migrateFinanceData(mismatchedTrip.data).transactions[0]?.amount === 999, 'A reconciled load result must be safe for the strict persistence boundary')
 let mismatchBlocked = false
 try {
   migrateFinanceData({

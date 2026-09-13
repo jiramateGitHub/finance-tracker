@@ -78,6 +78,7 @@
 - กด manual Load ได้ผลลัพธ์ “ยังไม่มีข้อมูลบน Cloud” ก่อนสร้าง baseline; กด manual Save ด้วยชุดข้อมูลว่างสำเร็จ และมีเวลาซิงก์ล่าสุดแสดงใน UI
 - reload และ login ซ้ำโหลดจาก Cloud สำเร็จ; logout กลับ LoginScreen; console error/warn เป็นศูนย์
 - ไม่สร้าง transaction/budget/goal จริงในบัญชี เพราะต้องใช้ข้อมูลทดสอบและมีผลต่อข้อมูลการเงินของบัญชี
+- บัญชีทดสอบที่มีข้อมูลจริงพบ nested trip item เก่าไม่ตรงกับ transaction เจ้าของ 3 รายการ; ปรับ Firestore load ให้ใช้ `migrateFinanceDataWithReport` hydrate read model จาก transaction source จึงเข้า dashboard ได้ ขณะที่ import/export/save ยังคงใช้ strict reconciliation เพื่อกันการเขียนทับข้อมูลที่ยังไม่ตรวจ
 
 ก่อน PR-01 การตรวจ assertions เดิมใช้วิธีสำรองด้วย `typescript.transpileModule` เพราะ `npx -y tsx` ดาวน์โหลดไม่ได้ วิธีนั้นไม่ใช่ test command ของโปรเจคและยังไม่ทดแทน integration tests; หลัง PR-01 ให้ใช้ `npm test` เป็น baseline หลัก
 

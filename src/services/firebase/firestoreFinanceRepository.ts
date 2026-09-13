@@ -9,7 +9,7 @@ import {
   type Firestore,
   type Transaction,
 } from 'firebase/firestore'
-import { createExportableFinanceData, migrateFinanceData } from '../../lib/dataMigration'
+import { createExportableFinanceData, migrateFinanceDataWithReport } from '../../lib/dataMigration'
 import {
   FinanceDataConflictError,
   type FinanceRepository,
@@ -144,7 +144,11 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
   ])
 
   const rootData = root.exists() ? root.data() : {}
-  return migrateFinanceData({
+  // Cloud reads may contain an older nested trip read model whose fields no
+  // longer match the canonical transaction owner. Reconcile that read model
+  // from the transaction source and let callers decide when a report must
+  // block persistence (imports and export validation remain strict).
+  return migrateFinanceDataWithReport({
     schemaVersion: rootData.schemaVersion ?? meta?.schemaVersion,
     meta: {
       ...(meta ?? {}),
@@ -159,7 +163,7 @@ export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceD
     trips,
     budgets,
     goals,
-  })
+  }).data
 }
 
 export async function saveFinanceDataToCloud(
