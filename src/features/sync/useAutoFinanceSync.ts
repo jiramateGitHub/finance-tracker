@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createExportableFinanceData, normalizeFinanceData } from '../../lib/dataMigration'
+import { createExportableFinanceData, normalizeFinanceData, type FinanceMigrationReport } from '../../lib/dataMigration'
 import { th } from '../../i18n/th'
 import { loadFinanceDataFromCloudWithReport, saveFinanceDataToCloud } from '../../services/firebase/firestoreFinanceRepository'
 import { FinanceDataConflictError } from '../../services/financeRepository'
@@ -12,7 +12,13 @@ import type { SyncStatus } from './syncTypes'
 type UseAutoFinanceSyncOptions = {
   userId: string
   data: FinanceData
-  replaceData: (nextData: FinanceData, message?: string) => FinanceData
+  replaceData: (nextData: FinanceData, message?: string, reconciliation?: FinanceMigrationReport | null) => FinanceData
+  /** Provider data is initially empty while the Cloud read is in flight. */
+  dataReady: boolean
+  /** Raw persisted Cloud data, before trip transaction hydration. */
+  baselineData?: FinanceData | null
+  /** Block writes until the user has reviewed an outstanding reconciliation report. */
+  reconciliationPending?: boolean
 }
 
 type SaveOptions = {
@@ -64,7 +70,7 @@ function validateNormalizedData(data: FinanceData): FinanceData {
   return normalized
 }
 
-export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinanceSyncOptions) {
+export function useAutoFinanceSync({ userId, data, replaceData, dataReady, baselineData, reconciliationPending = false }: UseAutoFinanceSyncOptions) {
   const [status, setStatus] = useState<SyncStatus>(createInitialStatus)
   const lastSavedFingerprintRef = useRef<string | null>(createFinanceDataFingerprint(data))
   const lastSavedDataRef = useRef<FinanceData>(data)
@@ -73,6 +79,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
   const skipNextSaveRef = useRef(true)
   const coordinatorRef = useRef<FinanceSyncCoordinator | null>(null)
   const sessionGenerationRef = useRef(0)
+  const sessionReadyRef = useRef(false)
   if (!coordinatorRef.current) coordinatorRef.current = new FinanceSyncCoordinator()
 
   const isDemo = userId === 'demo-user'
@@ -108,6 +115,9 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
           dirty: true,
         }))
         try {
+          if (!isDemo && reconciliationPending) {
+            throw new Error(th.sync.reconciliationPending)
+          }
           if (generation !== sessionGenerationRef.current) return { ok: false, errorMessage: 'ยกเลิก operation จาก session เดิม' }
           const normalized = validateNormalizedData(sourceData)
           const expectedRevision = lastSavedDataRef.current.meta.revision
@@ -184,7 +194,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
       }))
       return operation.promise
     },
-    [clearSaveTimer, data, isDemo, replaceData, userId],
+    [clearSaveTimer, data, isDemo, reconciliationPending, replaceData, userId],
   )
 
   const loadNow = useCallback(async (options: LoadOptions = {}): Promise<boolean> => {
@@ -235,18 +245,19 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
           }))
           return false
         }
-        skipNextSaveRef.current = true
-        const loadedData = replaceData(cloudResult.data, th.sync.loadManual)
-        lastSavedDataRef.current = loadedData
+        skipNextSaveRef.current = false
+        const loadedData = replaceData(cloudResult.data, th.sync.loadManual, cloudResult.reconciliation)
+        lastSavedDataRef.current = cloudResult.baselineData
         latestDataRef.current = loadedData
-        lastSavedFingerprintRef.current = createFinanceDataFingerprint(loadedData)
+        lastSavedFingerprintRef.current = createFinanceDataFingerprint(cloudResult.baselineData)
+        const loadedFingerprint = createFinanceDataFingerprint(loadedData)
         setOperationStatus(operationId, (current) => ({
           ...current,
           state: 'saved',
           message: th.sync.loadManual,
           lastSyncedAt: currentIsoTimestamp(),
           errorMessage: null,
-          dirty: false,
+          dirty: loadedFingerprint !== createFinanceDataFingerprint(cloudResult.baselineData),
           reconciliation: cloudResult.reconciliation,
         }))
         return true
@@ -287,6 +298,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
     lastSavedFingerprintRef.current = null
     lastSavedDataRef.current = data
     latestDataRef.current = data
+    sessionReadyRef.current = false
     skipNextSaveRef.current = true
     setStatus(createInitialStatus())
     return () => {
@@ -302,17 +314,42 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
 
   useEffect(() => {
     latestDataRef.current = data
+    if (!dataReady) {
+      clearSaveTimer()
+      return
+    }
     const fingerprint = createFinanceDataFingerprint(data)
+    if (!sessionReadyRef.current) {
+      const baseline = baselineData ?? data
+      const baselineFingerprint = createFinanceDataFingerprint(baseline)
+      sessionReadyRef.current = true
+      skipNextSaveRef.current = false
+      lastSavedDataRef.current = baseline
+      lastSavedFingerprintRef.current = baselineFingerprint
+      setStatus((current) => ({
+        ...current,
+        dirty: fingerprint !== baselineFingerprint,
+      }))
+      return
+    }
     if (skipNextSaveRef.current) {
       skipNextSaveRef.current = false
-      lastSavedDataRef.current = data
-      lastSavedFingerprintRef.current = fingerprint
       setStatus((current) => ({ ...current, dirty: false }))
       return
     }
     if (fingerprint === lastSavedFingerprintRef.current) return
 
     clearSaveTimer()
+    if (!isDemo && reconciliationPending) {
+      setStatus((current) => ({
+        ...current,
+        state: 'idle',
+        message: th.sync.reconciliationPending,
+        errorMessage: null,
+        dirty: true,
+      }))
+      return
+    }
     setStatus((current) => ({
       ...current,
       state: 'pending',
@@ -328,7 +365,7 @@ export function useAutoFinanceSync({ userId, data, replaceData }: UseAutoFinance
     }, AUTO_SAVE_DEBOUNCE_MS)
 
     return clearSaveTimer
-  }, [clearSaveTimer, data, isDemo, saveNow])
+  }, [baselineData, clearSaveTimer, data, dataReady, isDemo, reconciliationPending, saveNow])
 
   return {
     status,

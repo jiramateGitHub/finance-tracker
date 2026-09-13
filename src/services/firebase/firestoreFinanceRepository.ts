@@ -9,7 +9,7 @@ import {
   type Firestore,
   type Transaction,
 } from 'firebase/firestore'
-import { createExportableFinanceData, migrateFinanceDataWithReport, type FinanceMigrationReport } from '../../lib/dataMigration'
+import { createExportableFinanceData, migrateFinanceDataWithReport, normalizeFinanceData, type FinanceMigrationReport } from '../../lib/dataMigration'
 import {
   FinanceDataConflictError,
   type FinanceRepository,
@@ -17,9 +17,9 @@ import {
 } from '../financeRepository'
 import type { FinanceData } from '../../types/finance'
 import { getFirebaseApp } from './firebaseApp'
-import { getChangedFirestoreItems } from './firestoreWritePlan'
+import { createPersistedFinanceBaseline, getChangedFirestoreItems } from './firestoreWritePlan'
 export { documentDataWithId, FinanceDocumentIdentityConflictError } from './firestoreIdentity'
-export { getChangedFirestoreItems } from './firestoreWritePlan'
+export { createPersistedFinanceBaseline, getChangedFirestoreItems } from './firestoreWritePlan'
 import { documentDataWithId } from './firestoreIdentity'
 
 export { FinanceDataConflictError } from '../financeRepository'
@@ -37,6 +37,8 @@ type ExportableFinanceData = ReturnType<typeof createExportableFinanceData>
 
 export type FinanceCloudLoadResult = {
   data: FinanceData
+  /** The canonical Cloud payload before runtime trip-item hydration. */
+  baselineData: FinanceData
   reconciliation: FinanceMigrationReport
 }
 
@@ -155,11 +157,7 @@ export async function loadFinanceDataFromCloudWithReport(userId: string): Promis
   ])
 
   const rootData = root.exists() ? root.data() : {}
-  // Cloud reads may contain an older nested trip read model whose fields no
-  // longer match the canonical transaction owner. Reconcile that read model
-  // from the transaction source and let callers decide when a report must
-  // block persistence (imports and export validation remain strict).
-  const migration = migrateFinanceDataWithReport({
+  const rawData = {
     schemaVersion: rootData.schemaVersion ?? meta?.schemaVersion,
     meta: {
       ...(meta ?? {}),
@@ -174,9 +172,18 @@ export async function loadFinanceDataFromCloudWithReport(userId: string): Promis
     trips,
     budgets,
     goals,
-  })
+  }
+  const normalized = normalizeFinanceData(rawData)
+  // Cloud reads may contain an older nested trip read model whose fields no
+  // longer match the canonical transaction owner. Reconcile that read model
+  // from the transaction source and let callers decide when a report must
+  // block persistence (imports and export validation remain strict).
+  // Reuse the normalized payload so legacy records missing timestamps/ids do
+  // not receive a second set of fallback values between baseline and runtime.
+  const migration = migrateFinanceDataWithReport(normalized)
   return {
     data: migration.data,
+    baselineData: createPersistedFinanceBaseline(normalized),
     reconciliation: migration.report,
   }
 }

@@ -16,6 +16,7 @@ Finance Tracker เป็นแอป Vite + React + TypeScript + Tailwind CSS �
 - ก่อน confirm import ระบบ download backup ของข้อมูลปัจจุบันเป็น JSON อัตโนมัติ
 - Deploy ผ่าน GitHub Pages โดย `vite.config.ts` ตั้ง `base: '/finance-tracker/'`
 - PR-12 แยก feature pages เป็น lazy chunks และตรวจ workflow หลักผ่าน production preview ในโหมด demo; live Auth/Firestore bootstrap, load, save ชุดข้อมูลว่าง, reload และ load บัญชีที่มีข้อมูลจริงพร้อม reconciliation report ผ่านแล้ว ส่วน mobile viewport และ non-empty multi-device acceptance ยังต้องตรวจแยกบน browser/device จริง
+- P1 follow-up แยก persisted Cloud baseline ออกจาก runtime trip read model แล้ว และเพิ่มรายละเอียด snapshot/การรับทราบ reconciliation ในหน้า More
 
 ## คำสั่งหลัก
 
@@ -69,8 +70,9 @@ Dependencies หลัก:
 Provider behavior:
 
 - `FinanceDataProvider` รับ `userId`
-- ตอน mount/userId change จะ `loadFinanceDataFromCloud(userId)`
+- ตอน mount/userId change จะ `loadFinanceDataFromCloudWithReport(userId)`
 - ถ้ามี Cloud data: normalize แล้ว set เป็น runtime state
+- ถ้ามีข้อมูล legacy nested trip items: runtime จะ hydrate จาก transaction owner และเก็บ `cloudBaseline` ที่ตัด read-model items เพื่อใช้คำนวณ dirty/write diff
 - ถ้าไม่มี Cloud data: ใช้ `createEmptyFinanceData()`
 - ถ้า Cloud load fail: แสดง error screen + retry button
 - ไม่โหลด localStorage เป็น primary data
@@ -81,6 +83,7 @@ Autosave:
 - `useAutoFinanceSync` debounce save ประมาณ 1.8 วินาที
 - save ด้วย `saveFinanceDataToCloud(userId, normalizedData)`
 - ใช้ fingerprint เพื่อลด duplicate writes
+- fingerprint ไม่รวม `trip.items[]` เพราะเป็น read model ที่ derive จาก transactions
 - sync state ปัจจุบันคือ `idle`, `loading`, `saving`, `saved`, `error`
 
 ## Firestore Repository
@@ -117,6 +120,7 @@ Implementation notes:
 - save ใช้ batched writes และลบ stale docs ที่ไม่มีใน normalized current data
 - save เขียน user root doc ด้วย schemaVersion/updatedAt เพื่อช่วย detect cloud existence
 - load อ่าน path เดียวกับที่ save เขียน
+- `loadFinanceDataFromCloudWithReport` คืนทั้ง runtime data, persisted `baselineData` และ reconciliation report; report แสดงค่า nested item/transaction owner, บล็อก save/autosave จนกว่าจะรับทราบ และผู้ใช้ต้องกดรับทราบก่อนซ่อน
 
 ## Data Model
 

@@ -2,7 +2,8 @@ import type { FinanceRepository, FinanceRepositorySaveOptions } from '../../serv
 import { FinanceDataConflictError } from '../../services/financeRepository'
 import { normalizeFinanceData } from '../../lib/dataMigration'
 import type { FinanceData } from '../../types/finance'
-import { makeFinanceData, makeTransaction } from '../../test/fixtures/financeFixtures'
+import { makeFinanceData, makeTransaction, makeTrip } from '../../test/fixtures/financeFixtures'
+import { createFinanceDataFingerprint } from './syncData'
 
 function assert(condition: unknown, message?: string): asserts condition {
   if (!condition) throw new Error(message || 'Assertion failed')
@@ -65,6 +66,9 @@ console.log('Testing sync repository contract...')
 const initial = makeFinanceData({
   transactions: [makeTransaction({ id: 'existing-transaction' })],
 })
+const withTripReadModel = makeFinanceData({ trips: [makeTrip()] })
+const withoutTripReadModel = makeFinanceData({ trips: [makeTrip({ items: [] })] })
+assert(createFinanceDataFingerprint(withTripReadModel) === createFinanceDataFingerprint(withoutTripReadModel), 'Sync fingerprint must ignore derived trip read-model items')
 const repository = new InMemoryFinanceRepository(initial)
 const clientA = await repository.load('user-a')
 const clientB = await repository.load('user-b')

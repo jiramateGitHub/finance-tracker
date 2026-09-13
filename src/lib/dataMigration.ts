@@ -71,6 +71,21 @@ export type TripMigrationIssue = {
   transactionId?: string
   code: 'duplicate-source' | 'field-mismatch' | 'orphan-transaction'
   message: string
+  /** Values captured at reconciliation time so the report can be reviewed without guessing. */
+  nestedItem?: TripMigrationSnapshot
+  transaction?: TripMigrationSnapshot
+}
+
+export type TripMigrationSnapshot = {
+  date: string
+  categoryId: string
+  title: string
+  amount: number
+  status: TransactionStatus
+  note: string | null
+  destination: string | null
+  country: string | null
+  installmentPlanId: string | null
 }
 
 export type TripMigrationReport = {
@@ -658,6 +673,35 @@ function createTripTransactionFromItem(trip: Trip, item: TripItem): TransactionE
   }
 }
 
+function createTripItemSnapshot(item: TripItem): TripMigrationSnapshot {
+  return {
+    date: normalizeDate(item.date),
+    categoryId: normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว'),
+    title: item.title,
+    amount: Math.max(0, Number(item.amount || 0)),
+    status: item.isPaid === false ? 'pending' : 'cleared',
+    note: item.note ?? null,
+    destination: item.destination ?? null,
+    country: item.country ?? null,
+    installmentPlanId: item.installmentPlanId ?? item.installmentId ?? null,
+  }
+}
+
+function createTripTransactionSnapshot(transaction: TransactionEntry): TripMigrationSnapshot {
+  const travelDetails = transaction.travelDetails ?? {}
+  return {
+    date: normalizeDate(transaction.date),
+    categoryId: normalizeCategoryId(transaction.categoryId ?? transaction.category, 'ท่องเที่ยว'),
+    title: transaction.title,
+    amount: Math.max(0, Number(transaction.amount || 0)),
+    status: transaction.status,
+    note: transaction.note ?? null,
+    destination: travelDetails.destination ?? null,
+    country: travelDetails.country ?? null,
+    installmentPlanId: transaction.installmentPlanId ?? transaction.installmentId ?? null,
+  }
+}
+
 function tripItemMatchesTransaction(item: TripItem, transaction: TransactionEntry): boolean {
   const itemCategoryId = normalizeCategoryId(item.categoryId ?? item.category, 'ท่องเที่ยว')
   const transactionCategoryId = normalizeCategoryId(transaction.categoryId ?? transaction.category, 'ท่องเที่ยว')
@@ -766,6 +810,8 @@ function materializeTripTransactions(
             transactionId: existing.id,
             code: 'field-mismatch',
             message: 'ข้อมูล nested trip item ไม่ตรงกับ transaction เจ้าของ; ใช้ transaction เป็น source หลัก',
+            nestedItem: createTripItemSnapshot(item),
+            transaction: createTripTransactionSnapshot(enrichedExisting),
           })
         }
         return

@@ -35,7 +35,8 @@ export interface FinanceStore {
   previewImportJson: (file: File) => Promise<FinanceImportPreview | null>
   markImportSucceeded: (preview: FinanceImportPreview) => void
   markImportFailed: (preview: FinanceImportPreview, errorMessage: string) => void
-  replaceData: (data: AppData, message?: string) => FinanceData
+  replaceData: (data: AppData, message?: string, reconciliation?: FinanceDataStatus['lastReconciliation']) => FinanceData
+  acknowledgeReconciliation: () => void
 }
 
 export function useFinanceStore(): FinanceStore {
@@ -114,5 +115,6 @@ export function useFinanceStore(): FinanceStore {
     markImportSucceeded: financeData.markImportSucceeded,
     markImportFailed: financeData.markImportFailed,
     replaceData: financeData.replaceData,
+    acknowledgeReconciliation: financeData.acknowledgeReconciliation,
   }
 }

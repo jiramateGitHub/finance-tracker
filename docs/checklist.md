@@ -23,6 +23,7 @@ Checklist นี้อิงจากโครงสร้างโค้ดป�
 - [ ] `src/hooks/useFinanceStore.ts` ยัง expose actions ครบทุก module
 - [ ] `src/features/sync/useAutoFinanceSync.ts` ยัง debounce autosave
 - [ ] `src/services/firebase/firestoreFinanceRepository.ts` ยังใช้ paths เดิม
+- [x] Cloud load แยก persisted baseline ออกจาก runtime trip read model
 - [ ] `src/lib/dataMigration.ts` compile และ normalize schema v2 ได้
 - [ ] `src/lib/importDiagnostics.ts` compile และใช้กับ import preview ได้
 - [ ] `src/lib/storage.ts` ยังมี `createJsonDownload`
@@ -93,6 +94,9 @@ Repository behavior:
 - [ ] ไม่มี local-only/localStorage persistence เป็น main source
 - [x] manual Load from Cloud replace runtime state
 - [x] manual Save to Cloud เขียนข้อมูลปัจจุบันขึ้น Cloud
+- [x] legacy trip hydration ไม่ทำให้รายการ transaction ใหม่หายตอน save
+- [x] reconciliation report แสดงค่าทั้ง nested item/transaction owner และมี explicit acknowledge action
+- [x] save/autosave ถูกบล็อกจนกว่าจะรับทราบ reconciliation ที่ยังค้าง
 - [ ] autosave ทำงานหลัง CRUD changes
 - [ ] autosave ไม่ยิงทุก keystroke ทันที เพราะมี debounce
 

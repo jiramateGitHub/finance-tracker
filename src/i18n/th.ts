@@ -48,6 +48,7 @@ export const th = {
     saveToCloud: 'บันทึกขึ้น Cloud',
     loadFromCloud: 'โหลดจาก Cloud',
     lastSynced: 'ซิงก์ล่าสุด',
+    reconciliationPending: 'กรุณาตรวจและรับทราบ reconciliation ก่อนบันทึก',
   },
   monthly: {
     title: 'รายการรายเดือน',

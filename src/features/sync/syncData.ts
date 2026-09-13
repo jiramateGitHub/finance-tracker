@@ -52,7 +52,13 @@ export function createFinanceDataFingerprint(data: FinanceData): string {
     transactions: data.transactions,
     recurringRules: data.recurringRules,
     installmentPlans: data.installmentPlans,
-    trips: data.trips,
+    // Trip items are a derived read model. Their canonical cashflow rows live
+    // in transactions, so comparing nested items would mark every hydrated
+    // Cloud load as dirty even when nothing was edited.
+    trips: data.trips.map((trip) => ({
+      ...trip,
+      items: [],
+    })),
     budgets: data.budgets,
     goals: data.goals,
   })

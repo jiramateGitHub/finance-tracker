@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { SyncStatusBadge } from '../sync/SyncStatusBadge'
+import type { TripMigrationSnapshot } from '../../lib/dataMigration'
 import type { FinanceDataStatus, FinanceImportPreview } from '../../state/FinanceDataProvider'
 import type { AppData, FinanceData } from '../../types/finance'
 import type { SyncStatus } from '../sync/syncTypes'
@@ -20,6 +21,7 @@ type MorePageProps = {
   syncStatus: SyncStatus
   onLoadFromCloud: (discardDirty?: boolean) => Promise<void>
   onSaveToCloud: () => Promise<void>
+  onAcknowledgeReconciliation: () => void
 }
 
 type CountKey = 'transactions' | 'installmentPlans' | 'trips' | 'budgets' | 'goals'
@@ -68,6 +70,7 @@ export function MorePage({
   syncStatus,
   onLoadFromCloud,
   onSaveToCloud,
+  onAcknowledgeReconciliation,
 }: MorePageProps) {
   const [pendingImport, setPendingImport] = useState<FinanceImportPreview | null>(null)
   const [confirmingImport, setConfirmingImport] = useState(false)
@@ -119,6 +122,7 @@ export function MorePage({
   const isCloudBusy = syncStatus.state === 'loading' || syncStatus.state === 'saving' || syncStatus.state === 'pending' || confirmingImport
   const isLoadBlockedByDirty = syncStatus.dirty && syncStatus.state !== 'conflict'
   const isSaveBlockedByConflict = syncStatus.state === 'conflict'
+  const isSaveBlockedByReconciliation = Boolean(dataStatus.lastReconciliation?.tripOwnership.issues.length)
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'ไม่ได้ตั้งค่า'
   const importPreviewDiagnostics = pendingImport?.diagnostics ?? dataStatus.lastImportDiagnostics
 
@@ -216,10 +220,13 @@ export function MorePage({
             ) : null}
           </div>
 
-          <CloudReconciliationPanel report={dataStatus.lastReconciliation ?? syncStatus.reconciliation ?? null} />
+          <CloudReconciliationPanel
+            report={dataStatus.lastReconciliation}
+            onAcknowledge={onAcknowledgeReconciliation}
+          />
 
           <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
-            <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy || isSaveBlockedByConflict}>
+            <Button className="w-full sm:w-auto" type="button" variant="primary" onClick={onSaveToCloud} disabled={isCloudBusy || isSaveBlockedByConflict || isSaveBlockedByReconciliation}>
               <span className="flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
@@ -396,7 +403,13 @@ function ImportDiagnosticsPanel({
           <ul className="mt-1 grid gap-1">
             {diagnostics.reconciliation.tripOwnership.issues.map((issue) => (
               <li key={`${issue.code}-${issue.tripId}-${issue.itemId}-${issue.transactionId ?? ''}`}>
-                • {issue.message} ({issue.tripId}{issue.itemId ? ` / ${issue.itemId}` : ''}{issue.transactionId ? ` / ${issue.transactionId}` : ''})
+                <div>• {issue.message} ({issue.tripId}{issue.itemId ? ` / ${issue.itemId}` : ''}{issue.transactionId ? ` / ${issue.transactionId}` : ''})</div>
+                {issue.nestedItem || issue.transaction ? (
+                  <div className="ml-3 text-[11px] font-medium leading-5 text-amber-800">
+                    <div>nested trip item: {formatReconciliationSnapshot(issue.nestedItem)}</div>
+                    <div>transaction owner: {formatReconciliationSnapshot(issue.transaction)}</div>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -417,7 +430,20 @@ function ImportDiagnosticsPanel({
   )
 }
 
-function CloudReconciliationPanel({ report }: { report: FinanceDataStatus['lastReconciliation'] }) {
+function formatReconciliationSnapshot(snapshot?: TripMigrationSnapshot): string {
+  if (!snapshot) return 'ไม่มี snapshot ของฝั่งนี้'
+  const status = snapshot.status === 'cleared' ? 'เคลียร์แล้ว' : 'ค้างชำระ'
+  const place = [snapshot.destination, snapshot.country].filter(Boolean).join(' / ')
+  return `วันที่ ${snapshot.date} · หมวด ${snapshot.categoryId} · ${snapshot.title} · ${snapshot.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท · ${status}${place ? ` · ${place}` : ''}`
+}
+
+function CloudReconciliationPanel({
+  report,
+  onAcknowledge,
+}: {
+  report: FinanceDataStatus['lastReconciliation']
+  onAcknowledge: () => void
+}) {
   const issues = report?.tripOwnership.issues ?? []
   if (!issues.length) return null
 
@@ -425,15 +451,33 @@ function CloudReconciliationPanel({ report }: { report: FinanceDataStatus['lastR
     <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
       <div className="font-extrabold">ตรวจ reconciliation จาก Cloud: พบ {issues.length} รายการ</div>
       <p className="mt-1 text-xs font-semibold leading-5">
-        ระบบใช้ transaction owner เป็นข้อมูลหลักในการโหลด และเก็บรายการที่ต่างกันไว้ให้ตรวจสอบก่อนแก้ไขหรือบันทึกข้อมูลชุดใหญ่
+        ระบบใช้ transaction owner เป็นข้อมูลหลักในการโหลด รายงานด้านล่างแสดงค่าจาก nested trip item และ transaction owner เพื่อให้ตรวจสอบได้ก่อนบันทึก
       </p>
-      <ul className="mt-2 grid gap-1 text-xs font-semibold leading-5">
+      <ul className="mt-2 grid gap-2 text-xs font-semibold leading-5">
         {issues.map((issue) => (
-          <li key={`${issue.code}-${issue.tripId}-${issue.itemId}-${issue.transactionId ?? ''}`}>
-            • {issue.message} ({issue.tripId} / {issue.itemId}{issue.transactionId ? ` / ${issue.transactionId}` : ''})
+          <li
+            className="rounded-xl border border-amber-200 bg-white/70 px-3 py-2"
+            key={`${issue.code}-${issue.tripId}-${issue.itemId}-${issue.transactionId ?? ''}`}
+          >
+            <div>• {issue.message}</div>
+            <div className="mt-1 text-[11px] font-medium leading-5 text-amber-800">
+              <div>อ้างอิง: ทริป {issue.tripId} / รายการ {issue.itemId}{issue.transactionId ? ` / transaction ${issue.transactionId}` : ''}</div>
+              {issue.nestedItem || issue.transaction ? (
+                <>
+                  <div>nested trip item: {formatReconciliationSnapshot(issue.nestedItem)}</div>
+                  <div>transaction owner: {formatReconciliationSnapshot(issue.transaction)}</div>
+                </>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-xs font-bold text-amber-800">ตรวจค่าที่ต่างกันแล้วจึงกดรับทราบเพื่อปิดรายงาน</span>
+        <Button type="button" size="sm" variant="light" onClick={onAcknowledge}>
+          รับทราบ reconciliation
+        </Button>
+      </div>
     </div>
   )
 }

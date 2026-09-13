@@ -1,5 +1,6 @@
 import { createExportableFinanceData, migrateFinanceData, migrateFinanceDataWithReport, normalizeFinanceData } from './dataMigration'
 import { detachTripTransactions } from '../features/trips/utils/tripUtils'
+import { createPersistedFinanceBaseline } from '../services/firebase/firestoreWritePlan'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
@@ -252,6 +253,8 @@ const mismatchedTrip = migrateFinanceDataWithReport({
   }],
 })
 assert(mismatchedTrip.report.tripOwnership.issues.some((issue) => issue.code === 'field-mismatch'), 'Trip field mismatch must be included in the reconciliation report')
+const mismatchIssue = mismatchedTrip.report.tripOwnership.issues.find((issue) => issue.code === 'field-mismatch')
+assert(mismatchIssue?.nestedItem?.amount === 900 && mismatchIssue.transaction?.amount === 999, 'Reconciliation report must retain both nested and transaction owner values')
 assert(mismatchedTrip.data.trips[0]?.items[0]?.amount === 999, 'Transaction owner must win when hydrating a mismatched trip item')
 assert(migrateFinanceData(mismatchedTrip.data).transactions[0]?.amount === 999, 'A reconciled load result must be safe for the strict persistence boundary')
 let mismatchBlocked = false
@@ -292,6 +295,10 @@ const orphanTrip = migrateFinanceDataWithReport({
 })
 assert(orphanTrip.report.tripOwnership.orphanTransactionIds.includes('orphan-trip-tx'), 'Orphan trip transactions must be reported')
 assert(orphanTrip.data.transactions.some((transaction) => transaction.id === 'orphan-trip-tx'), 'Orphan trip transactions must be preserved')
+
+const persistedBaseline = createPersistedFinanceBaseline(normalizeFinanceData(tripWithNestedItems))
+assert(persistedBaseline.trips[0]?.items.length === 0, 'Persisted Cloud baseline must exclude runtime trip read-model items')
+assert(persistedBaseline.transactions.length === 0, 'Persisted Cloud baseline must not materialize nested trip transactions')
 
 const missingIdInput = { transactions: [{ type: 'expense', date: '2026-09-01', amount: 1 }] }
 assert(normalizeFinanceData(missingIdInput).transactions[0]?.id === normalizeFinanceData(missingIdInput).transactions[0]?.id, 'Missing IDs must be repaired deterministically')

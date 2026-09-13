@@ -192,6 +192,14 @@
 
 **Dependency:** ฟีเจอร์ที่เปลี่ยนผ่าน acceptance tests แล้ว · **เกี่ยวข้อง:** F13
 
+### P1 follow-up · Cloud baseline และ reconciliation review · เสร็จแล้ว
+
+แยก `baselineData` ที่สะท้อนเอกสาร Firestore จริงออกจาก runtime data ที่ hydrate `trip.items[]` เป็น read model และปรับ sync fingerprint ให้ไม่นับ read model ซ้ำ จึงไม่ทำให้ transaction ที่ materialize จาก nested trip item ถูกมองว่าเป็น baseline แล้วหายไปจาก save รอบถัดไป
+
+ขยาย reconciliation issue ให้เก็บ snapshot ของ nested item กับ transaction owner, แสดงรายละเอียดทั้งสองฝั่งใน More และบล็อก save/autosave จนกว่าจะกดรับทราบอย่างชัดเจน รายงานจะไม่ถูกล้างโดย `replaceData` หลัง save โดยอัตโนมัติ
+
+**ผลการทดสอบ:** เพิ่ม regression สำหรับ persisted baseline, fingerprint ที่ไม่รวม trip read model และ snapshot mismatch; `npm test`, `npm run lint`, `npm run build` และ `git diff --check` ผ่าน
+
 ## Test matrix ที่ต้องเพิ่ม
 
 | ชั้น | Cases สำคัญ | เป้าหมาย |

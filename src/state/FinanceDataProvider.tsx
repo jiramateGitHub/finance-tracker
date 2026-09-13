@@ -19,6 +19,8 @@ export type FinanceDataStatus = {
   errorMessage: string | null
   lastImportDiagnostics: ImportDiagnostics | null
   lastReconciliation: FinanceMigrationReport | null
+  /** Canonical Cloud payload used as the sync baseline before runtime hydration. */
+  cloudBaseline: FinanceData | null
 }
 
 export type FinanceImportPreview = {
@@ -33,7 +35,8 @@ export type FinanceImportPreview = {
 export type FinanceDataContextValue = {
   data: FinanceData
   status: FinanceDataStatus
-  replaceData: (nextData: FinanceData, message?: string) => FinanceData
+  replaceData: (nextData: FinanceData, message?: string, reconciliation?: FinanceMigrationReport | null) => FinanceData
+  acknowledgeReconciliation: () => void
   previewImportDataFromJson: (file: File) => Promise<FinanceImportPreview | null>
   markImportSucceeded: (preview: FinanceImportPreview) => void
   markImportFailed: (preview: FinanceImportPreview, errorMessage: string) => void
@@ -71,6 +74,7 @@ const loadingStatus: FinanceDataStatus = {
   errorMessage: null,
   lastImportDiagnostics: null,
   lastReconciliation: null,
+  cloudBaseline: null,
 }
 
 function markLoaded(message: string): FinanceDataStatus {
@@ -82,6 +86,7 @@ function markLoaded(message: string): FinanceDataStatus {
     errorMessage: null,
     lastImportDiagnostics: null,
     lastReconciliation: null,
+    cloudBaseline: null,
   }
 }
 
@@ -166,6 +171,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
         setStatus({
           ...markLoaded(loadedMessage),
           lastReconciliation: reconciliation,
+          cloudBaseline: cloudResult?.baselineData ?? null,
           message: issueCount
             ? `โหลดข้อมูลจาก Cloud แล้ว พบ reconciliation ${issueCount} รายการที่ถูก hydrate จาก transaction owner`
             : loadedMessage,
@@ -182,6 +188,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
           errorMessage,
           lastImportDiagnostics: null,
           lastReconciliation: null,
+          cloudBaseline: null,
         })
       }
     }
@@ -268,19 +275,32 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     }))
   }
 
-  const replaceData = useCallback((nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud แล้ว'): FinanceData => {
+  const replaceData = useCallback((nextData: FinanceData, message = 'โหลดข้อมูลจาก Cloud แล้ว', reconciliation?: FinanceMigrationReport | null): FinanceData => {
     const normalized = withUpdatedMeta(nextData)
     setData(normalized)
-    setStatus({
+    setStatus((current) => ({
+      ...current,
       loadState: 'ready',
       saveState: 'saved',
       importState: 'idle',
       message,
       errorMessage: null,
       lastImportDiagnostics: null,
-      lastReconciliation: null,
-    })
+      // A save replaces the runtime data but must not silently dismiss an
+      // outstanding Cloud reconciliation report. Explicit loads can pass the
+      // new report (or null) to replace it.
+      lastReconciliation: reconciliation === undefined ? current.lastReconciliation : reconciliation,
+      cloudBaseline: null,
+    }))
     return normalized
+  }, [])
+
+  const acknowledgeReconciliation = useCallback(() => {
+    setStatus((current) => ({
+      ...current,
+      lastReconciliation: null,
+      message: 'รับทราบ reconciliation แล้ว',
+    }))
   }, [])
 
   function applyCommand(command: financeCommands.FinanceCommand, message: string): void {
@@ -390,6 +410,7 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     data,
     status,
     replaceData,
+    acknowledgeReconciliation,
     previewImportDataFromJson,
     markImportSucceeded,
     markImportFailed,

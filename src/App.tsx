@@ -24,6 +24,9 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
     userId: currentUserId,
     data: store.data,
     replaceData: store.replaceData,
+    dataReady: store.dataStatus.loadState !== 'loading',
+    baselineData: store.dataStatus.cloudBaseline,
+    reconciliationPending: Boolean(store.dataStatus.lastReconciliation?.tripOwnership.issues.length),
   })
 
   async function handleSaveToCloud(): Promise<void> {
@@ -97,6 +100,7 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
           syncStatus={sync.status}
           onLoadFromCloud={handleLoadFromCloud}
           onSaveToCloud={handleSaveToCloud}
+          onAcknowledgeReconciliation={store.acknowledgeReconciliation}
         />
       )
     }
