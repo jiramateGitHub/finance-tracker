@@ -22,6 +22,7 @@ type MorePageProps = {
   onLoadFromCloud: (discardDirty?: boolean) => Promise<void>
   onSaveToCloud: () => Promise<void>
   onAcknowledgeReconciliation: () => void
+  onResetData: () => Promise<boolean>
 }
 
 type CountKey = 'transactions' | 'installmentPlans' | 'trips' | 'budgets' | 'goals'
@@ -71,10 +72,13 @@ export function MorePage({
   onLoadFromCloud,
   onSaveToCloud,
   onAcknowledgeReconciliation,
+  onResetData,
 }: MorePageProps) {
   const [pendingImport, setPendingImport] = useState<FinanceImportPreview | null>(null)
   const [confirmingImport, setConfirmingImport] = useState(false)
   const [confirmingCloudLoad, setConfirmingCloudLoad] = useState(false)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
 
   const currentCounts = useMemo(() => getDataCounts(data), [data])
   const pendingCounts = useMemo(() => (pendingImport ? getDataCounts(pendingImport.data) : null), [pendingImport])
@@ -88,6 +92,7 @@ export function MorePage({
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
+    setResetMessage(null)
     const preview = await onPreviewImportJson(file)
     if (preview) setPendingImport(preview)
   }
@@ -305,6 +310,24 @@ export function MorePage({
         </Card>
       </div>
 
+      <Card title={<span className="font-bold text-rose-700">ล้างข้อมูลทั้งหมด</span>}>
+        <p className="text-sm leading-relaxed text-slate-600">
+          ลบรายรับรายจ่าย รายการประจำ แผนผ่อน ทริป งบประมาณ และเป้าหมายทั้งหมดของบัญชีนี้บน Cloud
+          รวมถึงคืนค่าโปรไฟล์ การตั้งค่า และหมวดหมู่เป็นค่าเริ่มต้น บัญชีและรหัสผ่านยังใช้เข้าสู่ระบบได้ตามเดิม
+        </p>
+        <p className="mt-2 text-sm font-semibold text-rose-700">
+          ข้อมูลที่ลบจะกู้คืนในแอปไม่ได้ หากต้องการเก็บไว้ กรุณาส่งออก JSON ก่อนล้าง
+        </p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Button type="button" onClick={onExportJson} disabled={isCloudBusy}>ส่งออกไฟล์สำรอง</Button>
+          <Button type="button" variant="danger" disabled={isCloudBusy || isSaveBlockedByConflict} onClick={() => {
+            setResetMessage(null)
+            setConfirmingReset(true)
+          }}>ล้างข้อมูลทั้งหมดของบัญชีนี้</Button>
+        </div>
+        {resetMessage ? <p className="mt-3 text-sm font-semibold" role="status">{resetMessage}</p> : null}
+      </Card>
+
       {/* Technical Info QA Accordion */}
       <details className="rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-xs transition hover:border-slate-300">
         <summary className="cursor-pointer list-none font-extrabold text-slate-700 marker:hidden flex items-center justify-between">
@@ -327,6 +350,21 @@ export function MorePage({
           <TechnicalItem label="เป้าหมาย" value={data.goals.length.toString()} />
         </div>
       </details>
+
+      <ConfirmModal
+        open={confirmingReset}
+        title="ยืนยันล้างข้อมูลทั้งหมด?"
+        description={`ข้อมูลการเงินทั้งหมดของ ${currentUserEmail} จะถูกลบจาก Cloud และทุกอุปกรณ์เมื่อโหลดใหม่ พร้อมคืนค่าตั้งต้น การล้างครั้งนี้ไม่ลบบัญชีเข้าสู่ระบบ และไม่มีการสำรองอัตโนมัติ`}
+        confirmLabel="ยืนยันล้างทั้งหมด"
+        cancelLabel="ยกเลิก"
+        destructive
+        onConfirm={() => {
+          void onResetData().then((ok) => {
+            setResetMessage(ok ? 'ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว เริ่มบันทึกข้อมูลใหม่ได้ทันที' : 'ล้างข้อมูลไม่สำเร็จ โปรดตรวจสถานะ Cloud แล้วลองใหม่')
+          }).catch(() => setResetMessage('ล้างข้อมูลไม่สำเร็จ กรุณาลองใหม่'))
+        }}
+        onClose={() => setConfirmingReset(false)}
+      />
 
       <ConfirmModal
         open={pendingImport !== null}

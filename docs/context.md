@@ -443,6 +443,15 @@ Firebase setup required:
 - Authorized domains include `localhost` and GitHub Pages domain
 - Firestore rules restrict access to `users/{uid}/...`
 
+## Settings reset / large import (2026-09-13)
+
+- MorePage มีปุ่มล้างข้อมูลทั้งหมด พร้อมยืนยันบัญชีเป้าหมายและปุ่มส่งออกสำรองแยกต่างหาก
+- Reset ใช้ empty normalized dataset + `replace: true`: ลบเอกสารรายการทั้งหมดใน 6 collections ของ user ปัจจุบัน คืนค่า profile/settings/masters/meta และคงบัญชี Auth กับ root revision เพื่อปฏิเสธ stale writers
+- Import/reset แทน runtime state และ sync baseline หลัง Cloud สำเร็จเท่านั้น; บล็อกการแก้ไขและ autosave ระหว่างแทนที่ข้อมูล และล้าง reconciliation report ของชุดข้อมูลเดิมหลังสำเร็จ
+- เอาเพดาน 500 writes ฝั่งแอปออก โดยยังใช้ atomic transaction เดียว ตาม [Firestore release notes วันที่ 2023-03-29](https://docs.cloud.google.com/firestore/docs/release-notes#March_29_2023) ซึ่งยกเลิกเพดานจำนวน writes แล้ว ข้อจำกัดขนาด request และเวลาของบริการยังมีผล
+- ไฟล์ schema-v2 ที่ผู้ใช้ระบุผ่าน validation/migration/export: 502 transactions, 7 installment plans, 20 trips, 1 budget; canonical JSON ประมาณ 318 KB และไม่มี reconciliation issues
+- ตรวจ import และ reset ผ่าน browser demo; ยังไม่ได้ทำ non-empty write/reset บน production Firestore
+
 ## Guardrails For Future Work
 
 - Do not change Firestore paths casually

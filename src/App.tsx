@@ -1,9 +1,10 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { useAutoFinanceSync } from './features/sync/useAutoFinanceSync'
 import { useFinanceStore } from './hooks/useFinanceStore'
 import { th } from './i18n/th'
 import { createJsonDownload } from './lib/storage'
+import { createEmptyFinanceData } from './lib/dataMigration'
 import type { FinanceImportPreview } from './state/FinanceDataProvider'
 
 const MonthlyPage = lazy(() => import('./features/monthly/MonthlyPage').then((module) => ({ default: module.MonthlyPage })))
@@ -20,6 +21,8 @@ type AppProps = {
 
 function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
   const store = useFinanceStore()
+  const [replacementMessage, setReplacementMessage] = useState<string | null>(null)
+  const replacementBusyRef = useRef(false)
   const sync = useAutoFinanceSync({
     userId: currentUserId,
     data: store.data,
@@ -42,14 +45,35 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
   }
 
   async function handleConfirmImportJson(preview: FinanceImportPreview): Promise<boolean> {
-    createJsonDownload(store.data, 'finance-backup-before-import')
-    const result = await sync.saveNow(preview.data, th.sync.cloudImport, { replace: true })
-    if (result.ok) {
-      store.markImportSucceeded(preview)
-    } else {
-      store.markImportFailed(preview, result.errorMessage ?? 'บันทึกข้อมูลนำเข้าไม่สำเร็จ')
+    if (replacementBusyRef.current) return false
+    replacementBusyRef.current = true
+    setReplacementMessage('กำลังนำเข้าและบันทึกข้อมูล กรุณารอจนเสร็จ')
+    try {
+      createJsonDownload(store.data, 'finance-backup-before-import')
+      const result = await sync.saveNow(preview.data, th.sync.cloudImport, { replace: true })
+      if (result.ok) store.markImportSucceeded(preview)
+      else store.markImportFailed(preview, result.errorMessage ?? 'บันทึกข้อมูลนำเข้าไม่สำเร็จ')
+      return result.ok
+    } catch (error) {
+      store.markImportFailed(preview, error instanceof Error ? error.message : 'นำเข้าข้อมูลไม่สำเร็จ')
+      return false
+    } finally {
+      replacementBusyRef.current = false
+      setReplacementMessage(null)
     }
-    return result.ok
+  }
+
+  async function handleResetData(): Promise<boolean> {
+    if (replacementBusyRef.current) return false
+    replacementBusyRef.current = true
+    setReplacementMessage('กำลังล้างข้อมูลทั้งหมด กรุณารอจนเสร็จ')
+    try {
+      const result = await sync.saveNow(createEmptyFinanceData(), 'ล้างข้อมูลทั้งหมดและคืนค่าตั้งต้นแล้ว', { replace: true })
+      return result.ok
+    } finally {
+      replacementBusyRef.current = false
+      setReplacementMessage(null)
+    }
   }
 
   function renderActiveView() {
@@ -101,6 +125,7 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
           onLoadFromCloud={handleLoadFromCloud}
           onSaveToCloud={handleSaveToCloud}
           onAcknowledgeReconciliation={store.acknowledgeReconciliation}
+          onResetData={handleResetData}
         />
       )
     }
@@ -125,19 +150,30 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
   }
 
   return (
-    <AppShell
-      activeView={store.activeView}
-      onChangeView={store.setActiveView}
-      syncStatus={sync.status}
-    >
-      <Suspense fallback={(
-        <div className="grid min-h-[24rem] place-items-center rounded-3xl border border-blue-100 bg-white p-6 text-sm font-extrabold text-finance-muted shadow-finance-sm">
-          กำลังโหลดหน้าจอ...
+    <>
+      <div inert={replacementMessage !== null}>
+        <AppShell
+          activeView={store.activeView}
+          onChangeView={store.setActiveView}
+          syncStatus={sync.status}
+        >
+          <Suspense fallback={(
+            <div className="grid min-h-[24rem] place-items-center rounded-3xl border border-blue-100 bg-white p-6 text-sm font-extrabold text-finance-muted shadow-finance-sm">
+              กำลังโหลดหน้าจอ...
+            </div>
+          )}>
+            {renderActiveView()}
+          </Suspense>
+        </AppShell>
+      </div>
+      {replacementMessage ? (
+        <div className="finance-modal-backdrop z-[100]" role="status" aria-live="polite" aria-busy="true">
+          <div className="mx-4 max-w-md rounded-2xl bg-white p-6 text-center font-bold text-slate-800 shadow-xl">
+            {replacementMessage}
+          </div>
         </div>
-      )}>
-        {renderActiveView()}
-      </Suspense>
-    </AppShell>
+      ) : null}
+    </>
   )
 }
 

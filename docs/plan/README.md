@@ -52,7 +52,7 @@
 | `npm test` | ผ่าน: fixture/migration/money/id/import validation/sync coordinator+repository/view settings/commands ใหม่ + assertion เดิม |
 | Assertion เดิม 5 ไฟล์ | ผ่านทุกไฟล์: formatters, installments, monthlyLedger, tripUtils, budgetGoalCalculations |
 | เคส audit เพิ่มเติม | พบ trip/item กลับมาหลังลบ, ยอดคงเหลือ 0 หลังยกเลิกจ่าย, due day ไม่ตรง, invalid date/amount ถูกยอมรับ, future schema ถูกเปลี่ยนเป็น v2, linked transaction หายจาก ledger และ parser `ไม่เกิน` ผิด |
-| PR-02 focused behavior | ordinary save ลบเฉพาะ IDs ที่หายจาก local baseline; import ระบุ `replace: true`; root revision ตรวจแบบ transaction; local two-client contract test ผ่าน; `firestore.rules` บังคับ tenant/revision policy; dataset ที่เกิน 500 writes ถูกปฏิเสธเพื่อไม่เผย partial snapshot |
+| PR-02 focused behavior | ordinary save ลบเฉพาะ IDs ที่หายจาก local baseline; import ระบุ `replace: true`; root revision ตรวจแบบ transaction; local two-client contract test ผ่าน; `firestore.rules` บังคับ tenant/revision policy; import/reset ยังคงเป็น atomic transaction; เอาเพดาน 500 writes ที่แอปกำหนดเองออกแล้วตาม Firestore release notes (2023-03-29) |
 | PR-03 focused behavior | `migrateFinanceData` hydrate legacy trip เฉพาะ load/import; runtime `normalizeFinanceData` ไม่สร้าง trip กลับ; update/delete trip reconcile หรือ detach transactions ตาม ownership; Monthly/Yearly แสดง linked manual records และ deduplicate persisted trip items |
 | PR-04 focused behavior | ยอดคงเหลือปัจจุบันคำนวณจาก schedule; snapshot แยกและถูก invalidate ตอน pay/unpay; due date helper เดียวใช้กับ info/ledger; overdue ใช้ full-date difference; interest total แยกจาก principal |
 | PR-05 focused behavior | raw import validation ปฏิเสธ future/invalid schema, malformed root/collection, duplicate ID, invalid date/amount; schema v2 empty dataset ผ่าน; save failure คง preview สำหรับ retry; `ไม่เกิน`/strict amount operators และ smart month range ตรงกับ derived ledger |
@@ -80,7 +80,7 @@
 - reload และ login ซ้ำโหลดจาก Cloud สำเร็จ; logout กลับ LoginScreen; console error/warn เป็นศูนย์
 - ไม่สร้าง transaction/budget/goal จริงในบัญชี เพราะต้องใช้ข้อมูลทดสอบและมีผลต่อข้อมูลการเงินของบัญชี
 - บัญชีทดสอบที่มีข้อมูลจริงพบ nested trip item เก่าไม่ตรงกับ transaction เจ้าของ 3 รายการ; ปรับ Firestore load ให้ใช้ `migrateFinanceDataWithReport` hydrate read model จาก transaction source จึงเข้า dashboard ได้ ขณะที่ import/export/save ยังคงใช้ strict reconciliation เพื่อกันการเขียนทับข้อมูลที่ยังไม่ตรวจ
-- Cloud load เก็บ reconciliation report ไว้ในสถานะและแสดงในหน้า More; ordinary save เขียนเฉพาะ singleton/เอกสารที่เปลี่ยนแล้ว จึงไม่ชนเพดาน 500 writes จาก transaction เดิมจำนวนมาก ขณะที่ full replacement ยังคงตรวจเพดานแบบ atomic
+- Cloud load เก็บ reconciliation report ไว้ในสถานะและแสดงในหน้า More; ordinary save เขียนเฉพาะ singleton/เอกสารที่เปลี่ยนแล้ว เพื่อลด write volume; full replacement ใช้ atomic transaction โดยไม่มีเพดานจำนวน 500 writes ฝั่งแอป
 - P1 follow-up ตรวจแล้ว: persisted baseline ตัด `trip.items[]` ออกจากฐานเปรียบเทียบและคง transaction ที่มีอยู่จริงไว้ ทำให้ nested item ที่ถูก materialize เป็น transaction ใหม่ถูกเขียนได้ในการ save ครั้งถัดไป; report แสดงค่า nested/owner และปิดได้ด้วยปุ่มรับทราบเท่านั้น
 - P1 follow-up ตรวจเพิ่มแล้ว: future schema ถูกปฏิเสธก่อน normalize และ multi-line budget baseline สร้างเอกสาร split ใหม่ได้ครบ (`b`, `b--line`) โดยไม่ข้าม write เพราะ baseline ถูก split ล่วงหน้า
 

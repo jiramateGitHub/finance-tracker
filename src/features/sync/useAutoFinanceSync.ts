@@ -6,7 +6,7 @@ import { FinanceDataConflictError } from '../../services/financeRepository'
 import type { FinanceData } from '../../types/finance'
 import { currentIsoTimestamp } from '../../utils/formatters'
 import { FinanceSyncCoordinator, runWithBoundedRetry } from './syncCoordinator'
-import { createFinanceDataFingerprint } from './syncData'
+import { createFinanceDataFingerprint, resolveAcknowledgedSave } from './syncData'
 import type { SyncStatus } from './syncTypes'
 
 type UseAutoFinanceSyncOptions = {
@@ -80,6 +80,7 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
   const coordinatorRef = useRef<FinanceSyncCoordinator | null>(null)
   const sessionGenerationRef = useRef(0)
   const sessionReadyRef = useRef(false)
+  const replacementInProgressRef = useRef(false)
   if (!coordinatorRef.current) coordinatorRef.current = new FinanceSyncCoordinator()
 
   const isDemo = userId === 'demo-user'
@@ -103,6 +104,8 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
 
   const saveNow = useCallback(
     async (sourceData: FinanceData = data, message = th.sync.savedManual, options: SaveOptions = {}): Promise<FinanceSaveResult> => {
+      if (replacementInProgressRef.current) return { ok: false, errorMessage: 'กำลังแทนที่ข้อมูล กรุณารอให้เสร็จก่อน' }
+      if (options.replace) replacementInProgressRef.current = true
       clearSaveTimer()
       const generation = sessionGenerationRef.current
       const operation = coordinatorRef.current!.enqueue('save', async ({ operationId }) => {
@@ -115,7 +118,7 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
           dirty: true,
         }))
         try {
-          if (!isDemo && reconciliationPending) {
+          if (!isDemo && reconciliationPending && !options.replace) {
             throw new Error(th.sync.reconciliationPending)
           }
           if (generation !== sessionGenerationRef.current) return { ok: false, errorMessage: 'ยกเลิก operation จาก session เดิม' }
@@ -135,26 +138,12 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
               )
           if (generation !== sessionGenerationRef.current) return { ok: false, errorMessage: 'ยกเลิก operation จาก session เดิม' }
           const syncedAt = currentIsoTimestamp()
-          const savedData: FinanceData = {
-            ...normalized,
-            meta: {
-              ...normalized.meta,
-              revision: nextRevision,
-            },
-          }
-          const latestData = latestDataRef.current
-          const latestMatchesSource = createFinanceDataFingerprint(latestData) === createFinanceDataFingerprint(sourceData)
-          // Keep a newer local edit when it arrived while the request was in flight.
-          const nextLocalData = latestMatchesSource
-            ? savedData
-            : {
-                ...latestData,
-                meta: {
-                  ...latestData.meta,
-                  revision: nextRevision,
-                },
-              }
-          const storedData = replaceData(nextLocalData, isDemo ? th.sync.demoLocal : message)
+          // Confirmed import/reset replaces the previous dataset, unlike an
+          // ordinary save that must preserve edits made during the request.
+          const { savedData, localData: nextLocalData, clean: latestMatchesSource } = resolveAcknowledgedSave(
+            normalized, latestDataRef.current, nextRevision, options.replace, sourceData,
+          )
+          const storedData = replaceData(nextLocalData, isDemo ? th.sync.demoLocal : message, options.replace ? null : undefined)
           lastSavedDataRef.current = savedData
           lastSavedFingerprintRef.current = createFinanceDataFingerprint(savedData)
           skipNextSaveRef.current = latestMatchesSource
@@ -192,12 +181,22 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
         operationId: operation.operationId,
         dirty: true,
       }))
-      return operation.promise
+      try {
+        return await operation.promise
+      } finally {
+        if (options.replace && generation === sessionGenerationRef.current) {
+          replacementInProgressRef.current = false
+          // The data effect may have run while replacement was locked. Do not
+          // let its unconsumed skip flag swallow the first edit after reset.
+          skipNextSaveRef.current = false
+        }
+      }
     },
     [clearSaveTimer, data, isDemo, reconciliationPending, replaceData, userId],
   )
 
   const loadNow = useCallback(async (options: LoadOptions = {}): Promise<boolean> => {
+    if (replacementInProgressRef.current) return false
     clearSaveTimer()
     const generation = sessionGenerationRef.current
     const operation = coordinatorRef.current!.enqueue('load', async ({ operationId }) => {
@@ -298,6 +297,7 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
     lastSavedFingerprintRef.current = null
     lastSavedDataRef.current = data
     latestDataRef.current = data
+    replacementInProgressRef.current = false
     sessionReadyRef.current = false
     skipNextSaveRef.current = true
     setStatus(createInitialStatus())
@@ -314,6 +314,10 @@ export function useAutoFinanceSync({ userId, data, replaceData, dataReady, basel
 
   useEffect(() => {
     latestDataRef.current = data
+    if (replacementInProgressRef.current) {
+      clearSaveTimer()
+      return
+    }
     if (!dataReady) {
       clearSaveTimer()
       return

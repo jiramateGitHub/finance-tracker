@@ -26,7 +26,6 @@ export { FinanceDataConflictError } from '../financeRepository'
 
 const META_DOC_ID = 'app'
 const SINGLETON_DOC_ID = 'main'
-const MAX_TRANSACTION_WRITES = 500
 
 const singletonCollectionNames = ['meta', 'profile', 'settings', 'masters'] as const
 const itemCollectionNames = ['transactions', 'recurringRules', 'installmentPlans', 'trips', 'budgets', 'goals'] as const
@@ -249,10 +248,8 @@ export async function saveFinanceDataToCloud(
     })
   }
 
-  if (mutations.length > MAX_TRANSACTION_WRITES) {
-    throw new Error(`ไม่สามารถบันทึกข้อมูลชุดใหญ่แบบ atomic ได้ (${mutations.length} writes; สูงสุด ${MAX_TRANSACTION_WRITES}) กรุณาแบ่งการนำเข้าหรือใช้ bulk migration`)
-  }
-
+  // Firestore removed the 500-write commit/transaction limit in March 2023.
+  // Keep replacement atomic; the service still enforces request-size limits.
   return runTransaction(db, async (transaction) => {
     const rootSnapshot = await transaction.get(userRootRef(db, userId))
     const rootData = rootSnapshot.exists() ? rootSnapshot.data() : {}

@@ -310,7 +310,16 @@ Repository behavior:
 - ไม่กด settlement, delete และ confirm import ที่มี side effect ระหว่าง smoke; รายการเหล่านี้ต้องทำต่อบน browser/device หรือ test project ที่เหมาะสมก่อน release production
 - Legacy trip reconciliation รองรับ transaction เดิมที่มี note สำรองหรือไม่มี travel metadata แล้ว โดยเติมค่าที่ขาดจาก nested item และยังคงตรวจ mismatch ของข้อมูลหลัก
 - Cloud load รองรับ nested trip item เก่าที่ต่างจาก transaction owner โดย hydrate จาก transaction source ก่อนเข้า runtime; strict reconciliation ยังทำงานที่ import/export/save boundary
-- แสดง reconciliation report จาก Cloud load ในหน้า More และ ordinary save เขียนเฉพาะเอกสารที่เปลี่ยน ลดความเสี่ยงชนเพดาน Firestore 500 writes; full replacement ยังบล็อกเมื่อเกินเพดานเพื่อป้องกัน partial snapshot
+- แสดง reconciliation report จาก Cloud load ในหน้า More และ ordinary save เขียนเฉพาะเอกสารที่เปลี่ยนเพื่อลด write volume; ต่อมา Settings reset/import follow-up เอาเพดาน 500 writes ฝั่งแอปออกแล้ว โดยคง atomic transaction
+
+## Settings reset / import follow-up (2026-09-13)
+
+- [x] MorePage แสดง reset พร้อมคำยืนยัน ระบุบัญชี และอธิบายว่าเก็บบัญชี Auth ไว้
+- [x] ยกเลิก reset แล้วข้อมูล demo ไม่เปลี่ยน; ยืนยันแล้ว collections ใน runtime ว่าง
+- [x] ไฟล์ `finance-data-2026-09-13-01-04-37-schema-v2.json` ผ่าน validation และ browser demo import ได้ 502 transactions / 7 plans / 20 trips / 1 budget
+- [x] Regression: replacement นำข้อมูลใหม่มาใช้และ acknowledge baseline; ordinary save ยังรักษา newer edits
+- [x] หน้า Settings ที่ viewport 402×874 ไม่มี horizontal overflow (clientWidth = scrollWidth = 387)
+- [ ] Live Firestore import/reset และ stale-device recovery ใน test account
 
 ## Live Auth / Firestore smoke evidence (2026-09-13)
 

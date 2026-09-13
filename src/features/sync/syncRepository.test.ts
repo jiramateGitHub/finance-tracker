@@ -1,9 +1,9 @@
 import type { FinanceRepository, FinanceRepositorySaveOptions } from '../../services/financeRepository'
 import { FinanceDataConflictError } from '../../services/financeRepository'
-import { normalizeFinanceData } from '../../lib/dataMigration'
+import { createEmptyFinanceData, normalizeFinanceData } from '../../lib/dataMigration'
 import type { FinanceData } from '../../types/finance'
 import { makeFinanceData, makeTransaction, makeTrip } from '../../test/fixtures/financeFixtures'
-import { createFinanceDataFingerprint } from './syncData'
+import { createFinanceDataFingerprint, resolveAcknowledgedSave } from './syncData'
 
 function assert(condition: unknown, message?: string): asserts condition {
   if (!condition) throw new Error(message || 'Assertion failed')
@@ -120,3 +120,33 @@ assert.equal(afterReplace.transactions.length, 1)
 assert.equal(afterReplace.transactions[0]?.id, 'imported-only')
 
 console.log('✓ Sync repository contract passed')
+
+// Import must replace the previous runtime dataset as well as Cloud. Otherwise
+// autosave sees the old dataset as dirty and resurrects it after import/reset.
+const largeImport = makeFinanceData({
+  transactions: Array.from({ length: 502 }, (_, index) => makeTransaction({ id: `import-${index}` })),
+})
+const importedAck = resolveAcknowledgedSave(largeImport, initial, 4, true)
+assert.equal(importedAck.localData.transactions.length, 502)
+assert(!importedAck.localData.transactions.some((item) => item.id === 'existing-transaction'))
+assert(importedAck.clean, 'Confirmed import must not schedule an autosave of the previous dataset')
+assert.equal(importedAck.localData.meta.revision, 4)
+assert.equal(createFinanceDataFingerprint(importedAck.localData), createFinanceDataFingerprint(importedAck.savedData))
+
+const resetAck = resolveAcknowledgedSave(createEmptyFinanceData(), largeImport, 5, true)
+for (const key of ['transactions', 'recurringRules', 'installmentPlans', 'trips', 'budgets', 'goals'] as const) {
+  assert.equal(resetAck.localData[key].length, 0, `Reset clears ${key}`)
+}
+assert(!('entries' in resetAck.localData), 'Reset must not leave compatibility entries behind')
+assert(!('installments' in resetAck.localData), 'Reset must not leave compatibility plans behind')
+assert(resetAck.clean, 'Reset must acknowledge the empty baseline')
+assert.equal(resetAck.localData.meta.revision, 5, 'Reset retains monotonic revisions to reject stale clients')
+
+const newerEdit = makeFinanceData({ transactions: [makeTransaction({ id: 'newer-edit' })] })
+const ordinaryAck = resolveAcknowledgedSave(initial, newerEdit, 6)
+assert.equal(ordinaryAck.localData.transactions[0].id, 'newer-edit', 'Ordinary save keeps an edit made while saving')
+assert.equal(ordinaryAck.savedData.transactions[0].id, 'existing-transaction')
+assert(!ordinaryAck.clean, 'Newer edits still need autosave')
+const normalizedAck = resolveAcknowledgedSave(normalizeFinanceData(initial), initial, 7, false, initial)
+assert(normalizedAck.clean, 'Normalization during save is not a newer local edit')
+console.log('✓ Import/reset acknowledgement and ordinary edit preservation passed')

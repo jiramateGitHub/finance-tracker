@@ -63,3 +63,20 @@ export function createFinanceDataFingerprint(data: FinanceData): string {
     goals: data.goals,
   })
 }
+
+/** Apply an acknowledged snapshot, retaining newer edits only for ordinary saves. */
+export function resolveAcknowledgedSave(
+  sourceData: FinanceData,
+  latestData: FinanceData,
+  revision: number,
+  replace = false,
+  requestedData: FinanceData = sourceData,
+): { savedData: FinanceData; localData: FinanceData; clean: boolean } {
+  const savedData = { ...sourceData, meta: { ...sourceData.meta, revision } }
+  const clean = replace || createFinanceDataFingerprint(latestData) === createFinanceDataFingerprint(requestedData)
+  return {
+    savedData,
+    localData: clean ? savedData : { ...latestData, meta: { ...latestData.meta, revision } },
+    clean,
+  }
+}
