@@ -9,7 +9,7 @@ import {
   type Firestore,
   type Transaction,
 } from 'firebase/firestore'
-import { createExportableFinanceData, migrateFinanceDataWithReport, normalizeFinanceData, type FinanceMigrationReport } from '../../lib/dataMigration'
+import { assertSupportedFinanceDataSchema, createExportableFinanceData, createPersistedFinanceData, migrateFinanceDataWithReport, normalizeFinanceData, type FinanceMigrationReport } from '../../lib/dataMigration'
 import {
   FinanceDataConflictError,
   type FinanceRepository,
@@ -173,6 +173,7 @@ export async function loadFinanceDataFromCloudWithReport(userId: string): Promis
     budgets,
     goals,
   }
+  assertSupportedFinanceDataSchema(rawData)
   const normalized = normalizeFinanceData(rawData)
   // Cloud reads may contain an older nested trip read model whose fields no
   // longer match the canonical transaction owner. Reconcile that read model
@@ -202,7 +203,7 @@ export async function saveFinanceDataToCloud(
   const exportableData = createExportableFinanceData(data)
   assertValidExportableData(exportableData)
   const expectedRevision = Math.max(0, Math.floor(options.expectedRevision ?? exportableData.meta.revision ?? 0))
-  const baseData = options.baseData ? createExportableFinanceData(options.baseData) : null
+  const baseData = options.baseData ? createPersistedFinanceData(options.baseData) : null
   const mutations: Mutation[] = []
 
   mutations.push({

@@ -1,6 +1,6 @@
-import { createExportableFinanceData, migrateFinanceData, migrateFinanceDataWithReport, normalizeFinanceData } from './dataMigration'
+import { createExportableFinanceData, createPersistedFinanceData, migrateFinanceData, migrateFinanceDataWithReport, normalizeFinanceData } from './dataMigration'
 import { detachTripTransactions } from '../features/trips/utils/tripUtils'
-import { createPersistedFinanceBaseline } from '../services/firebase/firestoreWritePlan'
+import { createPersistedFinanceBaseline, getChangedFirestoreItems } from '../services/firebase/firestoreWritePlan'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
@@ -300,6 +300,23 @@ const persistedBaseline = createPersistedFinanceBaseline(normalizeFinanceData(tr
 assert(persistedBaseline.trips[0]?.items.length === 0, 'Persisted Cloud baseline must exclude runtime trip read-model items')
 assert(persistedBaseline.transactions.length === 0, 'Persisted Cloud baseline must not materialize nested trip transactions')
 
+const multilineBudget = normalizeFinanceData({ budgets: [{
+  id: 'baseline-budget',
+  scope: 'monthly',
+  month: '2026-09',
+  amount: 300,
+  lines: [
+    { id: 'food-line', categoryId: 'ของกิน', amount: 100 },
+    { id: 'travel-line', categoryId: 'เดินทาง', amount: 200 },
+  ],
+}] })
+const persistedBudgetBaseline = createPersistedFinanceData(multilineBudget)
+assert(persistedBudgetBaseline.budgets.length === 1 && persistedBudgetBaseline.budgets[0]?.id === 'baseline-budget', 'Persisted baseline must retain the original multi-line budget document identity')
+const splitBudgetExport = createExportableFinanceData(multilineBudget)
+assert(splitBudgetExport.budgets.some((budget) => budget.id === 'baseline-budget--travel-line'), 'Export boundary must still split multi-line budgets for canonical writes')
+const changedBudgetDocuments = getChangedFirestoreItems(splitBudgetExport.budgets, persistedBudgetBaseline.budgets)
+assert(changedBudgetDocuments.map((budget) => budget.id).join(',') === 'baseline-budget,baseline-budget--travel-line', 'Write planner must emit both changed legacy budget and newly split budget document')
+
 const missingIdInput = { transactions: [{ type: 'expense', date: '2026-09-01', amount: 1 }] }
 assert(normalizeFinanceData(missingIdInput).transactions[0]?.id === normalizeFinanceData(missingIdInput).transactions[0]?.id, 'Missing IDs must be repaired deterministically')
 
@@ -310,6 +327,13 @@ try {
   futureSchemaRejected = error instanceof Error && error.message.includes('schema v999')
 }
 assert(futureSchemaRejected, 'Migration dispatch must reject future schema versions')
+let futureNormalizationRejected = false
+try {
+  normalizeFinanceData({ schemaVersion: 999, transactions: [] })
+} catch (error) {
+  futureNormalizationRejected = error instanceof Error && error.message.includes('schema v999')
+}
+assert(futureNormalizationRejected, 'Normalization must reject future schema versions before downgrading them')
 
 console.log('Testing migration boundary behavior...')
 console.log('✓ Legacy trip hydration runs only at migration boundary')

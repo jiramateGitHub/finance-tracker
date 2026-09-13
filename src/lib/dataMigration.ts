@@ -1048,8 +1048,18 @@ export function getDataSchemaVersion(data: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+export function assertSupportedFinanceDataSchema(data: unknown): void {
+  const schemaVersion = getDataSchemaVersion(data)
+  if (schemaVersion !== null && (!Number.isInteger(schemaVersion) || schemaVersion < 1 || schemaVersion > FINANCE_SCHEMA_VERSION)) {
+    throw new Error(schemaVersion > FINANCE_SCHEMA_VERSION
+      ? `ยังไม่รองรับ schema v${schemaVersion}`
+      : `ไม่รองรับ schema v${schemaVersion}`)
+  }
+}
+
 export function normalizeFinanceData(data: unknown): FinanceData {
   assertNoMigrationConflicts(data)
+  assertSupportedFinanceDataSchema(data)
   const record = readRecord(data)
   const transactions = asArray(record.transactions ?? record.entries).map(normalizeTransaction)
   const recurringRules = asArray(record.recurringRules).map(normalizeRecurringRule)
@@ -1085,11 +1095,7 @@ export function normalizeFinanceData(data: unknown): FinanceData {
 export function migrateFinanceDataWithReport(data: unknown): { data: FinanceData; report: FinanceMigrationReport } {
   assertNoMigrationConflicts(data)
   const schemaVersion = getDataSchemaVersion(data)
-  if (schemaVersion !== null && (!Number.isInteger(schemaVersion) || schemaVersion < 1 || schemaVersion > FINANCE_SCHEMA_VERSION)) {
-    throw new Error(schemaVersion > FINANCE_SCHEMA_VERSION
-      ? `ยังไม่รองรับ schema v${schemaVersion}`
-      : `ไม่รองรับ schema v${schemaVersion}`)
-  }
+  assertSupportedFinanceDataSchema(data)
 
   // Keep the dispatch explicit even while v1 and v2 share the same
   // compatibility transforms. Future schema versions must never be silently
@@ -1288,13 +1294,11 @@ function serializeGoal(goal: Goal) {
   }
 }
 
-export function createExportableFinanceData(data: FinanceData) {
-  assertNoMigrationConflicts(data)
-  const normalized = normalizeFinanceData(data)
-  const exportTripReport = createEmptyTripMigrationReport()
-  const transactions = materializeTripTransactions(normalized.trips, normalized.transactions, exportTripReport)
-  assertTripMigrationSafe(exportTripReport)
-  const budgets = splitMonthlyBudgetLines(normalized.budgets)
+function createSerializedFinanceData(
+  normalized: FinanceData,
+  transactions: TransactionEntry[],
+  budgets: Budget[],
+) {
   return {
     schemaVersion: normalized.schemaVersion,
     profile: normalized.profile,
@@ -1319,4 +1323,24 @@ export function createExportableFinanceData(data: FinanceData) {
     budgets: budgets.map(serializeBudget),
     goals: normalized.goals.map(serializeGoal),
   }
+}
+
+export function createExportableFinanceData(data: FinanceData) {
+  assertNoMigrationConflicts(data)
+  const normalized = normalizeFinanceData(data)
+  const exportTripReport = createEmptyTripMigrationReport()
+  const transactions = materializeTripTransactions(normalized.trips, normalized.transactions, exportTripReport)
+  assertTripMigrationSafe(exportTripReport)
+  const budgets = splitMonthlyBudgetLines(normalized.budgets)
+  return createSerializedFinanceData(normalized, transactions, budgets)
+}
+
+/**
+ * Serialize a baseline using the document identities that were read from
+ * Firestore. Unlike an export, this must not materialize trip transactions or
+ * split legacy multi-line budget documents before changed-write planning.
+ */
+export function createPersistedFinanceData(data: FinanceData) {
+  const normalized = normalizeFinanceData(data)
+  return createSerializedFinanceData(normalized, normalized.transactions, normalized.budgets)
 }

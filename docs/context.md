@@ -121,6 +121,8 @@ Implementation notes:
 - save เขียน user root doc ด้วย schemaVersion/updatedAt เพื่อช่วย detect cloud existence
 - load อ่าน path เดียวกับที่ save เขียน
 - `loadFinanceDataFromCloudWithReport` คืนทั้ง runtime data, persisted `baselineData` และ reconciliation report; report แสดงค่า nested item/transaction owner, บล็อก save/autosave จนกว่าจะรับทราบ และผู้ใช้ต้องกดรับทราบก่อนซ่อน
+- write diff ใช้ persisted serializer ที่ไม่ materialize trip transactions และไม่ split multi-line budget baseline ล่วงหน้า จึงเห็นทั้ง document เดิมและ document ใหม่ที่ต้องสร้าง
+- schema gate ทำงานก่อน normalize เพื่อปฏิเสธข้อมูลจาก reader รุ่นอนาคตแทนการลดเป็น schema v2
 
 ## Data Model
 

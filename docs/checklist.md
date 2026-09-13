@@ -24,6 +24,8 @@ Checklist นี้อิงจากโครงสร้างโค้ดป�
 - [ ] `src/features/sync/useAutoFinanceSync.ts` ยัง debounce autosave
 - [ ] `src/services/firebase/firestoreFinanceRepository.ts` ยังใช้ paths เดิม
 - [x] Cloud load แยก persisted baseline ออกจาก runtime trip read model
+- [x] Cloud load reject future schema ก่อน normalize
+- [x] multi-line budget baseline รักษา document เดิมและเขียน split documents ครบ
 - [ ] `src/lib/dataMigration.ts` compile และ normalize schema v2 ได้
 - [ ] `src/lib/importDiagnostics.ts` compile และใช้กับ import preview ได้
 - [ ] `src/lib/storage.ts` ยังมี `createJsonDownload`

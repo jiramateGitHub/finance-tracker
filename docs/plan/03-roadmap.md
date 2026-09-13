@@ -196,6 +196,8 @@
 
 แยก `baselineData` ที่สะท้อนเอกสาร Firestore จริงออกจาก runtime data ที่ hydrate `trip.items[]` เป็น read model และปรับ sync fingerprint ให้ไม่นับ read model ซ้ำ จึงไม่ทำให้ transaction ที่ materialize จาก nested trip item ถูกมองว่าเป็น baseline แล้วหายไปจาก save รอบถัดไป
 
+เพิ่ม schema gate ก่อน normalize เพื่อไม่ให้ reader ลดข้อมูลจาก schema รุ่นอนาคตเป็น v2 เงียบ ๆ และใช้ persisted serializer ที่รักษา document identity ของ multi-line budget เดิม ก่อน canonical export จะ split เป็นเอกสารใหม่
+
 ขยาย reconciliation issue ให้เก็บ snapshot ของ nested item กับ transaction owner, แสดงรายละเอียดทั้งสองฝั่งใน More และบล็อก save/autosave จนกว่าจะกดรับทราบอย่างชัดเจน รายงานจะไม่ถูกล้างโดย `replaceData` หลัง save โดยอัตโนมัติ
 
 **ผลการทดสอบ:** เพิ่ม regression สำหรับ persisted baseline, fingerprint ที่ไม่รวม trip read model และ snapshot mismatch; `npm test`, `npm run lint`, `npm run build` และ `git diff --check` ผ่าน

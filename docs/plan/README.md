@@ -63,7 +63,7 @@
 | PR-10 focused behavior | nested trip item materialize เป็น transaction เดียวด้วย source mapping; export/Firestore ไม่เก็บ trip money ซ้ำ; edit/delete reconcile owner; orphan/duplicate/mismatch มี report; trip installment cashflow ไม่ซ้ำ; minor-unit precision/rounding มี test |
 | PR-11 focused behavior | CRUD/invariants อยู่ใน pure domain commands; update ป้องกัน id/timestamps/foreign keys; unchanged collections รักษา referential identity; Monthly/Yearly ใช้ memoized shared selector; range derivation คำนวณ installment schedule ต่อ plan ครั้งเดียว; installment schedule utility แยก module; command/selector benchmark fixture ผ่าน |
 | PR-12 focused behavior | Monthly quick-add/add/edit/filter, Yearly drilldown, Installment card/table/calendar/schedule, Trip create/detail/item/budget/calendar, Monthly budget/goal, More demo sync/import preview/export และ technical disclosure ผ่าน production preview smoke; feature pages แยกเป็น lazy chunks; browser-compatible ID fallback แก้ quick-add runtime error |
-| P1 follow-up focused behavior | Cloud load แยก `baselineData` ที่ตรงกับเอกสารที่ persist จริงออกจาก runtime trip read model เพื่อไม่ทิ้ง transaction ที่ hydrate ใหม่ตอน save; sync fingerprint ไม่นับ nested trip items ที่เป็น derived view; reconciliation report เก็บ snapshot ของ nested item/transaction owner, แสดงค่าทั้งสองฝั่งใน More, บล็อก save/autosave จนกว่าจะกดรับทราบ และต้องกดรับทราบก่อนซ่อนรายงาน |
+| P1 follow-up focused behavior | Cloud load แยก `baselineData` ที่ตรงกับเอกสารที่ persist จริงออกจาก runtime trip read model เพื่อไม่ทิ้ง transaction ที่ hydrate ใหม่ตอน save; sync fingerprint ไม่นับ nested trip items ที่เป็น derived view; schema รุ่นอนาคตถูก reject ก่อน normalize; baseline ของ multi-line budget รักษา document identity เดิม; reconciliation report เก็บ snapshot ของ nested item/transaction owner, แสดงค่าทั้งสองฝั่งใน More, บล็อก save/autosave จนกว่าจะกดรับทราบ และต้องกดรับทราบก่อนซ่อนรายงาน |
 
 ## หลักฐาน PR-12
 
@@ -82,6 +82,7 @@
 - บัญชีทดสอบที่มีข้อมูลจริงพบ nested trip item เก่าไม่ตรงกับ transaction เจ้าของ 3 รายการ; ปรับ Firestore load ให้ใช้ `migrateFinanceDataWithReport` hydrate read model จาก transaction source จึงเข้า dashboard ได้ ขณะที่ import/export/save ยังคงใช้ strict reconciliation เพื่อกันการเขียนทับข้อมูลที่ยังไม่ตรวจ
 - Cloud load เก็บ reconciliation report ไว้ในสถานะและแสดงในหน้า More; ordinary save เขียนเฉพาะ singleton/เอกสารที่เปลี่ยนแล้ว จึงไม่ชนเพดาน 500 writes จาก transaction เดิมจำนวนมาก ขณะที่ full replacement ยังคงตรวจเพดานแบบ atomic
 - P1 follow-up ตรวจแล้ว: persisted baseline ตัด `trip.items[]` ออกจากฐานเปรียบเทียบและคง transaction ที่มีอยู่จริงไว้ ทำให้ nested item ที่ถูก materialize เป็น transaction ใหม่ถูกเขียนได้ในการ save ครั้งถัดไป; report แสดงค่า nested/owner และปิดได้ด้วยปุ่มรับทราบเท่านั้น
+- P1 follow-up ตรวจเพิ่มแล้ว: future schema ถูกปฏิเสธก่อน normalize และ multi-line budget baseline สร้างเอกสาร split ใหม่ได้ครบ (`b`, `b--line`) โดยไม่ข้าม write เพราะ baseline ถูก split ล่วงหน้า
 
 ก่อน PR-01 การตรวจ assertions เดิมใช้วิธีสำรองด้วย `typescript.transpileModule` เพราะ `npx -y tsx` ดาวน์โหลดไม่ได้ วิธีนั้นไม่ใช่ test command ของโปรเจคและยังไม่ทดแทน integration tests; หลัง PR-01 ให้ใช้ `npm test` เป็น baseline หลัก
 
