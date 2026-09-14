@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { IconPlus } from '../../components/ui/Icons'
+import { ViewSwitcher, type StandardViewMode } from '../../components/ui/ViewSwitcher'
 import { th } from '../../i18n/th'
 import { createId } from '../../lib/id'
 import type { AppData, Budget, Goal, TransactionEntry } from '../../types/finance'
@@ -10,12 +12,14 @@ import { BudgetGoalSection } from '../budgetGoals/BudgetGoalSection'
 import type { SyncStatus } from '../sync/syncTypes'
 import { ActionNeededPanel } from './components/ActionNeededPanel'
 import { FrequentTransactionShortcuts } from './components/FrequentTransactionShortcuts'
+import { MonthlyCalendarView } from './components/MonthlyCalendarView'
 import { MonthlyFilters } from './components/MonthlyFilters'
 import { MonthlySummaryCards } from './components/MonthlySummaryCards'
 import { QuickAddBar } from './components/QuickAddBar'
 import { RecentTransactionPanel } from './components/RecentTransactionPanel'
 import { TransactionFormModal } from './components/TransactionFormModal'
 import { TransactionList } from './components/TransactionList'
+import { TransactionTable } from './components/TransactionTable'
 import {
   calculateMonthlyTotals,
   createMemoizedLedgerSelector,
@@ -79,6 +83,7 @@ export function MonthlyPage({
   const [modalState, setModalState] = useState<ModalState>({ open: false, transaction: null })
   const [deleteTransactionId, setDeleteTransactionId] = useState<string | null>(null)
   const [highlightedIds, setHighlightedIds] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<StandardViewMode>('cards')
 
   const categoryOptions = useMemo(() => getCategoryOptions(data), [data])
   const selectLedger = useMemo(() => createMemoizedLedgerSelector(), [])
@@ -308,23 +313,24 @@ export function MonthlyPage({
           </div>
 
           {/* Right: Actions */}
-          <div className="finance-command-actions">
-            <Button type="button" variant="success" onClick={() => openAddModal('income')}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                <span>{th.transaction.addIncome}</span>
-              </span>
+          <div className="finance-command-actions w-full sm:w-auto grid grid-cols-2 sm:flex">
+            <Button
+              type="button"
+              variant="success"
+              icon={<IconPlus size={16} />}
+              onClick={() => openAddModal('income')}
+              className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+            >
+              <span>{th.transaction.addIncome}</span>
             </Button>
-            <Button type="button" variant="danger" onClick={() => openAddModal('expense')}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                <span>{th.transaction.addExpense}</span>
-              </span>
+            <Button
+              type="button"
+              variant="danger"
+              icon={<IconPlus size={16} />}
+              onClick={() => openAddModal('expense')}
+              className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+            >
+              <span>{th.transaction.addExpense}</span>
             </Button>
           </div>
         </div>
@@ -396,17 +402,66 @@ export function MonthlyPage({
         onDeleteGoal={onDeleteGoal}
       />
 
-      {/* ==================== GROUPED TRANSACTION LIST ==================== */}
-      <Card title={th.monthly.grouped}>
-        <TransactionList
-          groups={transactionGroups}
-          highlightedIds={highlightedIds}
-          onEdit={openEditModal}
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          onUseTemplate={handleUseTemplate}
-          onTogglePaid={handleTogglePaid}
-        />
+      {/* ==================== TRANSACTIONS SECTION (CARDS / TABLE / CALENDAR) ==================== */}
+      <Card
+        title={
+          <div className="flex items-center gap-2.5">
+            <span>
+              {viewMode === 'cards'
+                ? th.monthly.grouped
+                : viewMode === 'table'
+                ? 'ตารางรายการรายรับ-รายจ่าย'
+                : 'ปฏิทินรายรับ-รายจ่าย'}
+            </span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              {filteredTransactions.length}
+            </span>
+          </div>
+        }
+        actions={
+          <ViewSwitcher
+            activeView={viewMode}
+            onViewChange={setViewMode}
+            options={[
+              { id: 'cards', label: 'การ์ด', icon: 'cards' },
+              { id: 'table', label: 'ตาราง', icon: 'table' },
+              { id: 'calendar', label: 'ปฏิทิน', icon: 'calendar' },
+            ]}
+          />
+        }
+      >
+        {viewMode === 'cards' ? (
+          <TransactionList
+            groups={transactionGroups}
+            highlightedIds={highlightedIds}
+            onEdit={openEditModal}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onUseTemplate={handleUseTemplate}
+            onTogglePaid={handleTogglePaid}
+          />
+        ) : viewMode === 'table' ? (
+          <TransactionTable
+            transactions={filteredTransactions}
+            highlightedIds={highlightedIds}
+            onEdit={openEditModal}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onUseTemplate={handleUseTemplate}
+            onTogglePaid={handleTogglePaid}
+          />
+        ) : (
+          <MonthlyCalendarView
+            transactions={filteredTransactions}
+            selectedMonth={activeMonth}
+            highlightedIds={highlightedIds}
+            onEdit={openEditModal}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onUseTemplate={handleUseTemplate}
+            onTogglePaid={handleTogglePaid}
+          />
+        )}
       </Card>
 
       {modalState.open && (

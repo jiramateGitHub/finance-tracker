@@ -1,3 +1,4 @@
+import { ActionButton } from '../../../components/ui/ActionButton'
 import { Badge } from '../../../components/ui/Badge'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import type { AppData, Trip } from '../../../types/finance'
@@ -9,9 +10,11 @@ type TripListProps = {
   trips: Trip[]
   activeTripId: string | null
   onSelectTrip: (tripId: string) => void
+  onEditTrip?: (trip: Trip) => void
+  onDeleteTrip?: (tripId: string) => void
 }
 
-export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListProps) {
+export function TripList({ data, trips, activeTripId, onSelectTrip, onEditTrip, onDeleteTrip }: TripListProps) {
   if (!trips.length) {
     return <EmptyState title="ไม่พบทริป" description="ปรับตัวกรองหรือเพิ่มทริปใหม่เพื่อเริ่มติดตามงบและค่าใช้จ่ายจริง" />
   }
@@ -119,12 +122,29 @@ export function TripList({ data, trips, activeTripId, onSelectTrip }: TripListPr
               </div>
             </div>
 
-            {/* Footer pill stats */}
+            {/* Footer pill stats & quick actions */}
             <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold">
-              <span className="text-emerald-700">จ่ายแล้ว {formatMoney(totals.paidTotal)}</span>
-              <span className={totals.unpaidTotal > 0 ? 'text-amber-700' : 'text-slate-400'}>
-                {totals.unpaidTotal > 0 ? `ค้างจ่าย ${formatMoney(totals.unpaidTotal)}` : 'ไม่มีค้าง'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-emerald-700">จ่ายแล้ว {formatMoney(totals.paidTotal)}</span>
+                {totals.unpaidTotal > 0 && (
+                  <span className="text-amber-700">· ค้าง {formatMoney(totals.unpaidTotal)}</span>
+                )}
+              </div>
+
+              {(onEditTrip || onDeleteTrip) ? (
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  {onEditTrip && (
+                    <ActionButton action="edit" iconOnly title="แก้ไขทริป" onClick={() => onEditTrip(trip)} />
+                  )}
+                  {onDeleteTrip && (
+                    <ActionButton action="delete" iconOnly title="ลบทริป" onClick={() => onDeleteTrip(trip.id)} />
+                  )}
+                </div>
+              ) : (
+                <span className="text-slate-400 group-hover:text-sky-600 transition">
+                  ดูรายละเอียด →
+                </span>
+              )}
             </div>
           </div>
         )

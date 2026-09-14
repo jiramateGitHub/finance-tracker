@@ -1,5 +1,5 @@
+import { ActionButton } from '../../components/ui/ActionButton'
 import { Badge } from '../../components/ui/Badge'
-import { Button } from '../../components/ui/Button'
 import { th } from '../../i18n/th'
 import type { Budget, TransactionEntry } from '../../types/finance'
 import { formatMoney } from '../../utils/formatters'
@@ -46,9 +46,9 @@ export function BudgetCard({ budget, transactions, includePending = true, onEdit
           </div>
           <p className="mt-1 text-sm leading-6 text-slate-500">{budget.note || 'งบประมาณรายเดือนตามหมวดหมู่'}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" onClick={() => onEdit(budget)}>{th.common.edit}</Button>
-          <Button type="button" size="sm" variant="danger" onClick={() => onDelete(budget.id)}>{th.common.delete}</Button>
+        <div className="flex items-center gap-1">
+          <ActionButton action="edit" iconOnly title={th.common.edit} onClick={() => onEdit(budget)} />
+          <ActionButton action="delete" iconOnly title={th.common.delete} onClick={() => onDelete(budget.id)} />
         </div>
       </header>
 

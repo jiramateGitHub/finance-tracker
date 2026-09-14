@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ActionButton } from '../../../components/ui/ActionButton'
 import { CATEGORY_ICONS } from '../../../data/categories'
 import type { InstallmentPlan } from '../../../types/finance'
 import { currentMonthInputValue, formatMoney } from '../../../utils/formatters'
@@ -95,62 +96,39 @@ export function InstallmentPlanTable({
               {/* Actions */}
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
                 {info.isActiveInMonth && !info.isCompleted ? (
-                  <button
-                    type="button"
+                  <ActionButton
+                    action="pay"
+                    className="flex-1 min-h-9"
+                    isPaid={info.isPaidInMonth}
+                    label={info.isPaidInMonth ? '✓ จ่ายแล้ว' : 'จ่ายงวดนี้'}
                     onClick={() => onToggleMonth(plan, selectedMonth, !info.isPaidInMonth)}
-                    className={`flex-1 min-h-10 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1 truncate ${
-                      info.isPaidInMonth
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-rose-50 hover:text-rose-700'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
-                    }`}
-                  >
-                    {info.isPaidInMonth ? '✓ จ่ายแล้ว' : 'จ่ายงวดนี้'}
-                  </button>
+                  />
                 ) : (
                   <div className="flex-1 text-[11px] text-slate-400 italic py-1 truncate">
                     {info.isCompleted ? 'ปลอดหนี้แล้ว' : 'ไม่อยู่ในรอบเดือนนี้'}
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setSchedulePlanId(plan.id)}
-                  title="ดูตารางงวด"
-                  className="min-h-10 min-w-10 p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-blue-700 transition flex items-center justify-center shrink-0 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onEdit(plan)}
-                  title="แก้ไข"
-                  className="min-h-10 min-w-10 p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition flex items-center justify-center shrink-0 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onDelete(plan.id)}
-                  title="ลบ"
-                  className="min-h-10 min-w-10 p-2 rounded-xl border border-slate-200 text-rose-500 hover:bg-rose-50 transition flex items-center justify-center shrink-0 cursor-pointer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <ActionButton
+                    action="view"
+                    iconOnly
+                    title="ดูตารางงวด"
+                    onClick={() => setSchedulePlanId(plan.id)}
+                  />
+                  <ActionButton
+                    action="edit"
+                    iconOnly
+                    title="แก้ไข"
+                    onClick={() => onEdit(plan)}
+                  />
+                  <ActionButton
+                    action="delete"
+                    iconOnly
+                    title="ลบ"
+                    onClick={() => onDelete(plan.id)}
+                  />
+                </div>
               </div>
             </div>
           )
@@ -227,65 +205,39 @@ export function InstallmentPlanTable({
 
                     {/* Actions */}
                     <td className="py-3 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1">
                         {/* Quick Pay */}
                         {info.isActiveInMonth && !info.isCompleted && (
-                          <button
-                            type="button"
+                          <ActionButton
+                            action="pay"
+                            size="sm"
+                            isPaid={info.isPaidInMonth}
+                            label={info.isPaidInMonth ? 'จ่ายแล้ว' : 'จ่ายงวดนี้'}
                             onClick={() => onToggleMonth(plan, selectedMonth, !info.isPaidInMonth)}
-                            title={info.isPaidInMonth ? 'ยกเลิกการชำระ' : 'บันทึกจ่ายงวดนี้'}
-                            className={`min-h-10 sm:min-h-9 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                              info.isPaidInMonth
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-rose-50 hover:text-rose-700'
-                                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
-                            }`}
-                          >
-                            {info.isPaidInMonth ? '✓ จ่ายแล้ว' : 'จ่ายงวดนี้'}
-                          </button>
+                          />
                         )}
 
-                        {/* Schedule Modal */}
-                        <button
-                          type="button"
-                          onClick={() => setSchedulePlanId(plan.id)}
+                        <ActionButton
+                          action="view"
+                          size="sm"
+                          iconOnly
                           title="ดูตารางงวด"
-                          className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-blue-700 transition flex items-center justify-center cursor-pointer"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="8" y1="6" x2="21" y2="6" />
-                            <line x1="8" y1="12" x2="21" y2="12" />
-                            <line x1="8" y1="18" x2="21" y2="18" />
-                            <line x1="3" y1="6" x2="3.01" y2="6" />
-                            <line x1="3" y1="12" x2="3.01" y2="12" />
-                            <line x1="3" y1="18" x2="3.01" y2="18" />
-                          </svg>
-                        </button>
-
-                        {/* Edit */}
-                        <button
-                          type="button"
-                          onClick={() => onEdit(plan)}
+                          onClick={() => setSchedulePlanId(plan.id)}
+                        />
+                        <ActionButton
+                          action="edit"
+                          size="sm"
+                          iconOnly
                           title="แก้ไข"
-                          className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition flex items-center justify-center cursor-pointer"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                          </svg>
-                        </button>
-
-                        {/* Delete */}
-                        <button
-                          type="button"
-                          onClick={() => onDelete(plan.id)}
+                          onClick={() => onEdit(plan)}
+                        />
+                        <ActionButton
+                          action="delete"
+                          size="sm"
+                          iconOnly
                           title="ลบ"
-                          className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 p-2 rounded-lg border border-slate-200 text-rose-500 hover:bg-rose-50 transition flex items-center justify-center cursor-pointer"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
+                          onClick={() => onDelete(plan.id)}
+                        />
                       </div>
                     </td>
                   </tr>

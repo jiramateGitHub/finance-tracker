@@ -7,14 +7,17 @@ import { SummaryCard } from '../../components/ui/SummaryCard'
 import { th } from '../../i18n/th'
 import type { AppData, BudgetLine, Trip, TripItem } from '../../types/finance'
 import { clampPercent, formatDate, formatMoney } from '../../utils/formatters'
-import { TripDetail } from './components/TripDetail'
 import { TripBudgetFormModal } from './components/TripBudgetFormModal'
 import { TripCalendar } from './components/TripCalendar'
+import { TripDetail } from './components/TripDetail'
 import { TripFilters } from './components/TripFilters'
 import { TripItemModal } from './components/TripItemModal'
 import { TripList } from './components/TripList'
 import { TripModal } from './components/TripModal'
 import { TripSummaryCards } from './components/TripSummaryCards'
+import { TripTable } from './components/TripTable'
+import { IconPlus, IconPencil, IconTrash } from '../../components/ui/Icons'
+import { ViewSwitcher } from '../../components/ui/ViewSwitcher'
 import {
   calculateTripTotals,
   createEmptyTripFilters,
@@ -63,7 +66,7 @@ type DeleteTarget =
   | { type: 'item'; trip: Trip; itemId: string }
   | { type: 'budgetLine'; trip: Trip; categoryId: string }
 
-type TripViewMode = 'list' | 'calendar'
+type TripViewMode = 'list' | 'table' | 'calendar'
 
 export function TripsPage({
   data,
@@ -308,20 +311,28 @@ export function TripsPage({
 
             {/* Right: Actions */}
             <div className="finance-command-actions">
-              <Button type="button" variant="primary" onClick={() => openAddItem(detailTrip)}>
-                <span className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  <span>เพิ่มรายการ</span>
-                </span>
+              <Button
+                type="button"
+                variant="primary"
+                icon={<IconPlus size={16} />}
+                onClick={() => openAddItem(detailTrip)}
+              >
+                <span>เพิ่มรายการ</span>
               </Button>
-              <Button type="button" onClick={() => openEditTrip(detailTrip)}>
-                {th.common.edit}
+              <Button
+                type="button"
+                icon={<IconPencil size={15} />}
+                onClick={() => openEditTrip(detailTrip)}
+              >
+                <span>{th.common.edit}</span>
               </Button>
-              <Button type="button" variant="danger" onClick={() => handleDeleteTrip(detailTrip.id)}>
-                {th.common.delete}
+              <Button
+                type="button"
+                variant="danger"
+                icon={<IconTrash size={15} />}
+                onClick={() => handleDeleteTrip(detailTrip.id)}
+              >
+                <span>{th.common.delete}</span>
               </Button>
             </div>
           </div>
@@ -463,36 +474,16 @@ export function TripsPage({
             </div>
           </div>
 
-          {/* Center: View Switcher */}
-          <div className="finance-segmented" aria-label="เลือกมุมมองทริป">
-            <button
-              type="button"
-              className={`finance-segmented-button ${viewMode === 'list' ? 'is-active' : ''}`}
-              aria-pressed={viewMode === 'list'}
-              onClick={() => setViewMode('list')}
-            >
-              รายการ
-            </button>
-            <button
-              type="button"
-              className={`finance-segmented-button ${viewMode === 'calendar' ? 'is-active' : ''}`}
-              aria-pressed={viewMode === 'calendar'}
-              onClick={() => setViewMode('calendar')}
-            >
-              ปฏิทิน
-            </button>
-          </div>
-
           {/* Right: Add Trip Button */}
-          <div className="finance-command-actions">
-            <Button type="button" variant="primary" onClick={openAddTrip}>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                <span>เพิ่มทริป</span>
-              </span>
+          <div className="finance-command-actions w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="primary"
+              icon={<IconPlus size={16} />}
+              onClick={openAddTrip}
+              className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+            >
+              <span>เพิ่มทริป</span>
             </Button>
           </div>
         </div>
@@ -508,16 +499,61 @@ export function TripsPage({
         filters={filters}
         resultCount={filteredTrips.length}
         onChange={setFilters}
-        onAddItem={() => openAddItem()}
-        canAddItem={Boolean(activeTrip)}
       />
 
       {/* Main Items View */}
-      <Card title={viewMode === 'list' ? 'รายการทริปทั้งหมด' : 'ปฏิทินทริป'}>
+      <Card
+        title={
+          <div className="flex items-center gap-2.5">
+            <span>
+              {viewMode === 'list'
+                ? 'รายการทริปทั้งหมด'
+                : viewMode === 'table'
+                ? 'ตารางภาพรวมทริป'
+                : 'ปฏิทินทริป'}
+            </span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              {filteredTrips.length}
+            </span>
+          </div>
+        }
+        actions={
+          <ViewSwitcher<TripViewMode>
+            activeView={viewMode}
+            onViewChange={setViewMode}
+            options={[
+              { id: 'list', label: 'การ์ด', icon: 'cards' },
+              { id: 'table', label: 'ตาราง', icon: 'table' },
+              { id: 'calendar', label: 'ปฏิทิน', icon: 'calendar' },
+            ]}
+          />
+        }
+      >
         {viewMode === 'list' ? (
-          <TripList data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+          <TripList
+            data={data}
+            trips={filteredTrips}
+            activeTripId={effectiveActiveTripId}
+            onSelectTrip={selectTrip}
+            onEditTrip={openEditTrip}
+            onDeleteTrip={handleDeleteTrip}
+          />
+        ) : viewMode === 'table' ? (
+          <TripTable
+            data={data}
+            trips={filteredTrips}
+            activeTripId={effectiveActiveTripId}
+            onSelectTrip={selectTrip}
+            onEditTrip={openEditTrip}
+            onDeleteTrip={handleDeleteTrip}
+          />
         ) : (
-          <TripCalendar data={data} trips={filteredTrips} activeTripId={effectiveActiveTripId} onSelectTrip={selectTrip} />
+          <TripCalendar
+            data={data}
+            trips={filteredTrips}
+            activeTripId={effectiveActiveTripId}
+            onSelectTrip={selectTrip}
+          />
         )}
       </Card>
 

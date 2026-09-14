@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ActionButton } from '../../components/ui/ActionButton'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { th } from '../../i18n/th'
@@ -49,9 +50,9 @@ export function GoalCard({ goal, onEdit, onDelete, onUpdateAmount }: GoalCardPro
             {goal.targetDate ? `วันที่เป้าหมาย ${goal.targetDate}` : 'ยังไม่มีวันที่เป้าหมาย'}{goal.note ? ` · ${goal.note}` : ''}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" onClick={() => onEdit(goal)}>{th.common.edit}</Button>
-          <Button type="button" size="sm" variant="danger" onClick={() => onDelete(goal.id)}>{th.common.delete}</Button>
+        <div className="flex items-center gap-1">
+          <ActionButton action="edit" iconOnly title={th.common.edit} onClick={() => onEdit(goal)} />
+          <ActionButton action="delete" iconOnly title={th.common.delete} onClick={() => onDelete(goal.id)} />
         </div>
       </header>
 

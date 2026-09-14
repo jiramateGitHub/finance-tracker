@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { ActionButton } from '../../../components/ui/ActionButton'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { EmptyState } from '../../../components/ui/EmptyState'
@@ -318,11 +319,29 @@ export function TripDetail({
                           </div>
                         </div>
                         <div className="grid gap-2 md:justify-items-end">
-                          <div className="text-right text-lg font-extrabold text-rose-700">{formatMoney(item.amount)}</div>
-                          <div className="flex min-w-0 flex-wrap justify-end gap-2">
-                            <Button type="button" size="sm" onClick={() => onToggleItemPaid(trip, item.id)}>{item.isPaid ? th.transaction.markUnpaid : th.transaction.markPaid}</Button>
-                            <Button type="button" size="sm" onClick={() => onEditItem(trip, item)}>{th.common.edit}</Button>
-                            <Button type="button" size="sm" variant="danger" onClick={() => onDeleteItem(trip, item.id)}>{th.common.delete}</Button>
+                          <div className="text-right text-lg font-extrabold text-rose-700 tabular-nums">{formatMoney(item.amount)}</div>
+                          <div className="flex min-w-0 flex-wrap justify-end gap-1.5">
+                            <ActionButton
+                              action="pay"
+                              size="sm"
+                              isPaid={item.isPaid}
+                              label={item.isPaid ? th.transaction.markUnpaid : th.transaction.markPaid}
+                              onClick={() => onToggleItemPaid(trip, item.id)}
+                            />
+                            <ActionButton
+                              action="edit"
+                              size="sm"
+                              iconOnly
+                              title={th.common.edit}
+                              onClick={() => onEditItem(trip, item)}
+                            />
+                            <ActionButton
+                              action="delete"
+                              size="sm"
+                              iconOnly
+                              title={th.common.delete}
+                              onClick={() => onDeleteItem(trip, item.id)}
+                            />
                           </div>
                         </div>
                       </article>
@@ -365,9 +384,21 @@ export function TripDetail({
                       </div>
                       {view.line.note ? <p className="mt-1 text-sm leading-6 text-slate-500">{view.line.note}</p> : null}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" size="sm" onClick={() => onEditBudgetLine(trip, view.line)}>{th.common.edit}</Button>
-                      <Button type="button" size="sm" variant="danger" onClick={() => onDeleteBudgetLine(trip, view.categoryId)}>{th.common.delete}</Button>
+                    <div className="flex items-center gap-1">
+                      <ActionButton
+                        action="edit"
+                        size="sm"
+                        iconOnly
+                        title={th.common.edit}
+                        onClick={() => onEditBudgetLine(trip, view.line)}
+                      />
+                      <ActionButton
+                        action="delete"
+                        size="sm"
+                        iconOnly
+                        title={th.common.delete}
+                        onClick={() => onDeleteBudgetLine(trip, view.categoryId)}
+                      />
                     </div>
                   </div>
 

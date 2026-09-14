@@ -35,15 +35,15 @@ export function TripCalendar({ data, trips, activeTripId, onSelectTrip }: TripCa
           const monthActual = monthTrips.reduce((total, trip) => total + calculateTripTotals(data, trip).actualSpending, 0)
           const monthPlanned = monthTrips.reduce((total, trip) => total + calculateTripTotals(data, trip).plannedBudget, 0)
           return (
-            <section key={monthKey} className="grid min-w-0 content-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex min-w-0 items-start justify-between gap-3">
+            <section key={monthKey} className="grid min-w-0 content-start gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs transition hover:shadow-md">
+              <div className="flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-2.5">
                 <div className="min-w-0">
-                  <h3 className="font-extrabold text-slate-800">{monthKey === 'ไม่ระบุเดือน' ? monthKey : formatMonth(monthKey)}</h3>
-                  <p className="mt-1 text-sm font-bold text-slate-500">{monthTrips.length} ทริป</p>
+                  <h3 className="font-extrabold text-slate-900">{monthKey === 'ไม่ระบุเดือน' ? monthKey : formatMonth(monthKey)}</h3>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-500">{monthTrips.length} ทริป</p>
                 </div>
-                <div className="min-w-0 text-right text-xs font-extrabold leading-5">
-                  <div className="break-words text-rose-700">{formatMoney(monthActual)}</div>
-                  <div className="break-words text-blue-700">งบ {formatMoney(monthPlanned)}</div>
+                <div className="min-w-0 text-right text-xs font-extrabold leading-tight">
+                  <div className="text-rose-700 tabular-nums">{formatMoney(monthActual)}</div>
+                  <div className="text-blue-700 tabular-nums text-[11px] mt-0.5">งบ {formatMoney(monthPlanned)}</div>
                 </div>
               </div>
 

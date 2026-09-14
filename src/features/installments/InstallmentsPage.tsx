@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { IconPlus } from '../../components/ui/Icons'
+import { ViewSwitcher } from '../../components/ui/ViewSwitcher'
 import { th } from '../../i18n/th'
 import type { AppData, InstallmentPlan } from '../../types/finance'
 import { currentMonthInputValue, formatMonth } from '../../utils/formatters'
@@ -204,15 +206,14 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
 
           {/* Right: Actions */}
           <div className="finance-command-actions w-full sm:w-auto">
-            <Button type="button" variant="primary" onClick={openAddModal} className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center">
-              <span className="flex items-center justify-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="16" />
-                  <line x1="8" y1="12" x2="16" y2="12" />
-                </svg>
-                <span>เพิ่มแผนผ่อน</span>
-              </span>
+            <Button
+              type="button"
+              variant="primary"
+              icon={<IconPlus size={16} />}
+              onClick={openAddModal}
+              className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+            >
+              <span>เพิ่มแผนผ่อน</span>
             </Button>
           </div>
         </div>
@@ -251,19 +252,35 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
         resultCount={filteredPlans.length}
         categoryOptions={categoryOptions}
         counts={filterCounts}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
         onFiltersChange={setFilters}
       />
 
       {/* ==================== MAIN ITEMS VIEW ==================== */}
       <Card
         title={
-          viewMode === 'list'
-            ? 'รายการแผนผ่อน'
-            : viewMode === 'table'
-            ? 'ตารางภาพรวมแผนผ่อน'
-            : 'ปฏิทินรายเดือน'
+          <div className="flex items-center gap-2.5">
+            <span>
+              {viewMode === 'list'
+                ? 'รายการแผนผ่อน'
+                : viewMode === 'table'
+                ? 'ตารางภาพรวมแผนผ่อน'
+                : 'ปฏิทินรายเดือน'}
+            </span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              {filteredPlans.length}
+            </span>
+          </div>
+        }
+        actions={
+          <ViewSwitcher<InstallmentViewMode>
+            activeView={viewMode}
+            onViewChange={setViewMode}
+            options={[
+              { id: 'list', label: 'การ์ด', icon: 'cards' },
+              { id: 'table', label: 'ตาราง', icon: 'table' },
+              { id: 'calendar', label: 'ปฏิทิน', icon: 'calendar' },
+            ]}
+          />
         }
       >
         {viewMode === 'list' ? (

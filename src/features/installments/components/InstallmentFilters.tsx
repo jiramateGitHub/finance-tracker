@@ -5,7 +5,6 @@ import type {
   InstallmentFilters as InstallmentFiltersState,
   InstallmentSortOrder,
   InstallmentStatusFilter,
-  InstallmentViewMode,
 } from '../utils/installmentPlans'
 import { createDefaultInstallmentFilters } from '../utils/installmentPlans'
 
@@ -22,8 +21,6 @@ type InstallmentFiltersProps = {
   resultCount: number
   categoryOptions?: string[]
   counts?: FilterCounts
-  viewMode?: InstallmentViewMode
-  onViewModeChange?: (mode: InstallmentViewMode) => void
   onFiltersChange: (filters: InstallmentFiltersState) => void
 }
 
@@ -32,8 +29,6 @@ export function InstallmentFilters({
   resultCount,
   categoryOptions = [],
   counts,
-  viewMode = 'list',
-  onViewModeChange,
   onFiltersChange,
 }: InstallmentFiltersProps) {
   const currentStatus = filters.status || 'all'
@@ -107,65 +102,6 @@ export function InstallmentFilters({
             ผ่อนหมดแล้ว {counts ? `(${counts.completed})` : ''}
           </button>
         </div>
-
-        {/* View Mode Switcher (Desktop: sm+) */}
-        {onViewModeChange && (
-          <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
-            <button
-              type="button"
-              onClick={() => onViewModeChange('list')}
-              title="มุมมองการ์ด"
-              className={`min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 flex items-center justify-center p-1.5 sm:p-2 rounded-lg font-medium transition cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="7" height="7" x="3" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="14" rx="1" />
-                <rect width="7" height="7" x="3" y="14" rx="1" />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onViewModeChange('table')}
-              title="มุมมองตาราง"
-              className={`min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 flex items-center justify-center p-1.5 sm:p-2 rounded-lg font-medium transition cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v18" />
-                <rect width="18" height="18" x="3" y="3" rx="2" />
-                <path d="M3 9h18" />
-                <path d="M3 15h18" />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onViewModeChange('calendar')}
-              title="มุมมองปฏิทิน"
-              className={`min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 flex items-center justify-center p-1.5 sm:p-2 rounded-lg font-medium transition cursor-pointer ${
-                viewMode === 'calendar'
-                  ? 'bg-white text-blue-700 shadow-xs font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                <line x1="16" x2="16" y1="2" y2="6" />
-                <line x1="8" x2="8" y1="2" y2="6" />
-                <line x1="3" y1="21" x2="21" y2="21" />
-              </svg>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* 2. Secondary Filter Controls: Search, Category, Sort */}
@@ -242,65 +178,6 @@ export function InstallmentFilters({
               </Button>
             )}
           </div>
-
-          {/* Mobile View Mode Switcher */}
-          {onViewModeChange && (
-            <div className="sm:hidden flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs shrink-0">
-              <button
-                type="button"
-                onClick={() => onViewModeChange('list')}
-                title="มุมมองการ์ด"
-                className={`min-h-9 min-w-9 flex items-center justify-center p-1.5 rounded-lg font-medium transition cursor-pointer ${
-                  viewMode === 'list'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="7" height="7" x="3" y="3" rx="1" />
-                  <rect width="7" height="7" x="14" y="3" rx="1" />
-                  <rect width="7" height="7" x="14" y="14" rx="1" />
-                  <rect width="7" height="7" x="3" y="14" rx="1" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onViewModeChange('table')}
-                title="มุมมองตาราง"
-                className={`min-h-9 min-w-9 flex items-center justify-center p-1.5 rounded-lg font-medium transition cursor-pointer ${
-                  viewMode === 'table'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3v18" />
-                  <rect width="18" height="18" x="3" y="3" rx="2" />
-                  <path d="M3 9h18" />
-                  <path d="M3 15h18" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onViewModeChange('calendar')}
-                title="มุมมองปฏิทิน"
-                className={`min-h-9 min-w-9 flex items-center justify-center p-1.5 rounded-lg font-medium transition cursor-pointer ${
-                  viewMode === 'calendar'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                  <line x1="16" x2="16" y1="2" y2="6" />
-                  <line x1="8" x2="8" y1="2" y2="6" />
-                  <line x1="3" y1="21" x2="21" y2="21" />
-                </svg>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </section>

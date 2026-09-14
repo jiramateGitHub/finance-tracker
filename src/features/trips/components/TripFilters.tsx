@@ -9,11 +9,9 @@ type TripFiltersProps = {
   filters: TripFiltersState
   resultCount: number
   onChange: (filters: TripFiltersState) => void
-  onAddItem: () => void
-  canAddItem: boolean
 }
 
-export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddItem }: TripFiltersProps) {
+export function TripFilters({ filters, resultCount, onChange }: TripFiltersProps) {
   const currentStatus = filters.status || 'all'
 
   function handleStatusClick(status: TripStatusFilter) {
@@ -81,19 +79,8 @@ export function TripFilters({ filters, resultCount, onChange, onAddItem, canAddI
           </button>
         </div>
 
-        {/* Right side: Add Item & Clear */}
+        {/* Right side: Clear filters */}
         <div className="flex items-center gap-2">
-          {canAddItem && (
-            <Button type="button" size="sm" onClick={onAddItem}>
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                <span>เพิ่มรายการทริป</span>
-              </span>
-            </Button>
-          )}
           {hasActiveFilters && (
             <Button type="button" size="sm" onClick={() => onChange(createEmptyTripFilters())}>
               {th.common.clearFilters}
