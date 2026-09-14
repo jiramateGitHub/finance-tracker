@@ -32,6 +32,14 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
     })
   }, [slices, circumference])
 
+  const sortedSlices = useMemo(() => {
+    if (!hoveredSlice) return slicesWithOffsets
+    return [
+      ...slicesWithOffsets.filter((s) => s.category !== hoveredSlice.category),
+      ...slicesWithOffsets.filter((s) => s.category === hoveredSlice.category),
+    ]
+  }, [slicesWithOffsets, hoveredSlice])
+
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between min-w-0 w-full max-w-full">
       {/* Title */}
@@ -58,18 +66,22 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
         <>
           {/* Donut Chart */}
           <div className="relative flex items-center justify-center my-2 sm:my-3 h-40 sm:h-44">
-            <svg viewBox="0 0 100 100" className="w-36 h-36 sm:w-40 sm:h-40 -rotate-90 transform">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-36 h-36 sm:w-40 sm:h-40 -rotate-90 transform"
+              onMouseLeave={() => setHoveredSlice(null)}
+            >
               {/* Background circle */}
               <circle
                 cx="50"
                 cy="50"
                 r={radius}
-                fill="transparent"
+                fill="none"
                 stroke={MASTER_COLORS.neutral[100]}
                 strokeWidth={strokeWidth}
               />
               {/* Slices */}
-              {slicesWithOffsets.map((slice) => {
+              {sortedSlices.map((slice) => {
                 const isHovered = hoveredSlice?.category === slice.category
 
                 return (
@@ -78,12 +90,13 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                     cx="50"
                     cy="50"
                     r={radius}
-                    fill="transparent"
+                    fill="none"
                     stroke={slice.color}
                     strokeWidth={isHovered ? strokeWidth + 3 : strokeWidth}
                     strokeDasharray={slice.strokeDasharray}
                     strokeDashoffset={slice.strokeDashoffset}
                     className="transition-all duration-200 cursor-pointer"
+                    style={{ pointerEvents: 'stroke' }}
                     onClick={() => setHoveredSlice(hoveredSlice?.category === slice.category ? null : slice)}
                     onMouseEnter={() => setHoveredSlice(slice)}
                     onMouseLeave={() => setHoveredSlice(null)}
@@ -136,8 +149,8 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                   onMouseLeave={() => setHoveredSlice(null)}
                   className={`flex items-center justify-between p-2 sm:p-1.5 rounded-xl transition-all cursor-pointer select-none ${
                     isHovered
-                      ? 'bg-blue-50/80 ring-1 ring-blue-200/80 font-bold'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-blue-50/80 ring-1 ring-blue-200/80 text-blue-900 font-semibold'
+                      : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 truncate pr-2 min-w-0">
@@ -145,7 +158,7 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: slice.color }}
                     />
-                    <span className="text-slate-700 truncate text-[11px] sm:text-xs">
+                    <span className="truncate text-[11px] sm:text-xs">
                       {icon} {slice.category}
                     </span>
                   </div>

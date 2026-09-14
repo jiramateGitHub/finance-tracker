@@ -82,7 +82,7 @@ export function InstallmentProjectionChart({
               </div>
 
               {/* Bar Chart Container */}
-              <div className="relative pt-6 pb-2 overflow-x-auto touch-pan-x min-w-0 w-full max-w-full">
+              <div className="relative pt-8 sm:pt-9 pb-2 overflow-x-auto sm:overflow-visible touch-pan-x min-w-0 w-full max-w-full">
                 <div className="grid grid-cols-12 min-w-[480px] sm:min-w-0 gap-1.5 sm:gap-2 items-end h-40 sm:h-44 border-b border-slate-100 pr-1">
                   {months.map((item, idx) => {
                     const isSelected = item.monthKey === selectedMonth
@@ -103,7 +103,7 @@ export function InstallmentProjectionChart({
                         onMouseLeave={() => setHoveredIdx(null)}
                       >
                         {/* Milestone indicator icon */}
-                        {hasMilestone && (
+                        {hasMilestone && !isHovered && (
                           <span
                             className="absolute -top-5 text-[10px] text-amber-500 animate-bounce"
                             title={`ผ่อนหมด: ${item.finishingPlans.join(', ')}`}
@@ -138,7 +138,7 @@ export function InstallmentProjectionChart({
                         {/* Desktop Tooltip on Hover (hidden on mobile touch to avoid clipping) */}
                         {isHovered && (
                           <div className={`hidden sm:block absolute bottom-full mb-2 z-30 pointer-events-none rounded-xl bg-slate-900/90 text-white p-2.5 shadow-xl text-center min-w-[120px] backdrop-blur-xs text-xs animate-in fade-in zoom-in-95 ${
-                            idx === 0 ? 'left-0' : idx === months.length - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+                            idx <= 1 ? 'left-0' : idx >= months.length - 2 ? 'right-0' : 'left-1/2 -translate-x-1/2'
                           }`}>
                             <div className="font-bold text-slate-100">{formatMonth(item.monthKey)}</div>
                             <div className="text-emerald-400 font-extrabold text-sm mt-0.5">
