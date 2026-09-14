@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Badge } from '../../../components/ui/Badge'
 import type { InstallmentPlan } from '../../../types/finance'
 import { formatMoney } from '../../../utils/formatters'
 import type { InstallmentDashboardMetrics } from '../utils/installmentPlans'
@@ -63,9 +64,9 @@ export function InstallmentAlertBanner({
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   <span className="font-bold text-slate-900 truncate max-w-full sm:max-w-xs" title={plan.name}>{plan.name}</span>
                   <span className="text-slate-600 font-semibold tabular-nums shrink-0">({formatMoney(monthlyAmount)})</span>
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${type === 'overdue' ? 'bg-rose-100/90 text-rose-800' : 'bg-amber-100/90 text-amber-800'}`}>
+                  <Badge tone={type === 'overdue' ? 'expense' : 'warning'} className="text-[11px] py-0.5 px-2 min-h-0">
                     {statusLabel}
-                  </span>
+                  </Badge>
                 </div>
               </div>
               <button

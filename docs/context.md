@@ -17,6 +17,7 @@ Finance Tracker เป็นแอป Vite + React + TypeScript + Tailwind CSS �
 - Deploy ผ่าน GitHub Pages โดย `vite.config.ts` ตั้ง `base: '/finance-tracker/'`
 - PR-12 แยก feature pages เป็น lazy chunks และตรวจ workflow หลักผ่าน production preview ในโหมด demo; live Auth/Firestore bootstrap, load, save ชุดข้อมูลว่าง, reload และ load บัญชีที่มีข้อมูลจริงพร้อม reconciliation report ผ่านแล้ว ส่วน mobile viewport และ non-empty multi-device acceptance ยังต้องตรวจแยกบน browser/device จริง
 - P1 follow-up แยก persisted Cloud baseline ออกจาก runtime trip read model แล้ว และเพิ่มรายละเอียด snapshot/การรับทราบ reconciliation ในหน้า More
+- Master Color System: รวมค่าสีทั้งหมดไว้ที่ `src/constants/theme.ts` และ `tailwind.config.ts` ทุกหน้าใช้งาน semantic tokens ชุดเดียวกัน (Primary blue, Income emerald, Expense rose, Warning amber, Neutral slate, Chart 8-color) ไม่ใช้สีสุ่มหรือ inline custom spans แทน Badge
 
 ## คำสั่งหลัก
 
@@ -460,4 +461,5 @@ Firebase setup required:
 - Keep import preview + confirm + backup-before-overwrite
 - Keep JSON export schema clean and normalized
 - Keep UI text Thai-first
+- Follow the Master Color System (`src/constants/theme.ts`) strictly; do not use random hex codes or unstandardized color shades
 - Run `npm run lint` and `npm run build` after code changes

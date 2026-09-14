@@ -112,15 +112,17 @@ export function MorePage({
     }
   }
 
-  const statusTone = dataStatus.importState === 'error' || syncStatus.state === 'error' || syncStatus.state === 'conflict'
+  const statusTone = dataStatus.importState === 'error' || syncStatus.state === 'error'
     ? 'border-rose-200 bg-rose-50 text-rose-700'
-    : dataStatus.importState === 'success' || syncStatus.state === 'saved'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : 'border-blue-200 bg-blue-50 text-blue-700'
+    : syncStatus.state === 'conflict'
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
+      : dataStatus.importState === 'success' || syncStatus.state === 'saved'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : 'border-blue-200 bg-blue-50 text-blue-700'
   const cloudStatusTone = syncStatus.state === 'error'
     ? 'border-rose-200 bg-rose-50 text-rose-700'
     : syncStatus.state === 'conflict'
-      ? 'border-amber-200 bg-amber-50 text-amber-800'
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
     : syncStatus.state === 'saved'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
       : 'border-blue-200 bg-blue-50 text-blue-700'
@@ -410,8 +412,8 @@ function ImportDiagnosticsPanel({
   if (!diagnostics) return null
 
   return (
-    <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-      <div className="font-extrabold">{title}: {diagnostics.fileName ?? 'ไฟล์ JSON'}</div>
+    <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-slate-800">
+      <div className="font-extrabold text-slate-900">{title}: {diagnostics.fileName ?? 'ไฟล์ JSON'}</div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <ImportDiagnosticItem label="เวอร์ชันข้อมูล" value={diagnostics.schemaVersion ? `v${diagnostics.schemaVersion}` : 'เดิม / ไม่ระบุ'} />
         <ImportDiagnosticItem label="รายการ" value={`${diagnostics.counts.transactions || diagnostics.counts.entries} รายการ`} />
@@ -430,13 +432,13 @@ function ImportDiagnosticsPanel({
             : 'ไม่มี'}
         />
       </div>
-      <div className="mt-2 text-xs font-bold text-blue-800">
+      <div className="mt-2 text-xs font-bold text-slate-600">
         หมวดหมู่ที่แปลง: {diagnostics.categorySummary.aliasMappingsApplied.length
           ? diagnostics.categorySummary.aliasMappingsApplied.map((item) => `${item.from} → ${item.to} (${item.count})`).join(', ')
           : 'ไม่มี'}
       </div>
       {diagnostics.reconciliation?.tripOwnership.issues.length ? (
-        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
+        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800">
           รายการที่ต้องตรวจสอบก่อนยืนยัน:
           <ul className="mt-1 grid gap-1">
             {diagnostics.reconciliation.tripOwnership.issues.map((issue) => (

@@ -120,7 +120,7 @@ export function InstallmentSummaryCards({ metrics, summary }: InstallmentSummary
         </div>
 
         {/* CARD 4: ปลดหนี้ชิ้นถัดไป */}
-        <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-teal-50/30 to-white p-3.5 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between min-w-0 w-full">
+        <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/60 via-emerald-50/20 to-white p-3.5 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between min-w-0 w-full">
           <div>
             <div className="flex items-center justify-between gap-2 text-emerald-800 mb-1.5 sm:mb-2 min-w-0">
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-1 min-w-0 flex-1">
@@ -130,7 +130,7 @@ export function InstallmentSummaryCards({ metrics, summary }: InstallmentSummary
                 </svg>
                 <span className="truncate">ปลดหนี้ชิ้นถัดไป</span>
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 shrink-0">
                 {candidate ? (candidate.remainingMonths === 1 ? 'งวดสุดท้ายแล้ว!' : `อีก ${candidate.remainingMonths} งวด`) : 'เสร็จสิ้น'}
               </span>
             </div>

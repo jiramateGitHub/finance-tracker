@@ -35,7 +35,7 @@ export function TripFilters({ filters, resultCount, onChange }: TripFiltersProps
             onClick={() => handleStatusClick('all')}
             className={`min-h-10 sm:min-h-8 px-3.5 py-2 sm:py-1.5 inline-flex items-center justify-center rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
               currentStatus === 'all'
-                ? 'bg-sky-600 text-white shadow-xs'
+                ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >

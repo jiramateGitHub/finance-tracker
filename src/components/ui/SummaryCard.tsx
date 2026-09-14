@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type SummaryTone = 'income' | 'expense' | 'balance' | 'due' | 'violet' | 'sky' | 'indigo' | 'slate'
+export type SummaryTone = 'income' | 'expense' | 'balance' | 'due' | 'primary' | 'warning' | 'violet' | 'sky' | 'indigo' | 'slate'
 
 export type SummaryCardProps = {
   label: string
@@ -36,7 +36,17 @@ const toneClassName: Record<
     iconColor: 'text-blue-600',
     bar: 'bg-blue-600',
   },
+  primary: {
+    iconBg: 'bg-blue-50 text-blue-600',
+    iconColor: 'text-blue-600',
+    bar: 'bg-blue-600',
+  },
   due: {
+    iconBg: 'bg-amber-50 text-amber-600',
+    iconColor: 'text-amber-600',
+    bar: 'bg-amber-500',
+  },
+  warning: {
     iconBg: 'bg-amber-50 text-amber-600',
     iconColor: 'text-amber-600',
     bar: 'bg-amber-500',

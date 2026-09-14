@@ -1,3 +1,4 @@
+import { CATEGORY_CHART_COLORS } from '../../../constants/theme'
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import { createId } from '../../../lib/id'
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
@@ -324,17 +325,6 @@ export type InstallmentCategoryDistribution = {
   slices: InstallmentCategorySlice[]
   totalMonthlyDue: number
 }
-
-const CATEGORY_CHART_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#64748b', // slate
-]
 
 export function getInstallmentCategoryDistribution(
   plans: InstallmentPlan[],

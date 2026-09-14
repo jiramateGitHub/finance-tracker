@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ActionButton } from '../../../components/ui/ActionButton'
+import { Badge } from '../../../components/ui/Badge'
 import { CATEGORY_ICONS } from '../../../data/categories'
 import type { InstallmentPlan } from '../../../types/finance'
 import { currentMonthInputValue, formatMoney, formatMonth } from '../../../utils/formatters'
@@ -23,7 +24,7 @@ type InstallmentPlanListProps = {
 export function InstallmentPlanList({
   plans,
   selectedMonth = currentMonthInputValue(),
-  totalPlansCount,
+  totalPlansCount = 0,
   onOpenAdd,
   onClearFilters,
   onEdit,
@@ -34,59 +35,48 @@ export function InstallmentPlanList({
   const [schedulePlanId, setSchedulePlanId] = useState<string | null>(null)
   const scheduleModalPlan = plans.find((p) => p.id === schedulePlanId) ?? null
 
-  if (!plans.length) {
-    if (totalPlansCount === 0) {
-      return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 sm:p-12 text-center max-w-lg mx-auto my-4 shadow-xs">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shadow-xs">
-            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="20" height="14" x="2" y="5" rx="2" />
-              <line x1="2" x2="22" y1="10" y2="10" />
-            </svg>
-          </div>
-          <h3 className="text-base font-bold text-slate-900 mb-1.5">ยังไม่มีรายการผ่อนในระบบ</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
-            เริ่มต้นบันทึกยอดผ่อนสินค้า บัตรเครดิต หรือสินเชื่อ เพื่อให้ระบบช่วยคำนวณและสรุปภาระรายจ่ายรายเดือนให้อัตโนมัติ
-          </p>
+  // Empty state handling
+  if (plans.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center shadow-xs">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="2" />
+            <line x1="2" x2="22" y1="10" y2="10" />
+          </svg>
+        </div>
+        <h3 className="text-base font-bold text-slate-900 mb-1">
+          {totalPlansCount === 0 ? 'ยังไม่มีรายการผ่อนชำระ' : 'ไม่พบรายการผ่อนชำระ'}
+        </h3>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+          {totalPlansCount === 0
+            ? 'เริ่มต้นบันทึกรายการผ่อนชำระ เพื่อติดตามยอดคงเหลือและวางแผนกระแสเงินสด'
+            : 'ลองเปลี่ยนคำค้นหาหรือตัวกรอง เพื่อดูรายการผ่อนชำระอื่นๆ'}
+        </p>
+        <div className="flex items-center justify-center gap-2">
+          {totalPlansCount > 0 && onClearFilters && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+            >
+              ล้างตัวกรอง
+            </button>
+          )}
           {onOpenAdd && (
             <button
               type="button"
               onClick={onOpenAdd}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-sm transition"
+              className="px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="16" />
-                <line x1="8" y1="12" x2="16" y2="12" />
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>เพิ่มรายการผ่อนแรก</span>
+              เพิ่มรายการผ่อน
             </button>
           )}
         </div>
-      )
-    }
-
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center max-w-md mx-auto my-4 shadow-xs">
-        <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mb-3">
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </div>
-        <h3 className="text-base font-bold text-slate-900 mb-1">ไม่พบแผนผ่อนที่ตรงกับเงื่อนไข</h3>
-        <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4">
-          ลองปรับตัวกรองสถานะ หมวดหมู่ หรือคำค้นหาใหม่อีกครั้ง
-        </p>
-        {onClearFilters && (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-          >
-            ล้างตัวกรองทั้งหมด
-          </button>
-        )}
       </div>
     )
   }
@@ -102,54 +92,39 @@ export function InstallmentPlanList({
           let statusBadge: React.ReactNode
           if (info.isCompleted) {
             statusBadge = (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+              <Badge tone="income">
                 ผ่อนหมดแล้ว 🎉
-              </span>
+              </Badge>
             )
           } else if (!info.isActiveInMonth) {
             statusBadge = (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+              <Badge tone="neutral">
                 ไม่มีงวดเดือนนี้
-              </span>
+              </Badge>
             )
           } else if (info.isPaidInMonth) {
             statusBadge = (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <svg className="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+              <Badge tone="income">
                 จ่ายงวดนี้แล้ว
-              </span>
+              </Badge>
             )
           } else if (info.isOverdue) {
             statusBadge = (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
-                <svg className="w-3.5 h-3.5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
+              <Badge tone="expense" className="animate-pulse">
                 เกินกำหนดชำระ!
-              </span>
+              </Badge>
             )
           } else if (info.isDueSoon) {
             statusBadge = (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                <svg className="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
+              <Badge tone="warning">
                 {info.daysUntilDue === 0 ? 'ครบกำหนดวันนี้!' : `ครบกำหนดในอีก ${info.daysUntilDue} วัน`}
-              </span>
+              </Badge>
             )
           } else {
             statusBadge = (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+              <Badge tone="warning">
                 รอชำระ (วันที่ {info.actualDueDay})
-              </span>
+              </Badge>
             )
           }
 

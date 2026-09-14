@@ -107,7 +107,7 @@ export function TransactionFormModal({
                   type="button"
                   className={`flex min-h-10 sm:min-h-9 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition cursor-pointer ${
                     values.type === 'expense'
-                      ? 'bg-rose-500 text-white shadow-xs'
+                      ? 'bg-rose-600 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                   onClick={() => updateField('type', 'expense')}
@@ -119,7 +119,7 @@ export function TransactionFormModal({
                   type="button"
                   className={`flex min-h-10 sm:min-h-9 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition cursor-pointer ${
                     values.type === 'income'
-                      ? 'bg-emerald-500 text-white shadow-xs'
+                      ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                   onClick={() => updateField('type', 'income')}

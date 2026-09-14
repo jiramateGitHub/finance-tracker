@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "tsx src/test/fixtures/financeFixtures.test.ts && tsx src/lib/dataMigration.test.ts && tsx src/lib/money.test.ts && tsx src/lib/id.test.ts && tsx src/lib/importDiagnostics.test.ts && tsx src/lib/importValidation.test.ts && tsx src/features/sync/syncCoordinator.test.ts && tsx src/features/sync/syncRepository.test.ts && tsx src/services/firebase/firestoreFinanceRepository.test.ts && tsx src/utils/formatters.test.ts && tsx src/lib/viewSettings.test.ts && tsx src/features/installments/utils/installmentPlans.test.ts && tsx src/features/monthly/utils/monthlyLedger.test.ts && tsx src/features/trips/utils/tripUtils.test.ts && tsx src/features/budgetGoals/budgetGoalCalculations.test.ts && tsx src/state/financeCommands.test.ts",
+    "test": "tsx src/test/fixtures/financeFixtures.test.ts && tsx src/lib/dataMigration.test.ts && tsx src/lib/money.test.ts && tsx src/lib/id.test.ts && tsx src/lib/importDiagnostics.test.ts && tsx src/lib/importValidation.test.ts && tsx src/features/sync/syncCoordinator.test.ts && tsx src/features/sync/syncRepository.test.ts && tsx src/services/firebase/firestoreFinanceRepository.test.ts && tsx src/utils/formatters.test.ts && tsx src/lib/viewSettings.test.ts && tsx src/features/installments/utils/installmentPlans.test.ts && tsx src/features/monthly/utils/monthlyLedger.test.ts && tsx src/features/trips/utils/tripUtils.test.ts && tsx src/features/budgetGoals/budgetGoalCalculations.test.ts && tsx src/state/financeCommands.test.ts && tsx src/constants/theme.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { MASTER_COLORS } from '../../../constants/theme'
 import { CATEGORY_ICONS } from '../../../data/categories'
 import { formatMoney } from '../../../utils/formatters'
 import type { InstallmentCategoryDistribution, InstallmentCategorySlice } from '../utils/installmentPlans'
@@ -64,7 +65,7 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
                 cy="50"
                 r={radius}
                 fill="transparent"
-                stroke="#f1f5f9"
+                stroke={MASTER_COLORS.neutral[100]}
                 strokeWidth={strokeWidth}
               />
               {/* Slices */}

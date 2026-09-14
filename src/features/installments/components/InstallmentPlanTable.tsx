@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ActionButton } from '../../../components/ui/ActionButton'
+import { Badge } from '../../../components/ui/Badge'
 import { CATEGORY_ICONS } from '../../../data/categories'
 import type { InstallmentPlan } from '../../../types/finance'
 import { currentMonthInputValue, formatMoney } from '../../../utils/formatters'
@@ -263,42 +264,42 @@ export function InstallmentPlanTable({
 function getStatusBadge(info: ReturnType<typeof calculateInstallmentMonthlyInfo>): React.ReactNode {
   if (info.isCompleted) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+      <Badge tone="income" className="text-[11px] py-0.5 px-2 min-h-0">
         ผ่อนหมดแล้ว 🎉
-      </span>
+      </Badge>
     )
   }
   if (!info.isActiveInMonth) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500">
+      <Badge tone="neutral" className="text-[11px] py-0.5 px-2 min-h-0">
         ไม่มีงวด
-      </span>
+      </Badge>
     )
   }
   if (info.isPaidInMonth) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <Badge tone="income" className="text-[11px] py-0.5 px-2 min-h-0">
         จ่ายแล้ว
-      </span>
+      </Badge>
     )
   }
   if (info.isOverdue) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
+      <Badge tone="expense" className="text-[11px] py-0.5 px-2 min-h-0 animate-pulse">
         เกินกำหนด!
-      </span>
+      </Badge>
     )
   }
   if (info.isDueSoon) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+      <Badge tone="warning" className="text-[11px] py-0.5 px-2 min-h-0">
         {info.daysUntilDue === 0 ? 'วันนี้' : `อีก ${info.daysUntilDue} วัน`}
-      </span>
+      </Badge>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
+    <Badge tone="warning" className="text-[11px] py-0.5 px-2 min-h-0">
       รอชำระ
-    </span>
+    </Badge>
   )
 }

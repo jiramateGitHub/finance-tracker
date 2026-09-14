@@ -142,13 +142,13 @@ export function TripDetail({
             <div className="finance-toolbar items-start">
               <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <h2 className="min-w-0 break-words text-xl font-extrabold leading-tight text-blue-950">{trip.name}</h2>
+                  <h2 className="min-w-0 break-words text-xl font-extrabold leading-tight text-slate-900">{trip.name}</h2>
                   <Badge tone={tripStatus === 'completed' ? 'neutral' : 'active'}>{tripStatusLabel[tripStatus]}</Badge>
                 </div>
-                <p className="mt-1 text-sm font-semibold leading-6 text-blue-700">
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
                   {trip.destination || 'ยังไม่ระบุจุดหมาย'} · {formatDate(trip.startDate)} - {formatDate(trip.endDate)} · {getTripDayCount(trip)} วัน
                 </p>
-                {trip.note ? <p className="mt-1 text-sm leading-6 text-blue-800">{trip.note}</p> : null}
+                {trip.note ? <p className="mt-1 text-sm leading-6 text-slate-500">{trip.note}</p> : null}
               </div>
               <div className="flex min-w-0 flex-wrap justify-end gap-2">
                 <Button type="button" size="sm" onClick={() => onAddItem(trip)}>เพิ่มรายการ</Button>

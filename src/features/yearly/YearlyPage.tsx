@@ -189,7 +189,7 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
                 onClick={() => setSelectedYear(yr)}
                 className={`min-h-10 sm:min-h-8 shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition cursor-pointer inline-flex items-center justify-center ${
                   selectedYear === yr
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? 'bg-blue-600 text-white shadow-xs'
                     : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
                 }`}
               >
@@ -316,7 +316,7 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
               >
                 <div className="flex items-center justify-between gap-3 mb-2.5">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-bold text-slate-900 group-hover:text-indigo-700 transition">
+                    <h3 className="font-bold text-slate-900 group-hover:text-blue-700 transition">
                       {full} ({short})
                     </h3>
                     {isCurrentMonth && (
@@ -348,7 +348,7 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
                 </div>
 
                 {onSelectMonth && (
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 transition">
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-400 group-hover:text-blue-600 transition">
                     <span>เปิดดูรายเดือน</span>
                     <svg className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="9 18 15 12 9 6" />

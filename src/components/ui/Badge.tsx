@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react'
 
-type BadgeTone = 'neutral' | 'income' | 'expense' | 'warning' | 'active'
+type BadgeTone = 'neutral' | 'income' | 'expense' | 'warning' | 'active' | 'primary'
 
 type BadgeProps = PropsWithChildren<{
   tone?: BadgeTone
@@ -13,6 +13,7 @@ const toneClassName: Record<BadgeTone, string> = {
   expense: 'border-rose-200/60 bg-rose-50/90 text-rose-700',
   warning: 'border-amber-200/60 bg-amber-50/90 text-amber-700',
   active: 'border-blue-200/60 bg-blue-50/90 text-blue-700',
+  primary: 'border-blue-200/60 bg-blue-50/90 text-blue-700',
 }
 
 export function Badge({ tone = 'neutral', className = '', children }: BadgeProps) {

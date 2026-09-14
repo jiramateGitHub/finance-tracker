@@ -42,7 +42,7 @@ export function TripList({ data, trips, activeTripId, onSelectTrip, onEditTrip, 
             }}
             className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group text-left ${
               isActive
-                ? 'border-sky-400 bg-sky-50/40 ring-2 ring-sky-200 shadow-sm'
+                ? 'border-blue-400 bg-blue-50/40 ring-2 ring-blue-200 shadow-sm'
                 : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md'
             }`}
           >
@@ -51,11 +51,11 @@ export function TripList({ data, trips, activeTripId, onSelectTrip, onEditTrip, 
               <div className="flex items-start justify-between gap-2 mb-2.5">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-extrabold text-base text-slate-900 group-hover:text-sky-700 transition">
+                    <h3 className="font-extrabold text-base text-slate-900 group-hover:text-blue-700 transition">
                       {trip.name}
                     </h3>
                     {isActive && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-700">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700">
                         กำลังดู
                       </span>
                     )}
@@ -107,14 +107,14 @@ export function TripList({ data, trips, activeTripId, onSelectTrip, onEditTrip, 
                   <span className="text-slate-600 font-medium">
                     ใช้ไป {percent}% ของงบ
                   </span>
-                  <span className={`font-bold ${isOverBudget ? 'text-rose-600' : 'text-sky-600'}`}>
+                  <span className={`font-bold ${isOverBudget ? 'text-rose-600' : 'text-blue-600'}`}>
                     {isOverBudget ? `เกินงบ ${formatMoney(Math.abs(totals.remaining))}` : `คงเหลือ ${formatMoney(totals.remaining)}`}
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      isOverBudget ? 'bg-rose-500' : percent > 80 ? 'bg-amber-500' : 'bg-sky-500'
+                      isOverBudget ? 'bg-rose-500' : percent > 80 ? 'bg-amber-500' : 'bg-blue-500'
                     }`}
                     style={{ width: `${Math.min(100, percent)}%` }}
                   />
