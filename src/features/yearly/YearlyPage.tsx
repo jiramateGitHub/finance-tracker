@@ -5,6 +5,9 @@ import type { AppData } from '../../types/finance'
 import { formatMoney } from '../../utils/formatters'
 import { getInstallmentScheduleMonths } from '../installments/utils/installmentPlans'
 import { calculateMonthlyTotals, createMemoizedLedgerSelector } from '../monthly/utils/monthlyLedger'
+import { YearlyCategoryDonutChart } from './components/YearlyCategoryDonutChart'
+import { YearlyMonthlyTrendChart } from './components/YearlyMonthlyTrendChart'
+import { calculateYearlyMonthlyTrend } from './utils/yearlyUtils'
 
 type YearlyPageProps = {
   data: AppData
@@ -102,6 +105,11 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
     [data.settings.includePendingInMonthlyTotals],
   )
   const totals = useMemo(() => calculateMonthlyTotals(yearLedgerTransactions, totalsOptions), [yearLedgerTransactions, totalsOptions])
+
+  const monthlyTrendData = useMemo(
+    () => calculateYearlyMonthlyTrend(yearLedgerTransactions, selectedYear, totalsOptions),
+    [yearLedgerTransactions, selectedYear, totalsOptions],
+  )
 
   const expenseRatio = totals.income > 0 ? Math.min(100, Math.round((totals.expense / totals.income) * 100)) : undefined
 
@@ -279,6 +287,25 @@ export function YearlyPage({ data, onSelectMonth }: YearlyPageProps) {
                 {totals.pendingExpense > 0 ? 'มียอดค้างชำระ' : 'ไม่มีค้างชำระ'}
               </span>
             }
+          />
+        </div>
+      </section>
+
+      {/* ==================== DASHBOARD: TREND & CATEGORY CHARTS ==================== */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 min-w-0">
+        <div className="lg:col-span-7 min-w-0">
+          <YearlyMonthlyTrendChart
+            data={monthlyTrendData}
+            selectedYear={selectedYear}
+            onSelectMonth={onSelectMonth}
+            currentMonthKey={currentMonthPrefix}
+          />
+        </div>
+        <div className="lg:col-span-5 min-w-0">
+          <YearlyCategoryDonutChart
+            transactions={yearLedgerTransactions}
+            selectedYear={selectedYear}
+            includePending={data.settings.includePendingInMonthlyTotals}
           />
         </div>
       </section>
