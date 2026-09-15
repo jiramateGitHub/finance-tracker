@@ -87,45 +87,49 @@ export function SummaryCard({
 
   return (
     <div
-      className={`min-w-0 rounded-2xl border border-slate-200/80 bg-white shadow-xs transition hover:shadow-md ${
+      className={`min-w-0 rounded-2xl border border-slate-200/80 bg-white shadow-xs transition hover:shadow-md h-full flex flex-col justify-between ${
         compact ? 'p-3 sm:p-3.5' : 'p-3.5 sm:p-5'
       } ${className}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">
-          {label}
-        </span>
-        <div
-          className={`shrink-0 rounded-xl flex items-center justify-center font-bold shadow-xs ${
-            compact ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm'
-          } ${theme.iconBg}`}
-        >
-          {icon}
-        </div>
-      </div>
-
-      <div
-        className={`mt-2 min-w-0 break-words tabular-nums font-extrabold tracking-tight text-slate-900 ${
-          compact ? 'text-base sm:text-lg lg:text-xl' : 'text-xl sm:text-2xl lg:text-3xl'
-        }`}
-      >
-        {value}
-      </div>
-
-      {subValue && (
-        <div className="mt-1.5 sm:mt-2 text-[11px] sm:text-xs font-medium text-slate-500 break-words">
-          {subValue}
-        </div>
-      )}
-
-      {typeof progress === 'number' && (
-        <div className="mt-2.5 w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden">
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">
+            {label}
+          </span>
           <div
-            className={`h-full rounded-full transition-all duration-500 ${theme.bar}`}
-            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-          />
+            className={`shrink-0 rounded-xl flex items-center justify-center font-bold shadow-xs ${
+              compact ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm'
+            } ${theme.iconBg}`}
+          >
+            {icon}
+          </div>
         </div>
-      )}
+
+        <div
+          className={`mt-2 min-w-0 break-words tabular-nums font-extrabold tracking-tight text-slate-900 ${
+            compact ? 'text-base sm:text-lg lg:text-xl' : 'text-xl sm:text-2xl lg:text-3xl'
+          }`}
+        >
+          {value}
+        </div>
+      </div>
+
+      <div className="mt-2">
+        {subValue && (
+          <div className="text-[11px] sm:text-xs font-medium text-slate-500 break-words">
+            {subValue}
+          </div>
+        )}
+
+        {typeof progress === 'number' && (
+          <div className="mt-2.5 w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${theme.bar}`}
+              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

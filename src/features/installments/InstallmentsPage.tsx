@@ -232,14 +232,14 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
       </section>
 
       {/* ==================== ANALYTICS & PROJECTION SECTION (installment_tracker.html line 280) ==================== */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 min-w-0 w-full max-w-full">
-        <div className="lg:col-span-2 min-w-0 w-full max-w-full">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 min-w-0 w-full max-w-full items-stretch">
+        <div className="lg:col-span-2 min-w-0 w-full max-w-full flex flex-col">
           <InstallmentProjectionChart
             projection={projection}
             selectedMonth={selectedMonth}
           />
         </div>
-        <div className="lg:col-span-1 min-w-0 w-full max-w-full">
+        <div className="lg:col-span-1 min-w-0 w-full max-w-full flex flex-col">
           <InstallmentCategoryChart
             distribution={categoryDistribution}
           />

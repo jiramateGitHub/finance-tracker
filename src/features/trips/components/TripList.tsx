@@ -40,7 +40,7 @@ export function TripList({ data, trips, activeTripId, onSelectTrip, onEditTrip, 
                 onSelectTrip(trip.id)
               }
             }}
-            className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group text-left ${
+            className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between h-full group text-left ${
               isActive
                 ? 'border-blue-400 bg-blue-50/40 ring-2 ring-blue-200 shadow-sm'
                 : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md'

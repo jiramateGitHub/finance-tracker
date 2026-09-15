@@ -131,7 +131,7 @@ export function InstallmentPlanList({
           return (
             <article
               key={plan.id}
-              className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between h-full"
             >
               <div>
                 {/* 1. Top Strip: Category & Month Status Badge */}

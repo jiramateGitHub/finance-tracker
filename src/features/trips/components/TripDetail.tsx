@@ -304,9 +304,9 @@ export function TripDetail({
           </div>
 
           {/* 2-Column Split: Category Distribution & Payment Breakdown */}
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 items-stretch">
             {/* Category Distribution Card */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs flex flex-col justify-between">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
                   <div>
@@ -370,33 +370,37 @@ export function TripDetail({
             </div>
 
             {/* Payment & Installment Breakdown Card */}
-            <div className="space-y-3.5">
+            <div className="flex flex-col gap-3.5 h-full">
               {/* Payment Status Split */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
                 {/* Paid */}
-                <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-3.5 shadow-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                      <IconCheck size={14} />
+                <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-3.5 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                        <IconCheck size={14} />
+                      </div>
+                      <Badge tone="income">จ่ายแล้ว</Badge>
                     </div>
-                    <Badge tone="income">จ่ายแล้ว</Badge>
+                    <div className="mt-2 text-lg font-extrabold text-emerald-800 tabular-nums">{formatMoney(totals.paidTotal)}</div>
                   </div>
-                  <div className="mt-2 text-lg font-extrabold text-emerald-800 tabular-nums">{formatMoney(totals.paidTotal)}</div>
-                  <div className="mt-0.5 text-xs text-emerald-700 font-medium">
+                  <div className="mt-1 text-xs text-emerald-700 font-medium">
                     {paidItemsCount} รายการชำระแล้ว
                   </div>
                 </div>
 
                 {/* Unpaid */}
-                <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3.5 shadow-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
-                      <IconCalendar size={14} />
+                <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3.5 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                        <IconCalendar size={14} />
+                      </div>
+                      <Badge tone="warning">รอชำระ</Badge>
                     </div>
-                    <Badge tone="warning">รอชำระ</Badge>
+                    <div className="mt-2 text-lg font-extrabold text-amber-800 tabular-nums">{formatMoney(totals.unpaidTotal)}</div>
                   </div>
-                  <div className="mt-2 text-lg font-extrabold text-amber-800 tabular-nums">{formatMoney(totals.unpaidTotal)}</div>
-                  <div className="mt-0.5 text-xs text-amber-700 font-medium flex items-center justify-between">
+                  <div className="mt-1 text-xs text-amber-700 font-medium flex items-center justify-between">
                     <span>{unpaidItemsCount} รายการยังไม่จ่าย</span>
                     {unpaidItemsCount > 0 ? (
                       <button
@@ -415,25 +419,27 @@ export function TripDetail({
               </div>
 
               {/* Installment Plans Info Box */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">การผูกกับแผนผ่อนชำระ</h4>
-                {trip.items.some((item) => Boolean(item.installmentId)) ? (
-                  <div className="mt-2 space-y-2">
-                    {trip.items
-                      .filter((item) => Boolean(item.installmentId))
-                      .map((item) => (
-                        <div key={item.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-slate-100 last:border-b-0">
-                          <div className="min-w-0">
-                            <span className="font-bold text-slate-800 truncate block">{item.title}</span>
-                            <span className="text-slate-400">{installmentNameById.get(item.installmentId ?? '') || 'แผนผ่อน'}</span>
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs flex-1 flex flex-col justify-between">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">การผูกกับแผนผ่อนชำระ</h4>
+                  {trip.items.some((item) => Boolean(item.installmentId)) ? (
+                    <div className="mt-2 space-y-2">
+                      {trip.items
+                        .filter((item) => Boolean(item.installmentId))
+                        .map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-slate-100 last:border-b-0">
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-800 truncate block">{item.title}</span>
+                              <span className="text-slate-400">{installmentNameById.get(item.installmentId ?? '') || 'แผนผ่อน'}</span>
+                            </div>
+                            <span className="font-bold text-rose-700 tabular-nums">{formatMoney(item.amount)}</span>
                           </div>
-                          <span className="font-bold text-rose-700 tabular-nums">{formatMoney(item.amount)}</span>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <p className="mt-1 text-xs text-slate-400 font-medium">ไม่มีรายการในทริปนี้ที่ผูกกับแผนผ่อนสินค้า</p>
-                )}
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400 font-medium">ไม่มีรายการในทริปนี้ที่ผูกกับแผนผ่อนสินค้า</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -41,28 +41,29 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
   }, [slicesWithOffsets, hoveredSlice])
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between min-w-0 w-full max-w-full">
-      {/* Title */}
-      <div className="mb-1 sm:mb-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
-            <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-              <path d="M22 12A10 10 0 0 0 12 2v10z" />
-            </svg>
-            <span>สัดส่วนตามหมวดหมู่ (เดือนนี้)</span>
-          </h3>
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between min-w-0 w-full max-w-full h-full">
+      <div>
+        {/* Title */}
+        <div className="mb-1 sm:mb-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                <path d="M22 12A10 10 0 0 0 12 2v10z" />
+              </svg>
+              <span>สัดส่วนตามหมวดหมู่ (เดือนนี้)</span>
+            </h3>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5 truncate">
+            แบ่งตามประเภทสินค้าและภาระผ่อนในเดือนนี้
+          </p>
         </div>
-        <p className="text-xs text-slate-500 mt-0.5 truncate">
-          แบ่งตามประเภทสินค้าและภาระผ่อนในเดือนนี้
-        </p>
-      </div>
 
-      {!hasData ? (
-        <div className="py-12 text-center text-xs text-slate-400">
-          ไม่มีรายการผ่อนที่ต้องชำระในเดือนนี้
-        </div>
-      ) : (
+        {!hasData ? (
+          <div className="py-12 text-center text-xs text-slate-400">
+            ไม่มีรายการผ่อนที่ต้องชำระในเดือนนี้
+          </div>
+        ) : (
         <>
           {/* Donut Chart */}
           <div className="relative flex items-center justify-center my-2 sm:my-3 h-40 sm:h-44">
@@ -175,6 +176,13 @@ export function InstallmentCategoryChart({ distribution }: InstallmentCategoryCh
             })}
           </div>
         </>
+      )}
+      </div>
+
+      {hasData && (
+        <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] text-slate-400 text-center">
+          แตะหรือชี้ที่กราฟเพื่อดูสัดส่วนแต่ละหมวด
+        </div>
       )}
     </div>
   )
