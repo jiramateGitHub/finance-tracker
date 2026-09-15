@@ -92,30 +92,31 @@ export function TripFilters({ filters, resultCount, onChange }: TripFiltersProps
       {/* 2. Core Filter Controls */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
         {/* Search */}
-        <div className="relative">
-          <label className="text-xs font-semibold text-slate-500 mb-1 block">ค้นหา</label>
-          <div className="relative">
-            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="text"
-              placeholder="ทริป, จุดหมาย, หมวด, หมายเหตุ..."
-              value={filters.keyword}
-              onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
-              className="h-11 sm:h-9 text-base sm:text-xs w-full pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-            />
-            {filters.keyword && (
-              <button
-                type="button"
-                onClick={() => onChange({ ...filters, keyword: '' })}
-                className="min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 flex items-center justify-center absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+        <div>
+          <FormField label="ค้นหา">
+            <div className="relative">
+              <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="ทริป, จุดหมาย, หมวด, หมายเหตุ..."
+                value={filters.keyword}
+                onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
+                className="finance-control pl-9 pr-10"
+              />
+              {filters.keyword && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filters, keyword: '' })}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 min-h-9 min-w-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </FormField>
         </div>
 
         {/* Month start */}
