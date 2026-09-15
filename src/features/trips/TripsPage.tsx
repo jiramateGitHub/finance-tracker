@@ -16,7 +16,7 @@ import { TripList } from './components/TripList'
 import { TripModal } from './components/TripModal'
 import { TripSummaryCards } from './components/TripSummaryCards'
 import { TripTable } from './components/TripTable'
-import { IconPlus, IconPencil, IconTrash } from '../../components/ui/Icons'
+import { IconChevronLeft, IconPlus, IconPencil, IconTrash } from '../../components/ui/Icons'
 import { ViewSwitcher } from '../../components/ui/ViewSwitcher'
 import {
   calculateTripTotals,
@@ -276,19 +276,14 @@ export function TripsPage({
       <div className="finance-page-shell">
         {/* ==================== COMMAND / HEADER PANEL FOR TRIP DETAIL ==================== */}
         <section className="finance-command-panel">
-          <div className="finance-toolbar finance-command-header border-b border-sky-100 pb-3">
+          <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
             {/* Left: Back button & Trip Title */}
             <div className="flex items-center gap-3">
-              <Button type="button" size="sm" onClick={closeTripDetail}>
-                <span className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                  <span>ย้อนกลับ</span>
-                </span>
+              <Button type="button" size="sm" icon={<IconChevronLeft size={16} />} onClick={closeTripDetail}>
+                <span>ย้อนกลับ</span>
               </Button>
 
-              <div className="w-10 h-10 rounded-xl bg-sky-600 flex items-center justify-center text-white shadow-sm shadow-sky-500/20">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
                   <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
@@ -455,7 +450,7 @@ export function TripsPage({
         <div className="finance-toolbar finance-command-header border-b border-blue-100 pb-3">
           {/* Left: Title & Subtitle */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-600 flex items-center justify-center text-white shadow-sm shadow-sky-500/20">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
@@ -464,7 +459,7 @@ export function TripsPage({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">จัดการทริป</h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/80">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
                   เที่ยวสบายใจ
                 </span>
               </div>
