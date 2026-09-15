@@ -83,8 +83,8 @@ export function ActionButton({
   const displayLabel = label !== undefined ? label : (iconOnly ? null : defaultLabel)
 
   const sizeClasses = iconOnly
-    ? (size === 'sm' ? 'min-h-9 min-w-9 p-2 rounded-xl text-xs' : 'min-h-10 min-w-10 p-2.5 rounded-xl text-sm')
-    : (size === 'sm' ? 'min-h-9 px-2.5 py-1.5 rounded-xl text-xs gap-1.5' : 'min-h-10 px-3.5 py-2 rounded-xl text-sm gap-2')
+    ? (size === 'sm' ? 'min-h-10 min-w-10 p-2 sm:min-h-9 sm:min-w-9 rounded-xl text-xs' : 'min-h-11 min-w-11 p-2.5 rounded-xl text-sm')
+    : (size === 'sm' ? 'min-h-10 px-2.5 py-1.5 sm:min-h-9 rounded-xl text-xs gap-1.5' : 'min-h-11 px-3.5 py-2 rounded-xl text-sm gap-2')
 
   return (
     <button

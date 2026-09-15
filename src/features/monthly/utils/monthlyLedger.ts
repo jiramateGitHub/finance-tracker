@@ -422,8 +422,24 @@ export function buildTransactionFromForm(values: TransactionFormValues, existing
   }
 }
 
+function isValidTransactionDate(value: string): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return false
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (year < 1 || month < 1 || month > 12 || day < 1) return false
+
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day
+}
+
 export function validateTransactionForm(values: TransactionFormValues): string | null {
   if (!values.date) return 'เลือกวันที่'
+  if (!isValidTransactionDate(values.date)) return 'เลือกวันที่ที่ถูกต้อง'
   if (!values.title.trim()) return 'กรอกชื่อรายการ'
   const parsedAmount = parseAmountSafe(values.amount, Number.NaN)
   if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return 'กรอกจำนวนเงินมากกว่า 0'

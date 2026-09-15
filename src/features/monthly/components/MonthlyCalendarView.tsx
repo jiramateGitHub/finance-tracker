@@ -225,7 +225,7 @@ export function MonthlyCalendarView({
             <button
               type="button"
               onClick={() => setActiveDate(null)}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+              className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
             >
               ปิด
             </button>
@@ -257,7 +257,7 @@ export function MonthlyCalendarView({
                         </Badge>
                       </div>
                       {transaction.note && (
-                        <p className="text-xs text-slate-500 mt-0.5">{transaction.note}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">{transaction.note}</p>
                       )}
                     </div>
 
@@ -272,7 +272,7 @@ export function MonthlyCalendarView({
                             action="pay"
                             size="sm"
                             isPaid={transaction.status === 'cleared'}
-                            label={transaction.status === 'pending' ? 'จ่าย' : 'ยกเลิก'}
+                            label={transaction.status === 'pending' ? th.transaction.markPaid : th.transaction.markUnpaid}
                             onClick={() => onTogglePaid(transaction)}
                           />
                         )}

@@ -55,7 +55,7 @@ export function ViewSwitcher<T extends string>({
             aria-checked={isActive}
             title={option.label}
             onClick={() => onViewChange(option.id)}
-            className={`min-h-9 min-w-9 sm:min-h-8 sm:min-w-0 flex items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-semibold transition-all duration-150 cursor-pointer ${
+            className={`min-h-10 min-w-10 sm:min-h-9 sm:min-w-0 flex items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-semibold transition-all duration-150 cursor-pointer ${
               isActive
                 ? 'bg-white text-blue-700 shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'

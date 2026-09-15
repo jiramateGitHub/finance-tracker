@@ -56,7 +56,10 @@ export function parseQuickAdd(input: string): QuickAddParseResult | null {
   const normalized = input.trim().replace(/\s+/g, ' ')
   if (!normalized) return null
 
-  const amountMatches = Array.from(normalized.matchAll(/(\d[\d,]*(?:\.\d{1,2})?)(?:\s*(?:บาท|฿|\.-))?/g))
+  // Keep a monetary token whole. A permissive expression can turn `65.999`
+  // into `9` by treating the final digit as a second amount, which silently
+  // saves the wrong value.
+  const amountMatches = Array.from(normalized.matchAll(/(?<![\d.,])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)(?:\s*(?:บาท|฿|\.-))?(?![\d.,])/g))
   const amountMatch = amountMatches.at(-1)
   if (!amountMatch) return null
 

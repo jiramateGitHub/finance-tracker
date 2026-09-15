@@ -36,16 +36,16 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
               <h3 className="text-base font-bold text-slate-900">{formatMonth(group.monthKey)}</h3>
               <p className="text-xs font-medium text-slate-500">{group.transactions.length} รายการ</p>
             </div>
-            <div className="flex flex-wrap gap-1.5 text-xs sm:text-sm font-semibold">
-              <span className="rounded-xl bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 text-emerald-700">
+            <div className="flex flex-wrap gap-1.5">
+              <Badge tone="income">
                 +{formatMoney(group.totals.income)}
-              </span>
-              <span className="rounded-xl bg-rose-50 border border-rose-200/60 px-2.5 py-1 text-rose-700">
+              </Badge>
+              <Badge tone="expense">
                 -{formatMoney(group.totals.expense)}
-              </span>
-              <span className="rounded-xl bg-blue-50 border border-blue-200/60 px-2.5 py-1 text-blue-700">
+              </Badge>
+              <Badge tone="primary">
                 {formatMoney(group.totals.balance)}
-              </span>
+              </Badge>
             </div>
           </div>
 
@@ -69,7 +69,7 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
                     <div className="flex items-start justify-between gap-2.5 flex-1 min-w-0">
                       <div className="flex min-w-0 items-start gap-2.5 flex-1">
                         <div className="shrink-0 rounded-xl bg-slate-50 border border-slate-200/60 px-2 sm:px-2.5 py-1 sm:py-1.5 text-center">
-                          <div className="text-[11px] font-semibold text-slate-500">{formatDate(transaction.date)}</div>
+                          <div className="text-sm font-semibold text-slate-600">{formatDate(transaction.date)}</div>
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -80,7 +80,7 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
                             </Badge>
                             <Badge tone={transaction.status === 'pending' ? 'warning' : 'active'}>{getPaymentLabel(transaction)}</Badge>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-500">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-sm text-slate-500">
                             <span className="font-medium text-slate-600">{transaction.category}</span>
                             <span>•</span>
                             <span>{getSourceLabel(transaction)}</span>
@@ -117,7 +117,7 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
                           />
                         ) : (
                           <div className="md:hidden">
-                            <span className="text-[11px] text-slate-400 font-medium">
+                            <span className="text-sm text-slate-500 font-medium">
                               {isIncome ? 'รายรับ' : th.transaction.readonly}
                             </span>
                           </div>
@@ -131,9 +131,9 @@ export function TransactionList({ groups, highlightedIds = [], onEdit, onDelete,
                             <ActionButton action="delete" iconOnly title={th.common.delete} onClick={() => onDelete(transaction.id)} />
                           </div>
                         ) : (
-                          <span className="hidden md:inline-block rounded-xl border border-slate-200/80 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-400">
+                          <Badge tone="neutral" className="hidden md:inline-flex text-slate-500">
                             {th.transaction.readonly}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </div>

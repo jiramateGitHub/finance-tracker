@@ -126,6 +126,7 @@ export function ComboboxField({
         }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
+            event.stopPropagation()
             setOpen(false)
             return
           }

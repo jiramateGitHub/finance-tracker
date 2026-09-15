@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { th } from '../../i18n/th'
 import { Button } from './Button'
 
@@ -23,13 +23,41 @@ export function ConfirmModal({
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
+  const panelRef = useRef<HTMLElement | null>(null)
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null)
+
   useEffect(() => {
     if (!open) return
+    previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const frameId = window.requestAnimationFrame(() => {
+      panelRef.current?.querySelector<HTMLElement>('[data-confirm-primary]')?.focus()
+    })
+
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') onClose()
+      if (event.key !== 'Tab') return
+
+      const focusableElements = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [])
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements.at(-1)
+      if (!firstElement || !lastElement) return
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.removeEventListener('keydown', handleKeyDown)
+      previouslyFocusedElementRef.current?.focus()
+    }
   }, [open, onClose])
 
   if (!open) return null
@@ -42,6 +70,7 @@ export function ConfirmModal({
         aria-hidden="true"
       />
       <section
+        ref={panelRef}
         className="finance-confirm-panel relative z-10 w-[calc(100vw-2rem)] max-w-md rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xl transition-all"
         role="dialog"
         aria-modal="true"
@@ -56,6 +85,7 @@ export function ConfirmModal({
           <Button
             type="button"
             variant={destructive ? 'danger' : 'primary'}
+            data-confirm-primary
             onClick={() => {
               onConfirm()
               onClose()

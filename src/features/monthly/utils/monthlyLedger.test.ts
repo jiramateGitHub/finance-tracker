@@ -10,8 +10,10 @@ import {
   addMonthsToMonthKey,
   createEmptyMonthlyFilters,
   getMonthKeysInRange,
+  getSafeDateInMonth,
   resolveMonthlyFilterRange,
   selectLedgerTransactionsForRange,
+  validateTransactionForm,
 } from './monthlyLedger'
 import { parseMonthlySmartKeyword } from './monthlySmartFilter'
 import { deriveInstallmentTransactions, deriveInstallmentTransactionsForMonths } from '../../installments/utils/installmentPlans'
@@ -109,6 +111,34 @@ assert.equal(filterMonthlyTransactions(sampleTransactions, { ...defaultFilters, 
 const previousMonth = addMonthsToMonthKey(defaultFilters.rangeStartMonth, -1)
 assert.equal(resolveMonthlyFilterRange({ ...defaultFilters, keyword: 'เดือนก่อน' })[0], previousMonth, 'เดือนก่อน resolves the derived range')
 console.log('✓ filterMonthlyTransactions passed')
+
+// 2.1 Transaction form date validation
+assert.equal(validateTransactionForm({
+  type: 'expense',
+  date: '2026-02-31',
+  category: 'อื่นๆ',
+  title: 'วันที่ไม่ถูกต้อง',
+  amount: '100',
+  status: 'cleared',
+  note: '',
+  sourceModule: 'manual',
+  repeatEnabled: false,
+  repeatCount: '1',
+}), 'เลือกวันที่ที่ถูกต้อง', 'Invalid calendar dates must be rejected')
+assert.equal(validateTransactionForm({
+  type: 'expense',
+  date: '2028-02-29',
+  category: 'อื่นๆ',
+  title: 'วัน leap year',
+  amount: '100',
+  status: 'cleared',
+  note: '',
+  sourceModule: 'manual',
+  repeatEnabled: false,
+  repeatCount: '1',
+}), null, 'Valid leap-day dates must be accepted')
+console.log('✓ Transaction form date validation passed')
+assert.equal(getSafeDateInMonth('2026-02', '31'), '2026-02-28', 'Templates should clamp a missing day to the end of the selected month')
 
 // 3. groupTransactionsByMonth
 const groups = groupTransactionsByMonth(sampleTransactions)

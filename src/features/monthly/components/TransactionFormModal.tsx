@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { ComboboxField } from '../../../components/ui/ComboboxField'
+import { ConfirmModal } from '../../../components/ui/ConfirmModal'
 import { DateInput } from '../../../components/ui/DateInput'
 import { FormField } from '../../../components/ui/FormField'
 import { SelectField } from '../../../components/ui/SelectField'
@@ -33,21 +34,68 @@ export function TransactionFormModal({
   onClose,
   onSubmit,
 }: TransactionFormModalProps) {
-  const [values, setValues] = useState<TransactionFormValues>(() => createTransactionFormValues(transaction ?? undefined, defaultValues))
+  const formRef = useRef<HTMLFormElement | null>(null)
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null)
+  const [initialValues] = useState<TransactionFormValues>(() => createTransactionFormValues(transaction ?? undefined, defaultValues))
+  const [values, setValues] = useState<TransactionFormValues>(initialValues)
   const [error, setError] = useState<string | null>(null)
+  const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false)
+  const hasUnsavedChanges = JSON.stringify(values) !== JSON.stringify(initialValues)
+  const requestClose = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setDiscardConfirmationOpen(true)
+      return
+    }
+    onClose()
+  }, [hasUnsavedChanges, onClose])
 
   useEffect(() => {
     if (!open) return
+    previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const frameId = window.requestAnimationFrame(() => {
+      formRef.current?.querySelector<HTMLElement>('[data-initial-focus]')?.focus()
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      previouslyFocusedElementRef.current?.focus()
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || discardConfirmationOpen) return
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        requestClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusableElements = Array.from(formRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [])
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements.at(-1)
+      if (!firstElement || !lastElement) return
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [discardConfirmationOpen, open, requestClose])
 
   if (!open) return null
 
   function updateField<K extends keyof TransactionFormValues>(field: K, value: TransactionFormValues[K]): void {
+    if (error) setError(null)
     setValues((current) => ({
       ...current,
       [field]: value,
@@ -59,6 +107,16 @@ export function TransactionFormModal({
     const validationError = validateTransactionForm(values)
     if (validationError) {
       setError(validationError)
+      const errorField = validationError === 'เลือกวันที่ที่ถูกต้อง' || validationError === 'เลือกวันที่'
+        ? 'date'
+        : validationError === 'กรอกชื่อรายการ'
+          ? 'title'
+          : validationError === 'กรอกจำนวนเงินมากกว่า 0'
+            ? 'amount'
+            : 'repeatCount'
+      window.requestAnimationFrame(() => {
+        formRef.current?.querySelector<HTMLElement>(`[data-error-field="${errorField}"]`)?.focus()
+      })
       return
     }
 
@@ -75,10 +133,15 @@ export function TransactionFormModal({
     saveTransaction()
   }
 
+  const dateError = error === 'เลือกวันที่' || error === 'เลือกวันที่ที่ถูกต้อง' ? error : null
+  const amountError = error === 'กรอกจำนวนเงินมากกว่า 0' ? error : null
+  const titleError = error === 'กรอกชื่อรายการ' ? error : null
+  const repeatCountError = error === 'จำนวนเดือนที่สร้างต้องอยู่ระหว่าง 1 ถึง 60' ? error : null
+
   return (
     <div className="finance-modal-backdrop">
-      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
-      <form className="finance-modal-panel relative z-10 max-w-xl" onSubmit={handleSubmit}>
+      <div className="fixed inset-0" onClick={requestClose} aria-hidden="true" />
+      <form ref={formRef} inert={discardConfirmationOpen} className="finance-modal-panel relative z-10 max-w-xl" onSubmit={handleSubmit}>
         <div className="mx-auto -mt-1 mb-1 h-1 w-10 rounded-full bg-slate-200 sm:hidden" aria-hidden="true" />
         <header className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
@@ -86,7 +149,7 @@ export function TransactionFormModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={th.common.close}
             className="grid min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition active:scale-95 cursor-pointer"
           >
@@ -96,8 +159,6 @@ export function TransactionFormModal({
             </svg>
           </button>
         </header>
-
-        {error && <div className="finance-error">{error}</div>}
 
         <div className="finance-modal-body">
           <div className="finance-form-grid">
@@ -131,7 +192,14 @@ export function TransactionFormModal({
             </FormField>
 
             <FormField label="วันที่">
-              <DateInput value={values.date} onChange={(event) => updateField('date', event.target.value)} />
+              <DateInput
+                aria-describedby={dateError ? 'transaction-date-error' : undefined}
+                aria-invalid={Boolean(dateError)}
+                data-error-field="date"
+                value={values.date}
+                onChange={(event) => updateField('date', event.target.value)}
+              />
+              {dateError ? <p id="transaction-date-error" className="text-sm font-semibold text-rose-700" role="alert">{dateError}</p> : null}
             </FormField>
 
             <FormField label="หมวดหมู่">
@@ -145,12 +213,16 @@ export function TransactionFormModal({
 
             <FormField label="จำนวนเงิน">
               <TextInput
+                aria-describedby={amountError ? 'transaction-amount-error' : undefined}
+                aria-invalid={Boolean(amountError)}
+                data-error-field="amount"
                 inputMode="decimal"
                 type="text"
                 placeholder="0.00"
                 value={values.amount}
                 onChange={(event) => updateField('amount', event.target.value)}
               />
+              {amountError ? <p id="transaction-amount-error" className="text-sm font-semibold text-rose-700" role="alert">{amountError}</p> : null}
             </FormField>
 
             <FormField label="สถานะจ่าย">
@@ -166,7 +238,16 @@ export function TransactionFormModal({
             </FormField>
 
             <FormField label="ชื่อรายการ" fullWidth>
-              <TextInput value={values.title} placeholder="เช่น เงินเดือน, กาแฟ, ค่าเช่าห้อง" onChange={(event) => updateField('title', event.target.value)} />
+              <TextInput
+                aria-describedby={titleError ? 'transaction-title-error' : undefined}
+                aria-invalid={Boolean(titleError)}
+                data-error-field="title"
+                data-initial-focus
+                value={values.title}
+                placeholder="เช่น เงินเดือน, กาแฟ, ค่าเช่าห้อง"
+                onChange={(event) => updateField('title', event.target.value)}
+              />
+              {titleError ? <p id="transaction-title-error" className="text-sm font-semibold text-rose-700" role="alert">{titleError}</p> : null}
             </FormField>
 
             <FormField label={th.transaction.note} fullWidth>
@@ -189,21 +270,34 @@ export function TransactionFormModal({
             {!transaction && values.repeatEnabled && (
               <FormField label="จำนวนเดือนที่สร้าง" fullWidth>
                 <TextInput
+                  aria-describedby={repeatCountError ? 'transaction-repeat-count-error' : undefined}
+                  aria-invalid={Boolean(repeatCountError)}
+                  data-error-field="repeatCount"
                   inputMode="numeric"
                   value={values.repeatCount}
                   placeholder="1-60 เดือน"
                   onChange={(event) => updateField('repeatCount', event.target.value)}
                 />
+                {repeatCountError ? <p id="transaction-repeat-count-error" className="text-sm font-semibold text-rose-700" role="alert">{repeatCountError}</p> : null}
               </FormField>
             )}
           </div>
         </div>
 
         <footer className="finance-modal-footer">
-          <Button type="button" onClick={onClose}>{th.common.cancel}</Button>
+          <Button type="button" onClick={requestClose}>{th.common.cancel}</Button>
           <Button type="submit" variant="primary">{transaction ? th.common.saveChanges : th.transaction.add}</Button>
         </footer>
       </form>
+      <ConfirmModal
+        open={discardConfirmationOpen}
+        title="ละทิ้งการเปลี่ยนแปลง?"
+        description="ข้อมูลที่กรอกไว้จะหายและไม่ถูกบันทึก"
+        confirmLabel="ละทิ้ง"
+        destructive
+        onConfirm={onClose}
+        onClose={() => setDiscardConfirmationOpen(false)}
+      />
     </div>
   )
 }

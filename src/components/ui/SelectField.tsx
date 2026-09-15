@@ -123,6 +123,7 @@ export function SelectField({
         }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
+            event.stopPropagation()
             closePanel()
             return
           }

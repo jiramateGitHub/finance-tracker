@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react'
 import { ActionButton } from '../../../components/ui/ActionButton'
 import { Badge } from '../../../components/ui/Badge'
 import { EmptyState } from '../../../components/ui/EmptyState'
@@ -16,6 +17,30 @@ type TransactionTableProps = {
   onTogglePaid: (transaction: TransactionEntry) => void
 }
 
+const desktopTableMediaQuery = '(min-width: 768px)'
+
+function subscribeToDesktopTableLayout(onStoreChange: () => void): () => void {
+  const mediaQueryList = window.matchMedia(desktopTableMediaQuery)
+  mediaQueryList.addEventListener('change', onStoreChange)
+  return () => mediaQueryList.removeEventListener('change', onStoreChange)
+}
+
+function getDesktopTableLayoutSnapshot(): boolean {
+  return window.matchMedia(desktopTableMediaQuery).matches
+}
+
+function getServerTableLayoutSnapshot(): boolean {
+  return false
+}
+
+function useDesktopTableLayout(): boolean {
+  return useSyncExternalStore(
+    subscribeToDesktopTableLayout,
+    getDesktopTableLayoutSnapshot,
+    getServerTableLayoutSnapshot,
+  )
+}
+
 export function TransactionTable({
   transactions,
   highlightedIds = [],
@@ -25,6 +50,8 @@ export function TransactionTable({
   onUseTemplate,
   onTogglePaid,
 }: TransactionTableProps) {
+  const isDesktopLayout = useDesktopTableLayout()
+
   if (!transactions.length) {
     return (
       <EmptyState
@@ -36,8 +63,7 @@ export function TransactionTable({
 
   return (
     <>
-      {/* 1. Mobile Cards Fallback (md:hidden) */}
-      <div className="space-y-3 md:hidden">
+      {!isDesktopLayout && <div className="space-y-3">
         {transactions.map((transaction) => {
           const linkedInstallment = isInstallmentTransaction(transaction)
           const linkedTrip = Boolean(transaction.tripId || transaction.sourceModule === 'trip')
@@ -56,14 +82,14 @@ export function TransactionTable({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+                  <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-1">
                     <span className="font-semibold text-slate-700">{formatDate(transaction.date)}</span>
                     <span>•</span>
                     <span>{transaction.category}</span>
                   </div>
                   <h4 className="font-bold text-sm text-slate-900 line-clamp-1">{transaction.title}</h4>
                   {transaction.note && (
-                    <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{transaction.note}</p>
+                    <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">{transaction.note}</p>
                   )}
                 </div>
                 <div className={`text-right text-base font-extrabold tabular-nums shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-700'}`}>
@@ -87,7 +113,7 @@ export function TransactionTable({
                     onClick={() => onTogglePaid(transaction)}
                   />
                 ) : (
-                  <span className="text-[11px] text-slate-400 font-medium">
+                  <span className="text-sm text-slate-500 font-medium">
                     {isIncome ? 'รายรับ' : th.transaction.readonly}
                   </span>
                 )}
@@ -104,12 +130,11 @@ export function TransactionTable({
             </article>
           )
         })}
-      </div>
+      </div>}
 
-      {/* 2. Full Table View for md+ */}
-      <div className="hidden md:block rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+      {isDesktopLayout && <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left border-collapse text-xs">
+          <table className="w-full min-w-[820px] text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">วันที่</th>
@@ -145,7 +170,7 @@ export function TransactionTable({
                         {transaction.title}
                       </div>
                       {transaction.note && (
-                        <div className="text-[11px] text-slate-400 font-normal truncate max-w-[220px]" title={transaction.note}>
+                        <div className="text-sm text-slate-500 font-normal truncate max-w-[220px]" title={transaction.note}>
                           {transaction.note}
                         </div>
                       )}
@@ -153,13 +178,13 @@ export function TransactionTable({
 
                     {/* Category */}
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-medium text-xs">
+                      <Badge tone="neutral">
                         {transaction.category}
-                      </span>
+                      </Badge>
                     </td>
 
                     {/* Source */}
-                    <td className="py-3 px-3 whitespace-nowrap text-slate-500 text-xs">
+                    <td className="py-3 px-3 whitespace-nowrap text-slate-500">
                       {getSourceLabel(transaction)}
                     </td>
 
@@ -185,7 +210,7 @@ export function TransactionTable({
                             action="pay"
                             size="sm"
                             isPaid={transaction.status === 'cleared'}
-                            label={transaction.status === 'pending' ? 'จ่าย' : 'ยกเลิก'}
+                            label={transaction.status === 'pending' ? th.transaction.markPaid : th.transaction.markUnpaid}
                             onClick={() => onTogglePaid(transaction)}
                           />
                         )}
@@ -197,9 +222,9 @@ export function TransactionTable({
                             <ActionButton action="delete" iconOnly title={th.common.delete} onClick={() => onDelete(transaction.id)} />
                           </>
                         ) : (
-                          <span className="rounded-xl border border-slate-200/80 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-400">
+                          <Badge tone="neutral" className="text-slate-500">
                             {th.transaction.readonly}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </td>
@@ -209,7 +234,7 @@ export function TransactionTable({
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
     </>
   )
 }

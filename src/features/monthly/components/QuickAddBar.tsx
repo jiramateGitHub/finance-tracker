@@ -61,13 +61,13 @@ export function QuickAddBar({ selectedMonth, onAddTransaction }: QuickAddBarProp
       {error ? <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p> : null}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
         <span className="font-medium text-slate-500">ตัวอย่าง:</span>
-        <button type="button" onClick={() => fillSample('กาแฟ 65')} className="min-h-9 sm:min-h-8 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200/60 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer">
+        <button type="button" onClick={() => fillSample('กาแฟ 65')} className="min-h-10 sm:min-h-9 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200/60 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer">
           กาแฟ 65
         </button>
-        <button type="button" onClick={() => fillSample('+ เงินเดือน 35000')} className="min-h-9 sm:min-h-8 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 border border-emerald-200/60 hover:bg-emerald-50 transition cursor-pointer">
+        <button type="button" onClick={() => fillSample('+ เงินเดือน 35000')} className="min-h-10 sm:min-h-9 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 border border-emerald-200/60 hover:bg-emerald-50 transition cursor-pointer">
           + เงินเดือน 35000
         </button>
-        <button type="button" onClick={() => fillSample('ค่าไฟ 1,450 ยังไม่จ่าย')} className="min-h-9 sm:min-h-8 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-amber-700 border border-amber-200/60 hover:bg-amber-50 transition cursor-pointer">
+        <button type="button" onClick={() => fillSample('ค่าไฟ 1,450 ยังไม่จ่าย')} className="min-h-10 sm:min-h-9 inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-amber-700 border border-amber-200/60 hover:bg-amber-50 transition cursor-pointer">
           ค่าไฟ 1,450 ยังไม่จ่าย
         </button>
       </div>

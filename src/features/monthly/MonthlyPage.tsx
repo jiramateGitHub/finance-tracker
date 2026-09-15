@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { Badge } from '../../components/ui/Badge'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconPlus } from '../../components/ui/Icons'
@@ -20,12 +21,14 @@ import { RecentTransactionPanel } from './components/RecentTransactionPanel'
 import { TransactionFormModal } from './components/TransactionFormModal'
 import { TransactionList } from './components/TransactionList'
 import { TransactionTable } from './components/TransactionTable'
+import { getQuickAddDate } from './utils/quickAddParser'
 import {
   calculateMonthlyTotals,
   createMemoizedLedgerSelector,
   createEmptyMonthlyFilters,
   filterMonthlyTransactions,
   getCategoryOptions,
+  getSafeDateInMonth,
   groupTransactionsByMonth,
   resolveMonthlyFilterRange,
   type MonthlyFilters as MonthlyFiltersState,
@@ -140,7 +143,7 @@ export function MonthlyPage({
       transaction: null,
       defaults: {
         type,
-        date: `${filters.rangeStartMonth || selectedMonth}-01`,
+        date: getQuickAddDate(filters.rangeStartMonth || selectedMonth),
         status: type === 'income' ? 'cleared' : 'pending',
         sourceModule: 'manual',
       },
@@ -191,12 +194,13 @@ export function MonthlyPage({
   }
 
   function handleUseTemplate(transaction: TransactionEntry): void {
+    const targetMonth = filters.rangeStartMonth || selectedMonth
     setModalState({
       open: true,
       transaction: null,
       defaults: {
         type: transaction.type,
-        date: `${filters.rangeStartMonth || selectedMonth}-${transaction.date.slice(8, 10) || '01'}`,
+        date: getSafeDateInMonth(targetMonth, transaction.date.slice(8, 10)),
         category: transaction.categoryId || transaction.category,
         title: transaction.title,
         amount: String(transaction.amount),
@@ -254,9 +258,9 @@ export function MonthlyPage({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">รายรับ-รายจ่าย</h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
+                <Badge tone="primary">
                   บันทึกรายเดือน
-                </span>
+                </Badge>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
                 บันทึกและติดตามกระแสเงินสดรายรับ-รายจ่ายประจำเดือน
