@@ -12,17 +12,12 @@ import {
 import { assertSupportedFinanceDataSchema, createExportableFinanceData, createPersistedFinanceData, migrateFinanceDataWithReport, normalizeFinanceData, type FinanceMigrationReport } from '../../lib/dataMigration'
 import {
   FinanceDataConflictError,
-  type FinanceRepository,
   type FinanceRepositorySaveOptions,
 } from '../financeRepository'
 import type { FinanceData } from '../../types/finance'
 import { getFirebaseApp } from './firebaseApp'
-import { createPersistedFinanceBaseline, getChangedFirestoreItems } from './firestoreWritePlan'
-export { documentDataWithId, FinanceDocumentIdentityConflictError } from './firestoreIdentity'
-export { createPersistedFinanceBaseline, getChangedFirestoreItems } from './firestoreWritePlan'
 import { documentDataWithId } from './firestoreIdentity'
-
-export { FinanceDataConflictError } from '../financeRepository'
+import { createPersistedFinanceBaseline, getChangedFirestoreItems } from './firestoreWritePlan'
 
 const META_DOC_ID = 'app'
 const SINGLETON_DOC_ID = 'main'
@@ -188,10 +183,6 @@ export async function loadFinanceDataFromCloudWithReport(userId: string): Promis
   }
 }
 
-export async function loadFinanceDataFromCloud(userId: string): Promise<FinanceData | null> {
-  const result = await loadFinanceDataFromCloudWithReport(userId)
-  return result?.data ?? null
-}
 
 export async function saveFinanceDataToCloud(
   userId: string,
@@ -270,7 +261,3 @@ export async function saveFinanceDataToCloud(
   })
 }
 
-export const firestoreFinanceRepository: FinanceRepository = {
-  load: loadFinanceDataFromCloud,
-  save: saveFinanceDataToCloud,
-}

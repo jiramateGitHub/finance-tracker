@@ -1,7 +1,7 @@
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import { getBudgetAllocatedAmount, getBudgetStatus, getBudgetThresholds } from '../../budgetGoals/budgetGoalCalculations'
 import { createId } from '../../../lib/id'
-import type { AppData, Budget, BudgetLine, InstallmentPlan, TransactionEntry, Trip, TripItem, TripStatus } from '../../../types/finance'
+import type { AppData, Budget, BudgetLine, TransactionEntry, Trip, TripItem, TripStatus } from '../../../types/finance'
 import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
 
 export type TripStatusFilter = 'all' | TripStatus
@@ -262,13 +262,6 @@ export function getCategoryOptions(data: AppData): string[] {
   return getCanonicalCategoryOptions(data)
 }
 
-export function getTripYearOptions(trips: Trip[]): string[] {
-  return Array.from(new Set(trips.flatMap((trip) => [
-    trip.startDate.slice(0, 4),
-    trip.endDate.slice(0, 4),
-    ...trip.items.map((item) => item.date.slice(0, 4)),
-  ]).filter(Boolean))).sort((a, b) => b.localeCompare(a))
-}
 
 export function createTripFormValues(trip?: Trip): TripFormValues {
   return {
@@ -410,11 +403,6 @@ export function validateTripBudgetLineForm(values: TripBudgetLineFormValues): st
   return null
 }
 
-export function getInstallmentOptionsForTrip(items: InstallmentPlan[]): Array<{ id: string; label: string }> {
-  return items
-    .map((plan) => ({ id: plan.id, label: `${plan.name} - ${plan.monthlyAmount.toLocaleString('th-TH')} THB` }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-}
 
 function isTripOwnedTransaction(transaction: TransactionEntry, tripId: string): boolean {
   return transaction.type === 'expense'

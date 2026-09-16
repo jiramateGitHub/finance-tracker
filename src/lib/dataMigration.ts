@@ -105,16 +105,6 @@ export type FinanceMigrationReport = {
   }
 }
 
-export class FinanceTripMigrationConflictError extends Error {
-  readonly issues: TripMigrationIssue[]
-
-  constructor(issues: TripMigrationIssue[]) {
-    super(`ไม่สามารถย้ายรายการทริปอัตโนมัติได้ ${issues.length} รายการ กรุณาตรวจ reconciliation report ก่อนบันทึก`)
-    this.name = 'FinanceTripMigrationConflictError'
-    this.issues = issues
-  }
-}
-
 function createEmptyTripMigrationReport(): TripMigrationReport {
   return {
     createdTransactionIds: [],
@@ -127,7 +117,9 @@ function createEmptyTripMigrationReport(): TripMigrationReport {
 
 function assertTripMigrationSafe(report: TripMigrationReport): void {
   const blockingIssues = report.issues.filter((issue) => issue.code !== 'orphan-transaction')
-  if (blockingIssues.length) throw new FinanceTripMigrationConflictError(blockingIssues)
+  if (blockingIssues.length) {
+    throw new Error(`ไม่สามารถย้ายรายการทริปอัตโนมัติได้ ${blockingIssues.length} รายการ กรุณาตรวจ reconciliation report ก่อนบันทึก`)
+  }
 }
 
 function isRecord(value: unknown): value is RawRecord {
@@ -293,7 +285,7 @@ export function getMigrationConflicts(data: unknown): FinanceMigrationConflict[]
   return collectMigrationConflicts(data)
 }
 
-export function assertNoMigrationConflicts(data: unknown): void {
+function assertNoMigrationConflicts(data: unknown): void {
   const conflicts = getMigrationConflicts(data)
   if (conflicts.length) throw new FinanceMigrationConflictError(conflicts)
 }

@@ -1,4 +1,4 @@
-import { addMonths, currentMonthInputValue, getMonthKey, clampPercent, parseAmountSafe, formatDate, formatMonth } from './formatters'
+import { addMonths, currentMonthInputValue, getMonthKey, clampPercent, parseAmountSafe, formatDate, formatMonth, normalizeMonthRange, getSafeDateInMonth } from './formatters'
 
 function assert(condition: unknown, message?: string): asserts condition {
   if (!condition) throw new Error(message || 'Assertion failed')
@@ -46,5 +46,17 @@ assert.ok(formatMonth('2026-09').length > 0)
 
 // currentMonthInputValue format
 assert.ok(/^\d{4}-\d{2}$/.test(currentMonthInputValue()), 'currentMonthInputValue should match YYYY-MM')
+
+// normalizeMonthRange
+assert.equal(normalizeMonthRange('2026-01', '2026-05').join(','), '2026-01,2026-05')
+assert.equal(normalizeMonthRange('2026-05', '2026-01').join(','), '2026-01,2026-05')
+assert.equal(normalizeMonthRange('', '2026-05').join(','), ',2026-05')
+
+// getSafeDateInMonth
+assert.equal(getSafeDateInMonth('2026-02', '31'), '2026-02-28', 'Leap/short month day clamping')
+assert.equal(getSafeDateInMonth('2024-02', '31'), '2024-02-29', 'Leap year 29 days clamping')
+assert.equal(getSafeDateInMonth('2026-04', '15'), '2026-04-15')
+assert.equal(getSafeDateInMonth('2026-04', '0'), '2026-04-01')
+assert.equal(getSafeDateInMonth('invalid', '15'), 'invalid-01')
 
 console.log('✓ All formatters tests passed successfully! 🎉')

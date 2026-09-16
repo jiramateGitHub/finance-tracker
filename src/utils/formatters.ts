@@ -93,3 +93,21 @@ export function parseAmountSafe(value: string | number | null | undefined, fallb
   const num = Number(sanitized)
   return Number.isFinite(num) ? num : fallback
 }
+
+export function normalizeMonthRange(startMonth: string, endMonth: string): [string, string] {
+  if (startMonth && endMonth && startMonth > endMonth) return [endMonth, startMonth]
+  return [startMonth, endMonth]
+}
+
+export function getSafeDateInMonth(monthKey: string, dayText: string): string {
+  const [yearText, monthText] = monthKey.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return `${monthKey}-01`
+
+  const parsedDay = Math.floor(Number(dayText))
+  const lastDay = new Date(year, month, 0).getDate()
+  const safeDay = Number.isFinite(parsedDay) ? Math.min(lastDay, Math.max(1, parsedDay)) : 1
+  return `${monthKey}-${String(safeDay).padStart(2, '0')}`
+}
+

@@ -149,7 +149,6 @@ export const SMART_CATEGORY_RULES: Array<{ keywords: string[]; category: string 
   { keywords: ['เงินเดือน', 'salary'], category: 'เงินเดือน' },
 ]
 
-const legacyCategorySet = new Set<string>(LEGACY_CATEGORY_OPTIONS)
 const incomeCategorySet = new Set<string>([
   'เงินเดือน',
   'โบนัส',
@@ -183,10 +182,6 @@ export function getCategoryDisplayName(categoryId: string): string {
   return CATEGORY_LABELS[normalized] || normalized
 }
 
-export function getCategoryIcon(categoryId: string): string {
-  const normalized = normalizeCategoryId(categoryId)
-  return CATEGORY_ICONS[normalized] || '📌'
-}
 
 export function inferLegacyCategoryKind(categoryId: string): CategoryKind {
   const normalized = normalizeCategoryId(categoryId)
@@ -205,9 +200,6 @@ export function createLegacyMasterCategory(categoryId: string, kind?: CategoryKi
   }
 }
 
-export function isLegacyCategory(categoryId: string): boolean {
-  return legacyCategorySet.has(normalizeCategoryId(categoryId))
-}
 
 export function getCanonicalCategoryOptions(data?: FinanceData): string[] {
   const categories = new Set<string>(LEGACY_CATEGORY_OPTIONS)

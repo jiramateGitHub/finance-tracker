@@ -53,9 +53,6 @@
 }
 
 @layer components {
-  .finance-input {
-    @apply min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-base sm:text-sm font-medium text-slate-900 shadow-xs transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15;
-  }
 
   .finance-field {
     min-width: 0;
@@ -121,21 +118,6 @@
     @apply bg-blue-600 text-white shadow-sm hover:bg-blue-600 hover:text-white;
   }
 
-  .finance-mini-summary-grid {
-    @apply grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5;
-  }
-
-  .finance-mini-summary-card {
-    @apply min-w-0 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 transition;
-  }
-
-  .finance-metric-label {
-    @apply truncate text-xs font-semibold text-slate-500;
-  }
-
-  .finance-metric-value {
-    @apply mt-0.5 min-w-0 break-words tabular-nums text-base font-bold leading-tight text-slate-900 sm:text-lg;
-  }
 
   .finance-progress-track {
     @apply h-2 overflow-hidden rounded-full bg-slate-100;
@@ -145,20 +127,6 @@
     @apply h-full rounded-full bg-blue-600;
   }
 
-  .finance-filter-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
-    @apply grid min-w-0 gap-3;
-  }
-
-  @screen xl {
-    .finance-filter-grid {
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    }
-  }
-
-  .finance-filter-actions {
-    @apply flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50/70 px-3 py-2;
-  }
 
   .finance-combobox {
     min-width: 0;
@@ -322,10 +290,6 @@
     .finance-confirm-panel .flex > button {
       flex: 1 1 0%;
       min-height: 2.75rem;
-    }
-
-    .finance-filter-actions {
-      @apply items-stretch;
     }
   }
 }

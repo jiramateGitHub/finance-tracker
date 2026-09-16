@@ -2,7 +2,7 @@ import { CATEGORY_CHART_COLORS } from '../../../constants/theme'
 import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/categories'
 import { createId } from '../../../lib/id'
 import type { AppData, InstallmentPlan, InterestType, TransactionEntry } from '../../../types/finance'
-import { currentIsoTimestamp, getMonthKey, parseAmountSafe } from '../../../utils/formatters'
+import { currentIsoTimestamp, getMonthKey, normalizeMonthRange, parseAmountSafe } from '../../../utils/formatters'
 import {
   addMonths,
   currentMonthKey,
@@ -82,28 +82,6 @@ export type InstallmentFormValues = {
   interestNote: string
 }
 
-export type InstallmentSummary = {
-  planCount: number
-  totalPaid: number
-  totalRemaining: number
-  totalMonthly: number
-  monthsRemaining: number
-}
-
-export function summarizeInstallmentPlans(plans: InstallmentPlan[]): InstallmentSummary {
-  return plans.reduce<InstallmentSummary>(
-    (summary, plan) => {
-      const progress = calculateInstallmentProgress(plan)
-      summary.planCount += 1
-      summary.totalPaid += progress.totalPaid
-      summary.totalRemaining += progress.remainingAmount
-      summary.totalMonthly += Math.max(0, Number(plan.monthlyAmount || 0))
-      summary.monthsRemaining += progress.monthsRemaining
-      return summary
-    },
-    { planCount: 0, totalPaid: 0, totalRemaining: 0, totalMonthly: 0, monthsRemaining: 0 },
-  )
-}
 
 export type InstallmentDashboardMetrics = {
   selectedMonth: string
@@ -568,10 +546,7 @@ export function createDefaultInstallmentFilters(selectedMonth = currentMonthKey(
   }
 }
 
-export function normalizeMonthRange(startMonth: string, endMonth: string): [string, string] {
-  if (startMonth && endMonth && startMonth > endMonth) return [endMonth, startMonth]
-  return [startMonth, endMonth]
-}
+export { normalizeMonthRange }
 
 export function compareInstallmentPlans(a: InstallmentPlan, b: InstallmentPlan, sortOrder: InstallmentSortOrder): number {
   const baseCompare = String(a.startMonth).localeCompare(String(b.startMonth)) || String(a.name).localeCompare(String(b.name))

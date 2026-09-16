@@ -1,5 +1,5 @@
 import type { InstallmentPlan } from '../../../types/finance'
-import { addMonths as addMonthsToMonthKey, currentMonthInputValue } from '../../../utils/formatters'
+import { addMonths as addMonthsToMonthKey, currentMonthInputValue, getSafeDateInMonth } from '../../../utils/formatters'
 
 export const DEFAULT_INSTALLMENT_DUE_DAY = 25
 
@@ -45,17 +45,7 @@ export function getPaidMonthKeys(plan: InstallmentPlan, scheduleMonths = getInst
   return scheduleMonths.slice(0, paidCount)
 }
 
-export function getSafeDateInMonth(monthKey: string, dayText: string): string {
-  const [yearText, monthText] = monthKey.split('-')
-  const year = Number(yearText)
-  const month = Number(monthText)
-  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return `${monthKey}-01`
-
-  const parsedDay = Math.floor(Number(dayText))
-  const lastDay = new Date(year, month, 0).getDate()
-  const safeDay = Number.isFinite(parsedDay) ? Math.min(lastDay, Math.max(1, parsedDay)) : 1
-  return `${monthKey}-${String(safeDay).padStart(2, '0')}`
-}
+export { getSafeDateInMonth }
 
 export function getInstallmentDueDate(plan: InstallmentPlan, monthKey: string): string {
   return getSafeDateInMonth(monthKey, String(getInstallmentDueDay(plan)))

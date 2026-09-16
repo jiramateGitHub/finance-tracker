@@ -2,7 +2,7 @@ import { getCanonicalCategoryOptions, normalizeCategoryId } from '../../../data/
 import { createId } from '../../../lib/id'
 import type { FinanceData, InstallmentPlan, TransactionEntry, TransactionStatus, TransactionType } from '../../../types/finance'
 import { th } from '../../../i18n/th'
-import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe, addMonths } from '../../../utils/formatters'
+import { currentDateInputValue, currentIsoTimestamp, currentMonthInputValue, getMonthKey, parseAmountSafe, addMonths, getSafeDateInMonth, normalizeMonthRange } from '../../../utils/formatters'
 import { deriveInstallmentTransactionsForMonths } from '../../installments/utils/installmentPlans'
 import { deriveTripTransactionsForMonths } from '../../trips/utils/tripUtils'
 import { parseMonthlySmartKeyword } from './monthlySmartFilter'
@@ -90,10 +90,7 @@ export function normalizeMonthlyFilters(filters: MonthlyFilters): Required<Month
   }
 }
 
-export function normalizeMonthRange(startMonth: string, endMonth: string): [string, string] {
-  if (startMonth && endMonth && startMonth > endMonth) return [endMonth, startMonth]
-  return [startMonth, endMonth]
-}
+export { normalizeMonthRange }
 
 /** Resolve form and smart-keyword month filters before deriving ledger rows. */
 export function resolveMonthlyFilterRange(filters: MonthlyFilters): [string, string] {
@@ -350,17 +347,7 @@ export function groupTransactionsByMonth(
     }))
 }
 
-export function getSafeDateInMonth(monthKey: string, dayText: string): string {
-  const [yearText, monthText] = monthKey.split('-')
-  const year = Number(yearText)
-  const month = Number(monthText)
-  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return `${monthKey}-01`
-
-  const parsedDay = Math.floor(Number(dayText))
-  const lastDay = new Date(year, month, 0).getDate()
-  const safeDay = Number.isFinite(parsedDay) ? Math.min(lastDay, Math.max(1, parsedDay)) : 1
-  return `${monthKey}-${String(safeDay).padStart(2, '0')}`
-}
+export { getSafeDateInMonth }
 
 function getSafeRepeatCount(repeatCountText: string): number {
   const parsedRepeatCount = Math.floor(Number(repeatCountText || 1))

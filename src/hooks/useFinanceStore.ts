@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { calculateEntryTotals } from '../lib/finance-calculations'
-import { createMemoizedFinanceTotalsSelector } from '../state/financeSelectors'
+import { useEffect, useRef, useState } from 'react'
 import { useFinanceData, type FinanceDataStatus, type FinanceImportPreview } from '../state/FinanceDataProvider'
 import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
 import { currentMonthInputValue } from '../utils/formatters'
@@ -11,7 +9,6 @@ export interface FinanceStore {
   data: AppData
   dataStatus: FinanceDataStatus
   selectedMonth: string
-  totals: ReturnType<typeof calculateEntryTotals>
   setActiveView: (viewId: ViewId) => void
   setSelectedMonth: (monthKey: string) => void
   addTransaction: (transaction: TransactionEntry) => void
@@ -71,12 +68,6 @@ export function useFinanceStore(): FinanceStore {
   const [selectedMonth, setSelectedMonth] = useState(() => currentMonthInputValue())
   const { data } = financeData
 
-  const selectTotals = useMemo(() => createMemoizedFinanceTotalsSelector(), [])
-  const totals = useMemo(
-    () => selectTotals(data),
-    [data, selectTotals],
-  )
-
   async function previewImportJson(file: File): Promise<FinanceImportPreview | null> {
     return financeData.previewImportDataFromJson(file)
   }
@@ -90,7 +81,6 @@ export function useFinanceStore(): FinanceStore {
     data,
     dataStatus: financeData.status,
     selectedMonth,
-    totals,
     setActiveView,
     setSelectedMonth,
     addTransaction: financeData.addTransaction,
