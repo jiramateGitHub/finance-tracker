@@ -7,11 +7,13 @@ import { IconPlus } from '../../components/ui/Icons'
 import { ViewSwitcher, type StandardViewMode } from '../../components/ui/ViewSwitcher'
 import { th } from '../../i18n/th'
 import { createId } from '../../lib/id'
-import type { AppData, Budget, Goal, TransactionEntry } from '../../types/finance'
+import type { AppData, Budget, Goal, RecurringRule, TransactionEntry } from '../../types/finance'
 import { addMonths, currentIsoTimestamp, currentMonthInputValue, formatMonth } from '../../utils/formatters'
 import { BudgetGoalSection } from '../budgetGoals/BudgetGoalSection'
+import { RecurringBillModal } from '../recurring/components/RecurringBillModal'
 import type { SyncStatus } from '../sync/syncTypes'
 import { ActionNeededPanel } from './components/ActionNeededPanel'
+import { DueBillsChecklistWidget } from './components/DueBillsChecklistWidget'
 import { FrequentTransactionShortcuts } from './components/FrequentTransactionShortcuts'
 import { MonthlyCalendarView } from './components/MonthlyCalendarView'
 import { MonthlyFilters } from './components/MonthlyFilters'
@@ -48,6 +50,19 @@ type MonthlyPageProps = {
   onAddGoal: (goal: Goal) => void
   onUpdateGoal: (goalId: string, patch: Partial<Goal>) => void
   onDeleteGoal: (goalId: string) => void
+  onAddRecurringRule?: (rule: RecurringRule) => void
+  onPayRecurringRule?: (
+    ruleId: string,
+    monthKey: string,
+    options?: {
+      createTransaction: boolean
+      amount: number
+      date: string
+      note?: string
+    },
+  ) => void
+  onUnpayRecurringRule?: (ruleId: string, monthKey: string) => void
+  onNavigateToObligations?: () => void
   syncStatus?: SyncStatus
 }
 
@@ -70,10 +85,15 @@ export function MonthlyPage({
   onAddGoal,
   onUpdateGoal,
   onDeleteGoal,
+  onAddRecurringRule = () => {},
+  onPayRecurringRule = () => {},
+  onUnpayRecurringRule = () => {},
+  onNavigateToObligations,
   syncStatus,
 }: MonthlyPageProps) {
   const [prevSelectedMonth, setPrevSelectedMonth] = useState(selectedMonth)
   const [filters, setFilters] = useState<MonthlyFiltersState>(() => createEmptyMonthlyFilters(selectedMonth))
+  const [isAddBillOpen, setIsAddBillOpen] = useState(false)
 
   if (prevSelectedMonth !== selectedMonth) {
     setPrevSelectedMonth(selectedMonth)
@@ -371,6 +391,16 @@ export function MonthlyPage({
         onChange={handleFiltersChange}
       />
 
+      {/* ==================== DUE BILLS CHECKLIST WIDGET ==================== */}
+      <DueBillsChecklistWidget
+        rules={data.recurringRules}
+        selectedMonth={activeMonth}
+        onPayRule={onPayRecurringRule}
+        onUnpayRule={onUnpayRecurringRule}
+        onNavigateToObligations={onNavigateToObligations}
+        onAddRule={() => setIsAddBillOpen(true)}
+      />
+
       {/* ==================== ACTION NEEDED / RECENT / FREQUENT ==================== */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <ActionNeededPanel
@@ -491,6 +521,18 @@ export function MonthlyPage({
         }}
         onClose={() => setDeleteTransactionId(null)}
       />
+
+      {isAddBillOpen && (
+        <RecurringBillModal
+          open={isAddBillOpen}
+          categoryOptions={categoryOptions}
+          onClose={() => setIsAddBillOpen(false)}
+          onSubmit={(rule) => {
+            onAddRecurringRule(rule)
+            setIsAddBillOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

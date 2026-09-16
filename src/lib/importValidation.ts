@@ -191,9 +191,42 @@ function validateTransactions(items: unknown[], path: string, issues: ImportVali
 function validateRecurringRules(items: unknown[], path: string, issues: ImportValidationIssue[]): void {
   validateUniqueIds(items, path, issues, (value, itemPath) => {
     if (!validateRecord(value, itemPath, issues)) return
-    validateEnum(value, 'type', ['income', 'expense'], itemPath, issues)
-    validateDate(value, 'startDate', itemPath, issues)
+    validateEnum(value, 'type', [
+      'credit_card',
+      'utility',
+      'subscription',
+      'loan',
+      'insurance',
+      'other',
+      'income',
+      'expense',
+    ], itemPath, issues)
+    if (hasOwn(value, 'startDate')) {
+      validateDate(value, 'startDate', itemPath, issues)
+    }
     validateAmount(value, 'amount', itemPath, issues)
+    for (const key of ['dueDay', 'dayOfMonth', 'statementDay']) {
+      if (!hasOwn(value, key) || value[key] === null || value[key] === '') continue
+      const day = parseFiniteNumber(value[key])
+      if (day === null || !Number.isInteger(day) || day < 1 || day > 31) {
+        addIssue(issues, { path: `${itemPath}.${key}`, code: 'date', message: 'วันต้องเป็นจำนวนเต็ม 1 ถึง 31' })
+      }
+    }
+    if (hasOwn(value, 'amountType')) {
+      validateEnum(value, 'amountType', ['fixed', 'variable'], itemPath, issues)
+    }
+    if (hasOwn(value, 'paidMonthKeys')) {
+      if (!Array.isArray(value.paidMonthKeys)) {
+        addIssue(issues, { path: `${itemPath}.paidMonthKeys`, code: 'collection', message: 'ต้องเป็น array' })
+      } else {
+        const seen = new Set<string>()
+        value.paidMonthKeys.forEach((month, index) => {
+          if (!isValidMonth(month)) addIssue(issues, { path: `${itemPath}.paidMonthKeys[${index}]`, code: 'month', message: 'เดือนไม่ถูกต้อง' })
+          if (typeof month === 'string' && seen.has(month)) addIssue(issues, { path: `${itemPath}.paidMonthKeys[${index}]`, code: 'duplicate-id', message: 'เดือนที่จ่ายซ้ำกัน' })
+          seen.add(month as string)
+        })
+      }
+    }
   })
 }
 

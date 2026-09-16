@@ -1,9 +1,14 @@
 import { createEmptyFinanceData, withUpdatedMeta } from '../lib/dataMigration'
-import type { Budget, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
+import type { Budget, Goal, InstallmentPlan, RecurringRule, TransactionEntry, Trip } from '../types/finance'
 import {
+  addRecurringRule,
   addTrip,
   deleteGoal,
+  deleteRecurringRule,
   deleteTrip,
+  payRecurringRule,
+  unpayRecurringRule,
+  updateRecurringRule,
   updateTransaction,
   updateTrip,
 } from './financeCommands'
@@ -128,6 +133,74 @@ const deletedMissingTrip = deleteTrip(base, 'missing-trip')
 assert(deletedMissingTrip === base, 'Deleting a missing trip should be a no-op')
 const deletedGoal = deleteGoal(base, goal.id)
 assert(deletedGoal.goals.length === 0 && deletedGoal.transactions === base.transactions, 'Goal command must preserve unrelated collections')
+
+// Test Recurring Rule commands
+const sampleRule: RecurringRule = {
+  id: 'rule-test-1',
+  isActive: true,
+  type: 'utility',
+  title: 'ค่าอินเทอร์เน็ต',
+  name: 'ค่าอินเทอร์เน็ต',
+  category: 'สาธารณูปโภค',
+  categoryId: 'สาธารณูปโภค',
+  amount: 599,
+  amountType: 'fixed',
+  currency: 'THB',
+  cadence: 'monthly',
+  interval: 1,
+  dueDay: 15,
+  paidMonthKeys: [],
+  autoGenerateTransaction: true,
+  startDate: '2026-09-01',
+  createdAt: '2026-09-01T00:00:00Z',
+  updatedAt: '2026-09-01T00:00:00Z',
+}
+
+const withRule = addRecurringRule(base, sampleRule)
+assert(withRule.recurringRules.length === 1, 'addRecurringRule adds rule')
+assert(withRule.recurringRules[0]?.id === 'rule-test-1', 'Rule id matches')
+
+const updatedRuleData = updateRecurringRule(withRule, 'rule-test-1', { amount: 699 })
+assert(updatedRuleData.recurringRules[0]?.amount === 699, 'updateRecurringRule updates amount')
+
+// Pay recurring rule with auto-generated transaction
+const paidRuleData = payRecurringRule(updatedRuleData, 'rule-test-1', '2026-09', { createTransaction: true })
+assert(paidRuleData.recurringRules[0]?.paidMonthKeys?.includes('2026-09'), 'payRecurringRule records paidMonthKey')
+const createdTx = paidRuleData.transactions.find((tx) => tx.sourceModule === 'recurring_bill' && tx.sourceRefId === 'rule-test-1')
+assert(Boolean(createdTx), 'payRecurringRule creates cleared transaction')
+assert(createdTx?.amount === 699, 'Created transaction has correct amount')
+assert(createdTx?.status === 'cleared', 'Created transaction is cleared')
+
+// Re-paying / adjusting existing transaction updates amount, date, and note
+const rePaidData = payRecurringRule(paidRuleData, 'rule-test-1', '2026-09', { amount: 850, date: '2026-09-10', note: 'Adjusted bill' })
+const adjustedTx = rePaidData.transactions.find((tx) => tx.id === createdTx?.id)
+assert(adjustedTx?.amount === 850, 'Re-paying updates existing transaction amount')
+assert(adjustedTx?.date === '2026-09-10', 'Re-paying updates existing transaction date')
+assert(adjustedTx?.recurringMonthKey === '2026-09', 'Transaction tracks recurringMonthKey')
+assert(adjustedTx?.note === 'Adjusted bill', 'Re-paying updates existing transaction note')
+
+// Cross-month pay: bill for Sep 2026 paid on Oct 2 (tx has date in Oct, recurringMonthKey in Sep)
+const crossMonthPaid = payRecurringRule(rePaidData, 'rule-test-1', '2026-09', { date: '2026-10-02' })
+const crossTx = crossMonthPaid.transactions.find((tx) => tx.id === createdTx?.id)
+assert(crossTx?.date === '2026-10-02', 'Cross-month pay records chosen date')
+assert(crossTx?.monthKey === '2026-10', 'Cross-month pay records date-derived monthKey')
+assert(crossTx?.recurringMonthKey === '2026-09', 'Cross-month pay preserves billing monthKey')
+
+// Unpay recurring rule removes monthKey and cross-month auto-generated transaction
+const unpaidRuleData = unpayRecurringRule(crossMonthPaid, 'rule-test-1', '2026-09')
+assert(!unpaidRuleData.recurringRules[0]?.paidMonthKeys?.includes('2026-09'), 'unpayRecurringRule removes monthKey')
+const removedTx = unpaidRuleData.transactions.find((tx) => tx.sourceModule === 'recurring_bill' && tx.sourceRefId === 'rule-test-1')
+assert(!removedTx, 'unpayRecurringRule removes cross-month generated transaction')
+
+// Delete recurring rule detaches existing linked transactions cleanly without deleting them
+const withPaidAgain = payRecurringRule(unpaidRuleData, 'rule-test-1', '2026-09', { createTransaction: true })
+const deletedRuleData = deleteRecurringRule(withPaidAgain, 'rule-test-1')
+assert(deletedRuleData.recurringRules.length === 0, 'deleteRecurringRule deletes rule')
+const detachedTx = deletedRuleData.transactions.find((tx) => tx.title === sampleRule.title)
+assert(Boolean(detachedTx), 'deleteRecurringRule preserves transaction history')
+assert(detachedTx?.sourceModule === 'manual', 'deleteRecurringRule detaches sourceModule to manual')
+assert(detachedTx?.sourceRefId === null, 'deleteRecurringRule clears sourceRefId')
+assert(detachedTx?.recurringRuleId === null, 'deleteRecurringRule clears recurringRuleId')
 
 console.log('Testing domain finance commands...')
 console.log('✓ command invariants and referential identity passed')

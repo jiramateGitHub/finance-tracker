@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFinanceData, type FinanceDataStatus, type FinanceImportPreview } from '../state/FinanceDataProvider'
-import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip, ViewId } from '../types/finance'
+import type { PayRecurringRuleOptions } from '../state/financeCommands'
+import type { AppData, Budget, FinanceData, Goal, InstallmentPlan, RecurringRule, TransactionEntry, Trip, ViewId } from '../types/finance'
 import { currentMonthInputValue } from '../utils/formatters'
 import { isViewId, resolveInitialView } from '../lib/viewSettings'
 
@@ -17,6 +18,11 @@ export interface FinanceStore {
   addInstallmentPlan: (plan: InstallmentPlan) => void
   updateInstallmentPlan: (planId: string, patch: Partial<InstallmentPlan>) => void
   deleteInstallmentPlan: (planId: string) => void
+  addRecurringRule: (rule: RecurringRule) => void
+  updateRecurringRule: (ruleId: string, patch: Partial<RecurringRule>) => void
+  deleteRecurringRule: (ruleId: string) => void
+  payRecurringRule: (ruleId: string, monthKey: string, options?: PayRecurringRuleOptions) => void
+  unpayRecurringRule: (ruleId: string, monthKey: string) => void
   addTrip: (trip: Trip) => void
   updateTrip: (tripId: string, patch: Partial<Trip>) => void
   deleteTrip: (tripId: string) => void
@@ -89,6 +95,11 @@ export function useFinanceStore(): FinanceStore {
     addInstallmentPlan: financeData.addInstallmentPlan,
     updateInstallmentPlan: financeData.updateInstallmentPlan,
     deleteInstallmentPlan: financeData.deleteInstallmentPlan,
+    addRecurringRule: financeData.addRecurringRule,
+    updateRecurringRule: financeData.updateRecurringRule,
+    deleteRecurringRule: financeData.deleteRecurringRule,
+    payRecurringRule: financeData.payRecurringRule,
+    unpayRecurringRule: financeData.unpayRecurringRule,
     addTrip: financeData.addTrip,
     updateTrip: financeData.updateTrip,
     deleteTrip: financeData.deleteTrip,

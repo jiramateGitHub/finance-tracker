@@ -15,9 +15,9 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'installments',
-    label: 'ผ่อน',
-    icon: '◌',
-    title: 'จัดการยอดผ่อน',
+    label: 'ภาระหนี้ & บิล',
+    icon: '💳',
+    title: 'ภาระหนี้ & บิลประจำ',
   },
   {
     id: 'trips',

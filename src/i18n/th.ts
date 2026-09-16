@@ -73,6 +73,7 @@ export const th = {
     unpaid: 'ยังไม่จ่าย',
     manual: 'บันทึกเอง',
     installment: 'ยอดผ่อน',
+    recurring_bill: 'บิลประจำ',
     trip: 'ทริป',
     addIncome: 'เพิ่มรายรับ',
     addExpense: 'เพิ่มรายจ่าย',
@@ -102,8 +103,19 @@ export const th = {
     deleteTitle: 'ลบเป้าหมายนี้?',
   },
   installments: {
-    title: 'ยอดผ่อน',
+    title: 'ภาระหนี้ & บิล',
     deleteTitle: 'ลบแผนผ่อนนี้?',
+  },
+  recurring: {
+    title: 'บิลประจำ & บัตรเครดิต',
+    deleteTitle: 'ลบบิลประจำนี้?',
+    deleteDescription: 'บิลนี้จะถูกลบออกจากระบบและไม่แสดงในรายการที่ต้องจ่ายอีกต่อไป',
+  },
+  obligations: {
+    title: 'ภาระหนี้ & บิลประจำ',
+    billsTab: 'บิลประจำ & บัตรเครดิต',
+    installmentsTab: 'ยอดผ่อนชำระ',
+    calendarTab: 'ปฏิทินภาระรวม',
   },
   trips: {
     title: 'จัดการทริป',

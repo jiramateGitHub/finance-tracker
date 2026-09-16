@@ -254,6 +254,7 @@ export function getPaymentLabel(transaction: TransactionEntry): string {
 export function getSourceLabel(transaction: TransactionEntry): string {
   if (isInstallmentTransaction(transaction)) return th.transaction.installment
   if (transaction.tripId || transaction.sourceModule === 'trip') return th.transaction.trip
+  if (transaction.recurringRuleId || transaction.sourceModule === 'recurring_bill') return th.transaction.recurring_bill
   return th.transaction.manual
 }
 

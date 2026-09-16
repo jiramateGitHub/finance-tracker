@@ -1,12 +1,16 @@
 import { useMemo, useState } from 'react'
+import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconPlus } from '../../components/ui/Icons'
 import { ViewSwitcher } from '../../components/ui/ViewSwitcher'
 import { th } from '../../i18n/th'
-import type { AppData, InstallmentPlan } from '../../types/finance'
+import type { AppData, InstallmentPlan, RecurringRule } from '../../types/finance'
 import { currentMonthInputValue, formatMonth } from '../../utils/formatters'
+import { ObligationsMasterCalendar } from '../recurring/components/ObligationsMasterCalendar'
+import { RecurringBillModal } from '../recurring/components/RecurringBillModal'
+import { RecurringBillsSection } from '../recurring/components/RecurringBillsSection'
 import { InstallmentAlertBanner } from './components/InstallmentAlertBanner'
 import { InstallmentCalendar } from './components/InstallmentCalendar'
 import { InstallmentCategoryChart } from './components/InstallmentCategoryChart'
@@ -30,11 +34,29 @@ import {
   type InstallmentViewMode,
 } from './utils/installmentPlans'
 
+export type ObligationsHubTab = 'bills' | 'installments' | 'calendar'
+
 type InstallmentsPageProps = {
   data: AppData
+  selectedMonth?: string
+  onMonthChange?: (monthKey: string) => void
   onAddPlan: (plan: InstallmentPlan) => void
   onUpdatePlan: (planId: string, patch: Partial<InstallmentPlan>) => void
   onDeletePlan: (planId: string) => void
+  onAddRecurringRule?: (rule: RecurringRule) => void
+  onUpdateRecurringRule?: (ruleId: string, patch: Partial<RecurringRule>) => void
+  onDeleteRecurringRule?: (ruleId: string) => void
+  onPayRecurringRule?: (
+    ruleId: string,
+    monthKey: string,
+    options?: {
+      createTransaction: boolean
+      amount: number
+      date: string
+      note?: string
+    },
+  ) => void
+  onUnpayRecurringRule?: (ruleId: string, monthKey: string) => void
 }
 
 type ModalState = {
@@ -42,17 +64,37 @@ type ModalState = {
   plan: InstallmentPlan | null
 }
 
-export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }: InstallmentsPageProps) {
+export function InstallmentsPage({
+  data,
+  selectedMonth: selectedMonthProp,
+  onMonthChange,
+  onAddPlan,
+  onUpdatePlan,
+  onDeletePlan,
+  onAddRecurringRule = () => {},
+  onUpdateRecurringRule = () => {},
+  onDeleteRecurringRule = () => {},
+  onPayRecurringRule = () => {},
+  onUnpayRecurringRule = () => {},
+}: InstallmentsPageProps) {
   const currentRealMonth = currentMonthInputValue()
-  const [selectedMonth, setSelectedMonth] = useState<string>(currentRealMonth)
+  const [internalSelectedMonth, setInternalSelectedMonth] = useState<string>(selectedMonthProp || currentRealMonth)
+  const selectedMonth = selectedMonthProp || internalSelectedMonth
+  const handleMonthChange = (monthKey: string) => {
+    setInternalSelectedMonth(monthKey)
+    onMonthChange?.(monthKey)
+  }
+  const [hubTab, setHubTab] = useState<ObligationsHubTab>('bills')
   const [filters, setFilters] = useState<InstallmentFiltersState>(() =>
-    createDefaultInstallmentFilters(currentRealMonth),
+    createDefaultInstallmentFilters(selectedMonth),
   )
   const [viewMode, setViewMode] = useState<InstallmentViewMode>('list')
   const [modalState, setModalState] = useState<ModalState>({ open: false, plan: null })
+  const [isAddBillModalOpen, setIsAddBillModalOpen] = useState(false)
   const [deletePlanId, setDeletePlanId] = useState<string | null>(null)
 
   const plans = data.installmentPlans
+  const recurringRules = data.recurringRules
 
   // Keep filters.selectedMonth in sync with selectedMonth
   const effectiveFilters = useMemo(
@@ -88,7 +130,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
     [plans, selectedMonth],
   )
 
-  // Category Breakdown for selected month (installment_tracker.html reference)
+  // Category Breakdown for selected month
   const categoryDistribution = useMemo(
     () => getInstallmentCategoryDistribution(plans, selectedMonth),
     [plans, selectedMonth],
@@ -138,30 +180,46 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
           {/* Left: Title & Subtitle */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20 shrink-0">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="20" height="14" x="2" y="5" rx="2" />
-                <line x1="2" x2="22" y1="10" y2="10" />
-              </svg>
+              {hubTab === 'bills' ? (
+                <span className="text-lg">💳</span>
+              ) : hubTab === 'calendar' ? (
+                <span className="text-lg">📅</span>
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="14" x="2" y="5" rx="2" />
+                  <line x1="2" x2="22" y1="10" y2="10" />
+                </svg>
+              )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">ยอดผ่อน</h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
-                  ผ่อนสบาย
-                </span>
+                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                  {hubTab === 'bills'
+                    ? 'บิลประจำ & บัตรเครดิต'
+                    : hubTab === 'calendar'
+                      ? 'ปฏิทินภาระหนี้รวม'
+                      : 'ยอดผ่อนชำระ'}
+                </h2>
+                <Badge tone="primary">
+                  {hubTab === 'bills' ? 'ภาระประจำ' : hubTab === 'calendar' ? 'ภาพรวม' : 'ผ่อนสบาย'}
+                </Badge>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block truncate">
-                บันทึกยอดผ่อน & สรุปภาระรายจ่ายรายเดือน
+                {hubTab === 'bills'
+                  ? 'บันทึกวันตัดรอบ วันครบกำหนดชำระ และเตือนจ่าย 1-Click'
+                  : hubTab === 'calendar'
+                    ? 'ตารางภาพรวมยอดที่ต้องชำระของทุกวันในเดือน'
+                    : 'บันทึกยอดผ่อน & สรุปภาระรายจ่ายรายเดือน'}
               </p>
             </div>
           </div>
 
-          {/* Center: Month Navigator (Touch-friendly & flexible) */}
+          {/* Center: Month Navigator */}
           <div className="flex items-center justify-between bg-white p-1 rounded-xl border border-slate-200/90 shadow-xs w-full sm:w-auto">
             <button
               type="button"
               title="เดือนก่อนหน้า"
-              onClick={() => setSelectedMonth((prev) => addMonths(prev, -1))}
+              onClick={() => handleMonthChange(addMonths(selectedMonth, -1))}
               className="min-h-10 min-w-10 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer shrink-0"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -184,7 +242,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
             <button
               type="button"
               title="เดือนถัดไป"
-              onClick={() => setSelectedMonth((prev) => addMonths(prev, 1))}
+              onClick={() => handleMonthChange(addMonths(selectedMonth, 1))}
               className="min-h-10 min-w-10 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer shrink-0"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -196,7 +254,7 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
               <button
                 type="button"
                 title="กลับมาเดือนปัจจุบัน"
-                onClick={() => setSelectedMonth(currentRealMonth)}
+                onClick={() => handleMonthChange(currentRealMonth)}
                 className="ml-1 min-h-10 sm:min-h-8 px-2.5 py-1 text-xs font-semibold rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 transition border-l border-slate-200 cursor-pointer flex items-center shrink-0"
               >
                 เดือนนี้
@@ -206,108 +264,211 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
 
           {/* Right: Actions */}
           <div className="finance-command-actions w-full sm:w-auto">
-            <Button
-              type="button"
-              variant="primary"
-              icon={<IconPlus size={16} />}
-              onClick={openAddModal}
-              className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+            {hubTab === 'bills' ? (
+              <Button
+                type="button"
+                variant="primary"
+                icon={<IconPlus size={16} />}
+                onClick={() => setIsAddBillModalOpen(true)}
+                className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+              >
+                <span>เพิ่มบิลประจำ</span>
+              </Button>
+            ) : hubTab === 'installments' ? (
+              <Button
+                type="button"
+                variant="primary"
+                icon={<IconPlus size={16} />}
+                onClick={openAddModal}
+                className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+              >
+                <span>เพิ่มแผนผ่อน</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="light"
+                icon={<IconPlus size={16} />}
+                onClick={() => setIsAddBillModalOpen(true)}
+                className="w-full sm:w-auto min-h-11 sm:min-h-9 justify-center"
+              >
+                <span>เพิ่มบิลใหม่</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* ==================== HUB SEGMENTED SWITCHER ==================== */}
+        <div className="mt-3 flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 w-full sm:w-auto self-start gap-1">
+          <button
+            type="button"
+            onClick={() => setHubTab('bills')}
+            className={`flex-1 sm:flex-initial px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+              hubTab === 'bills'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>💳 บิลประจำ & บัตรเครดิต</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                hubTab === 'bills' ? 'bg-blue-100 text-blue-700 font-extrabold' : 'bg-slate-200 text-slate-600'
+              }`}
             >
-              <span>เพิ่มแผนผ่อน</span>
-            </Button>
-          </div>
-        </div>
+              {recurringRules.length}
+            </span>
+          </button>
 
-        {/* ==================== STATS OVERVIEW CARDS ==================== */}
-        <div className="mt-3.5 space-y-3.5">
-          <InstallmentSummaryCards metrics={metrics} />
+          <button
+            type="button"
+            onClick={() => setHubTab('installments')}
+            className={`flex-1 sm:flex-initial px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+              hubTab === 'installments'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>🧾 ยอดผ่อนชำระ</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                hubTab === 'installments' ? 'bg-blue-100 text-blue-700 font-extrabold' : 'bg-slate-200 text-slate-600'
+              }`}
+            >
+              {plans.length}
+            </span>
+          </button>
 
-          {/* Alert Banner for Overdue / Due Soon */}
-          <InstallmentAlertBanner
-            urgentPlans={metrics.urgentPlans}
-            selectedMonth={selectedMonth}
-            onPay={handleToggleMonth}
-          />
+          <button
+            type="button"
+            onClick={() => setHubTab('calendar')}
+            className={`flex-1 sm:flex-initial px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+              hubTab === 'calendar'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>📅 ปฏิทินภาระรวม</span>
+          </button>
         </div>
       </section>
 
-      {/* ==================== ANALYTICS & PROJECTION SECTION (installment_tracker.html line 280) ==================== */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 min-w-0 w-full max-w-full items-stretch">
-        <div className="lg:col-span-2 min-w-0 w-full max-w-full flex flex-col">
-          <InstallmentProjectionChart
-            projection={projection}
-            selectedMonth={selectedMonth}
-          />
-        </div>
-        <div className="lg:col-span-1 min-w-0 w-full max-w-full flex flex-col">
-          <InstallmentCategoryChart
-            distribution={categoryDistribution}
-          />
-        </div>
-      </section>
+      {/* ==================== TAB 1: RECURRING BILLS & CARDS ==================== */}
+      {hubTab === 'bills' && (
+        <RecurringBillsSection
+          rules={recurringRules}
+          selectedMonth={selectedMonth}
+          categoryOptions={categoryOptions}
+          onAddRule={onAddRecurringRule}
+          onUpdateRule={onUpdateRecurringRule}
+          onDeleteRule={onDeleteRecurringRule}
+          onPayRule={onPayRecurringRule}
+          onUnpayRule={onUnpayRecurringRule}
+        />
+      )}
 
-      {/* ==================== FILTERS & SEARCH BAR ==================== */}
-      <InstallmentFilters
-        filters={filters}
-        resultCount={filteredPlans.length}
-        categoryOptions={categoryOptions}
-        counts={filterCounts}
-        onFiltersChange={setFilters}
-      />
+      {/* ==================== TAB 2: INSTALLMENTS ==================== */}
+      {hubTab === 'installments' && (
+        <div className="space-y-4">
+          {/* Stats Overview Cards & Alert Banner */}
+          <div className="space-y-3.5">
+            <InstallmentSummaryCards metrics={metrics} />
 
-      {/* ==================== MAIN ITEMS VIEW ==================== */}
-      <Card
-        title={
-          <div className="flex items-center gap-2.5">
-            <span>
-              {viewMode === 'list'
-                ? 'รายการแผนผ่อน'
-                : viewMode === 'table'
-                ? 'ตารางภาพรวมแผนผ่อน'
-                : 'ปฏิทินรายเดือน'}
-            </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-              {filteredPlans.length}
-            </span>
+            <InstallmentAlertBanner
+              urgentPlans={metrics.urgentPlans}
+              selectedMonth={selectedMonth}
+              onPay={handleToggleMonth}
+            />
           </div>
-        }
-        actions={
-          <ViewSwitcher<InstallmentViewMode>
-            activeView={viewMode}
-            onViewChange={setViewMode}
-            options={[
-              { id: 'list', label: 'การ์ด', icon: 'cards' },
-              { id: 'table', label: 'ตาราง', icon: 'table' },
-              { id: 'calendar', label: 'ปฏิทิน', icon: 'calendar' },
-            ]}
+
+          {/* Analytics & Projection Section */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 min-w-0 w-full max-w-full items-stretch">
+            <div className="lg:col-span-2 min-w-0 w-full max-w-full flex flex-col">
+              <InstallmentProjectionChart
+                projection={projection}
+                selectedMonth={selectedMonth}
+              />
+            </div>
+            <div className="lg:col-span-1 min-w-0 w-full max-w-full flex flex-col">
+              <InstallmentCategoryChart distribution={categoryDistribution} />
+            </div>
+          </section>
+
+          {/* Filters & Search Bar */}
+          <InstallmentFilters
+            filters={filters}
+            resultCount={filteredPlans.length}
+            categoryOptions={categoryOptions}
+            counts={filterCounts}
+            onFiltersChange={setFilters}
           />
-        }
-      >
-        {viewMode === 'list' ? (
-          <InstallmentPlanList
-            plans={filteredPlans}
-            selectedMonth={selectedMonth}
-            totalPlansCount={plans.length}
-            onOpenAdd={openAddModal}
-            onClearFilters={handleClearFilters}
-            onEdit={openEditModal}
-            onDelete={handleDelete}
-            onToggleMonth={handleToggleMonth}
-            onSettleAll={handleSettleAll}
-          />
-        ) : viewMode === 'table' ? (
-          <InstallmentPlanTable
-            plans={filteredPlans}
-            selectedMonth={selectedMonth}
-            onEdit={openEditModal}
-            onDelete={handleDelete}
-            onToggleMonth={handleToggleMonth}
-            onSettleAll={handleSettleAll}
-          />
-        ) : (
-          <InstallmentCalendar plans={filteredPlans} filters={effectiveFilters} />
-        )}
-      </Card>
+
+          {/* Main Items View */}
+          <Card
+            title={
+              <div className="flex items-center gap-2.5">
+                <span>
+                  {viewMode === 'list'
+                    ? 'รายการแผนผ่อน'
+                    : viewMode === 'table'
+                      ? 'ตารางภาพรวมแผนผ่อน'
+                      : 'ปฏิทินรายเดือน'}
+                </span>
+                <Badge tone="neutral">
+                  {filteredPlans.length}
+                </Badge>
+              </div>
+            }
+            actions={
+              <ViewSwitcher<InstallmentViewMode>
+                activeView={viewMode}
+                onViewChange={setViewMode}
+                options={[
+                  { id: 'list', label: 'การ์ด', icon: 'cards' },
+                  { id: 'table', label: 'ตาราง', icon: 'table' },
+                  { id: 'calendar', label: 'ปฏิทิน', icon: 'calendar' },
+                ]}
+              />
+            }
+          >
+            {viewMode === 'list' ? (
+              <InstallmentPlanList
+                plans={filteredPlans}
+                selectedMonth={selectedMonth}
+                totalPlansCount={plans.length}
+                onOpenAdd={openAddModal}
+                onClearFilters={handleClearFilters}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
+                onToggleMonth={handleToggleMonth}
+                onSettleAll={handleSettleAll}
+              />
+            ) : viewMode === 'table' ? (
+              <InstallmentPlanTable
+                plans={filteredPlans}
+                selectedMonth={selectedMonth}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
+                onToggleMonth={handleToggleMonth}
+                onSettleAll={handleSettleAll}
+              />
+            ) : (
+              <InstallmentCalendar plans={filteredPlans} filters={effectiveFilters} />
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ==================== TAB 3: MASTER CALENDAR ==================== */}
+      {hubTab === 'calendar' && (
+        <ObligationsMasterCalendar
+          rules={recurringRules}
+          plans={plans}
+          selectedMonth={selectedMonth}
+          onPayRule={onPayRecurringRule}
+          onUnpayRule={onUnpayRecurringRule}
+          onToggleInstallmentMonth={handleToggleMonth}
+        />
+      )}
 
       {/* ==================== ADD / EDIT PLAN MODAL ==================== */}
       {modalState.open && (
@@ -321,7 +482,20 @@ export function InstallmentsPage({ data, onAddPlan, onUpdatePlan, onDeletePlan }
         />
       )}
 
-      {/* ==================== DELETE CONFIRM MODAL ==================== */}
+      {/* ==================== ADD RECURRING BILL MODAL (FROM COMMAND BAR) ==================== */}
+      {isAddBillModalOpen && (
+        <RecurringBillModal
+          open={isAddBillModalOpen}
+          categoryOptions={categoryOptions}
+          onClose={() => setIsAddBillModalOpen(false)}
+          onSubmit={(newRule) => {
+            onAddRecurringRule(newRule)
+            setIsAddBillModalOpen(false)
+          }}
+        />
+      )}
+
+      {/* ==================== DELETE PLAN CONFIRM MODAL ==================== */}
       <ConfirmModal
         open={deletePlanId !== null}
         title={th.installments.deleteTitle}

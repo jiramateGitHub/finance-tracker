@@ -6,7 +6,7 @@ import { analyzeImportedFinanceData, type ImportDiagnostics } from '../lib/impor
 import { assertValidFinanceImportPayload, FinanceImportValidationError } from '../lib/importValidation'
 import { createJsonDownload } from '../lib/storage'
 import { loadFinanceDataFromCloudWithReport } from '../services/firebase/firestoreFinanceRepository'
-import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
+import type { Budget, FinanceData, Goal, InstallmentPlan, RecurringRule, TransactionEntry, Trip } from '../types/finance'
 import * as financeCommands from './financeCommands'
 
 export type FinanceDataLoadState = 'loading' | 'ready' | 'error'
@@ -47,6 +47,11 @@ export type FinanceDataContextValue = {
   addInstallmentPlan: (plan: InstallmentPlan) => void
   updateInstallmentPlan: (planId: string, patch: Partial<InstallmentPlan>) => void
   deleteInstallmentPlan: (planId: string) => void
+  addRecurringRule: (rule: RecurringRule) => void
+  updateRecurringRule: (ruleId: string, patch: Partial<RecurringRule>) => void
+  deleteRecurringRule: (ruleId: string) => void
+  payRecurringRule: (ruleId: string, monthKey: string, options?: financeCommands.PayRecurringRuleOptions) => void
+  unpayRecurringRule: (ruleId: string, monthKey: string) => void
   addTrip: (trip: Trip) => void
   updateTrip: (tripId: string, patch: Partial<Trip>) => void
   deleteTrip: (tripId: string) => void
@@ -103,6 +108,25 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
       try {
         if (userId === 'demo-user') {
           const sampleData = normalizeFinanceData({
+            transactions: [
+              {
+                id: 'tx-condo-rent-sep',
+                type: 'expense',
+                date: '2026-09-01',
+                monthKey: '2026-09',
+                category: 'บ้านและที่อยู่อาศัย',
+                categoryId: 'บ้านและที่อยู่อาศัย',
+                title: 'ค่าเช่าคอนโด / นิติบุคคล',
+                amount: 9500,
+                currency: 'THB',
+                status: 'cleared',
+                source: 'manual',
+                sourceModule: 'recurring_bill',
+                sourceRefId: 'rec-condo-rent',
+                recurringRuleId: 'rec-condo-rent',
+                note: 'โอนเข้านิติก่อนวันที่ 1',
+              },
+            ],
             installmentPlans: [
               {
                 id: 'p-shopee',
@@ -152,6 +176,69 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
                 dueDay: 1,
                 interestType: 'none',
                 paidMonthKeys: ['2026-07', '2026-08'],
+              },
+            ],
+            recurringRules: [
+              {
+                id: 'rec-card-kbank',
+                title: 'บัตรเครดิต KBank OneSiam',
+                name: 'บัตรเครดิต KBank OneSiam',
+                type: 'credit_card',
+                category: 'หนี้สินและการเงิน',
+                categoryId: 'หนี้สินและการเงิน',
+                amount: 8500,
+                amountType: 'variable',
+                statementDay: 20,
+                dueDay: 5,
+                isActive: true,
+                autoGenerateTransaction: true,
+                paidMonthKeys: ['2026-08'],
+                note: 'ตัดรอบวันที่ 20 จ่ายวันที่ 5',
+              },
+              {
+                id: 'rec-internet',
+                title: 'อินเทอร์เน็ตบ้าน AIS Fibre',
+                name: 'อินเทอร์เน็ตบ้าน AIS Fibre',
+                type: 'utility',
+                category: 'สาธารณูปโภค',
+                categoryId: 'สาธารณูปโภค',
+                amount: 599,
+                amountType: 'fixed',
+                dueDay: 15,
+                isActive: true,
+                autoGenerateTransaction: true,
+                paidMonthKeys: ['2026-08'],
+                note: 'แพ็กเกจ 1000/500 Mbps',
+              },
+              {
+                id: 'rec-condo-rent',
+                title: 'ค่าเช่าคอนโด / นิติบุคคล',
+                name: 'ค่าเช่าคอนโด / นิติบุคคล',
+                type: 'utility',
+                category: 'บ้านและที่อยู่อาศัย',
+                categoryId: 'บ้านและที่อยู่อาศัย',
+                amount: 9500,
+                amountType: 'fixed',
+                dueDay: 1,
+                isActive: true,
+                autoGenerateTransaction: true,
+                paidMonthKeys: ['2026-08', '2026-09'],
+                note: 'โอนเข้านิติก่อนวันที่ 1',
+              },
+              {
+                id: 'rec-sub-netflix',
+                title: 'Netflix Premium 4K',
+                name: 'Netflix Premium 4K',
+                type: 'subscription',
+                category: 'บันเทิง',
+                categoryId: 'บันเทิง',
+                amount: 419,
+                amountType: 'fixed',
+                dueDay: 22,
+                isActive: true,
+                autoGenerateTransaction: true,
+                paidMonthKeys: ['2026-08'],
+                note: 'ตัดผ่านบัตรเครดิต',
               },
             ],
           })
@@ -339,6 +426,26 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     applyCommand((current) => financeCommands.deleteInstallmentPlan(current, planId), 'ลบแผนผ่อนแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
 
+  function addRecurringRule(rule: RecurringRule): void {
+    applyCommand((current) => financeCommands.addRecurringRule(current, rule), 'เพิ่มบิลประจำแล้ว กำลังรอบันทึกขึ้น Cloud')
+  }
+
+  function updateRecurringRule(ruleId: string, patch: Partial<RecurringRule>): void {
+    applyCommand((current) => financeCommands.updateRecurringRule(current, ruleId, patch), 'แก้ไขบิลประจำแล้ว กำลังรอบันทึกขึ้น Cloud')
+  }
+
+  function deleteRecurringRule(ruleId: string): void {
+    applyCommand((current) => financeCommands.deleteRecurringRule(current, ruleId), 'ลบบิลประจำแล้ว กำลังรอบันทึกขึ้น Cloud')
+  }
+
+  function payRecurringRule(ruleId: string, monthKey: string, options?: financeCommands.PayRecurringRuleOptions): void {
+    applyCommand((current) => financeCommands.payRecurringRule(current, ruleId, monthKey, options), 'บันทึกการชำระบิลแล้ว กำลังรอบันทึกขึ้น Cloud')
+  }
+
+  function unpayRecurringRule(ruleId: string, monthKey: string): void {
+    applyCommand((current) => financeCommands.unpayRecurringRule(current, ruleId, monthKey), 'ยกเลิกการชำระบิลแล้ว กำลังรอบันทึกขึ้น Cloud')
+  }
+
   function addTrip(trip: Trip): void {
     applyCommand((current) => financeCommands.addTrip(current, trip), 'เพิ่มทริปแล้ว กำลังรอบันทึกขึ้น Cloud')
   }
@@ -421,6 +528,11 @@ export function FinanceDataProvider({ children, userId }: FinanceDataProviderPro
     addInstallmentPlan,
     updateInstallmentPlan,
     deleteInstallmentPlan,
+    addRecurringRule,
+    updateRecurringRule,
+    deleteRecurringRule,
+    payRecurringRule,
+    unpayRecurringRule,
     addTrip,
     updateTrip,
     deleteTrip,

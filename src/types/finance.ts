@@ -32,6 +32,7 @@ export interface TransactionEntry {
   installmentId?: string
   installmentPlanId?: string | null
   recurringRuleId?: string | null
+  recurringMonthKey?: string | null
   goalId?: string | null
   travelDetails?: {
     destination?: string | null
@@ -41,19 +42,36 @@ export interface TransactionEntry {
   updatedAt: string
 }
 
+export type RecurringBillType =
+  | 'credit_card'
+  | 'utility'
+  | 'subscription'
+  | 'loan'
+  | 'insurance'
+  | 'other'
+
+export type RecurringAmountType = 'fixed' | 'variable'
+export type RecurringRuleType = RecurringBillType | TransactionType
+
 export interface RecurringRule {
   id: string
   isActive: boolean
-  type: TransactionType
+  type: RecurringRuleType
   title: string
+  name?: string
   category: string
   categoryId?: string
   amount: number
+  amountType?: RecurringAmountType
   currency: 'THB'
   cadence: string
   interval: number
   dayOfMonth?: number | null
-  startDate: string
+  dueDay?: number | null
+  statementDay?: number | null
+  paidMonthKeys?: string[]
+  autoGenerateTransaction?: boolean
+  startDate?: string
   endDate?: string | null
   note?: string | null
   tripId?: string | null

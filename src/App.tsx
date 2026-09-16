@@ -92,9 +92,16 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
       return (
         <InstallmentsPage
           data={store.data}
+          selectedMonth={store.selectedMonth}
+          onMonthChange={store.setSelectedMonth}
           onAddPlan={store.addInstallmentPlan}
           onUpdatePlan={store.updateInstallmentPlan}
           onDeletePlan={store.deleteInstallmentPlan}
+          onAddRecurringRule={store.addRecurringRule}
+          onUpdateRecurringRule={store.updateRecurringRule}
+          onDeleteRecurringRule={store.deleteRecurringRule}
+          onPayRecurringRule={store.payRecurringRule}
+          onUnpayRecurringRule={store.unpayRecurringRule}
         />
       )
     }
@@ -144,6 +151,10 @@ function App({ currentUserId, currentUserEmail, onLogout }: AppProps) {
         onAddGoal={store.addGoal}
         onUpdateGoal={store.updateGoal}
         onDeleteGoal={store.deleteGoal}
+        onAddRecurringRule={store.addRecurringRule}
+        onPayRecurringRule={store.payRecurringRule}
+        onUnpayRecurringRule={store.unpayRecurringRule}
+        onNavigateToObligations={() => store.setActiveView('installments')}
         syncStatus={sync.status}
       />
     )

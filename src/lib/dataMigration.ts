@@ -20,6 +20,7 @@ import type {
   InterestType,
   MasterCategory,
   RecurringRule,
+  RecurringRuleType,
   TransactionEntry,
   TransactionStatus,
   TransactionType,
@@ -38,6 +39,22 @@ import { isViewId } from './viewSettings'
 
 const validTransactionTypes = new Set<TransactionType>(['income', 'expense'])
 const validTransactionStatuses = new Set<TransactionStatus>(['cleared', 'pending'])
+const validRecurringTypes = new Set<string>([
+  'credit_card',
+  'utility',
+  'subscription',
+  'loan',
+  'insurance',
+  'other',
+  'income',
+  'expense',
+])
+
+function normalizeRecurringType(value: unknown): RecurringRuleType {
+  return typeof value === 'string' && validRecurringTypes.has(value)
+    ? (value as RecurringRuleType)
+    : 'other'
+}
 const validInterestTypes = new Set<InterestType>(['none', 'flat', 'reducing'])
 const validGoalStatuses = new Set<GoalStatus>(['active', 'paused', 'completed'])
 const validCategoryKinds = new Set<CategoryKind>(['income', 'expense', 'mixed'])
@@ -471,6 +488,7 @@ function normalizeTransaction(value: unknown): TransactionEntry {
     installmentId: readNullableString(record, 'installmentId') ?? undefined,
     installmentPlanId: readNullableString(record, 'installmentPlanId'),
     recurringRuleId: readNullableString(record, 'recurringRuleId'),
+    recurringMonthKey: readNullableString(record, 'recurringMonthKey'),
     goalId: readNullableString(record, 'goalId'),
     travelDetails: (travelDetails.destination || travelDetails.country)
       ? {
@@ -486,21 +504,46 @@ function normalizeTransaction(value: unknown): TransactionEntry {
 function normalizeRecurringRule(value: unknown): RecurringRule {
   const record = readRecord(value)
   const now = currentIsoTimestamp()
-  const type = normalizeTransactionType(record.type)
+  const type = normalizeRecurringType(record.type)
   const category = normalizeCategoryId(record.categoryId ?? record.category, 'อื่นๆ')
+  const title = readString(record, 'title') || readString(record, 'name') || 'รายการประจำ'
+  const name = readString(record, 'name') || title
+  const rawDueDay = record.dueDay ?? record.dayOfMonth
+  const parsedDueDay = rawDueDay == null ? null : Number(rawDueDay)
+  const dueDay = parsedDueDay == null || Number.isNaN(parsedDueDay)
+    ? null
+    : Math.max(1, Math.min(31, Math.floor(parsedDueDay)))
+  const rawStatementDay = record.statementDay
+  const parsedStatementDay = rawStatementDay == null ? null : Number(rawStatementDay)
+  const statementDay = parsedStatementDay == null || Number.isNaN(parsedStatementDay)
+    ? null
+    : Math.max(1, Math.min(31, Math.floor(parsedStatementDay)))
+  const amountType = record.amountType === 'variable' ? 'variable' : 'fixed'
+  const paidMonthKeys = Array.isArray(record.paidMonthKeys)
+    ? asArray(record.paidMonthKeys).filter((item): item is string => typeof item === 'string' && isValidMonth(item))
+    : []
+  const autoGenerateTransaction = readBoolean(record, 'autoGenerateTransaction', false)
+  const startDate = record.startDate || record.date ? normalizeDate(record.startDate ?? record.date) : now.slice(0, 10)
+
   return {
     id: readId(record, 'recurring-rule'),
     isActive: readBoolean(record, 'isActive', true),
     type,
-    title: readString(record, 'title') || 'รายการประจำ',
+    title,
+    name,
     category,
     categoryId: category,
     amount: Math.max(0, readNumber(record, 'amount', 0)),
+    amountType,
     currency: 'THB',
     cadence: readString(record, 'cadence') || 'monthly',
     interval: Math.max(1, Math.floor(readNumber(record, 'interval', 1))),
-    dayOfMonth: record.dayOfMonth == null ? null : Math.max(1, Math.min(31, Math.floor(readNumber(record, 'dayOfMonth', 1)))),
-    startDate: normalizeDate(record.startDate ?? record.date),
+    dayOfMonth: dueDay,
+    dueDay,
+    statementDay,
+    paidMonthKeys,
+    autoGenerateTransaction,
+    startDate,
     endDate: readNullableString(record, 'endDate'),
     note: readNullableString(record, 'note'),
     tripId: readNullableString(record, 'tripId'),
@@ -1009,7 +1052,7 @@ function createDefaultMasters(rawMasters: unknown, normalized: {
   })
 
   normalized.transactions.forEach((transaction) => addKindHint(hints, transaction.categoryId || transaction.category, transaction.type))
-  normalized.recurringRules.forEach((rule) => addKindHint(hints, rule.categoryId || rule.category, rule.type))
+  normalized.recurringRules.forEach((rule) => addKindHint(hints, rule.categoryId || rule.category, rule.type === 'income' ? 'income' : 'expense'))
   normalized.installmentPlans.forEach((plan) => addKindHint(hints, plan.categoryId || plan.category, 'expense'))
   normalized.trips.forEach((trip) => trip.items.forEach((item) => addKindHint(hints, item.category, 'expense')))
   normalized.budgets.forEach((budget) => {
@@ -1173,6 +1216,7 @@ function serializeTransaction(transaction: TransactionEntry) {
     tripId: transaction.tripId,
     installmentPlanId: transaction.installmentPlanId ?? transaction.installmentId ?? null,
     recurringRuleId: transaction.recurringRuleId,
+    recurringMonthKey: transaction.recurringMonthKey ?? null,
     goalId: transaction.goalId,
     travelDetails: transaction.travelDetails,
     createdAt: transaction.createdAt,
@@ -1181,22 +1225,30 @@ function serializeTransaction(transaction: TransactionEntry) {
 }
 
 function serializeRecurringRule(rule: RecurringRule) {
+  const dueDay = rule.dueDay ?? rule.dayOfMonth ?? null
   return {
     id: rule.id,
     isActive: rule.isActive,
     type: rule.type,
-    title: rule.title,
+    title: rule.title || rule.name || 'รายการประจำ',
+    name: rule.name || rule.title || 'รายการประจำ',
+    category: rule.category,
     categoryId: rule.categoryId ?? normalizeCategoryId(rule.category, 'อื่นๆ'),
     amount: rule.amount,
-    currency: rule.currency,
-    cadence: rule.cadence,
-    interval: rule.interval,
-    dayOfMonth: rule.dayOfMonth,
-    startDate: rule.startDate,
-    endDate: rule.endDate,
-    note: rule.note,
-    tripId: rule.tripId,
-    goalId: rule.goalId,
+    amountType: rule.amountType ?? 'fixed',
+    currency: rule.currency ?? 'THB',
+    cadence: rule.cadence ?? 'monthly',
+    interval: rule.interval ?? 1,
+    dayOfMonth: dueDay,
+    dueDay,
+    statementDay: rule.statementDay ?? null,
+    paidMonthKeys: rule.paidMonthKeys ?? [],
+    autoGenerateTransaction: rule.autoGenerateTransaction ?? false,
+    startDate: rule.startDate ?? rule.createdAt.slice(0, 10),
+    endDate: rule.endDate ?? null,
+    note: rule.note ?? null,
+    tripId: rule.tripId ?? null,
+    goalId: rule.goalId ?? null,
     createdAt: rule.createdAt,
     updatedAt: rule.updatedAt,
   }

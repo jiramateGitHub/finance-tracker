@@ -1,7 +1,7 @@
 import { detachTripTransactions, reconcileTripTransactions } from '../features/trips/utils/tripUtils'
 import { createId } from '../lib/id'
-import type { Budget, FinanceData, Goal, InstallmentPlan, TransactionEntry, Trip } from '../types/finance'
-import { currentIsoTimestamp } from '../utils/formatters'
+import type { Budget, FinanceData, Goal, InstallmentPlan, RecurringRule, TransactionEntry, Trip } from '../types/finance'
+import { currentDateInputValue, currentIsoTimestamp, getMonthKey, getSafeDateInMonth } from '../utils/formatters'
 
 /**
  * Commands are pure state transitions. They keep persistence, migration and
@@ -11,6 +11,7 @@ export type FinanceCommand = (data: FinanceData) => FinanceData
 
 type TransactionPatch = Omit<Partial<TransactionEntry>, 'id' | 'createdAt' | 'updatedAt' | 'sourceModule' | 'sourceRefId' | 'tripId' | 'installmentId' | 'installmentPlanId' | 'recurringRuleId' | 'goalId'>
 type InstallmentPlanPatch = Omit<Partial<InstallmentPlan>, 'id' | 'createdAt' | 'updatedAt'>
+type RecurringRulePatch = Omit<Partial<RecurringRule>, 'id' | 'createdAt' | 'updatedAt'>
 type TripPatch = Omit<Partial<Trip>, 'id' | 'createdAt' | 'updatedAt'>
 type BudgetPatch = Omit<Partial<Budget>, 'id' | 'createdAt' | 'updatedAt'>
 type GoalPatch = Omit<Partial<Goal>, 'id' | 'createdAt' | 'updatedAt'>
@@ -67,6 +68,171 @@ export function deleteInstallmentPlan(data: FinanceData, planId: string): Financ
   const installmentPlans = data.installmentPlans.filter((plan) => plan.id !== planId)
   if (installmentPlans.length === data.installmentPlans.length) return data
   return { ...data, installmentPlans }
+}
+
+export function addRecurringRule(data: FinanceData, rule: RecurringRule): FinanceData {
+  return { ...data, recurringRules: [rule, ...data.recurringRules] }
+}
+
+export function updateRecurringRule(
+  data: FinanceData,
+  ruleId: string,
+  patch: RecurringRulePatch,
+  updatedAt = currentIsoTimestamp(),
+): FinanceData {
+  const recurringRules = updateById(
+    data.recurringRules,
+    ruleId,
+    withoutKeys(patch, ['id', 'createdAt', 'updatedAt']) as Partial<RecurringRule>,
+    updatedAt,
+  )
+  if (recurringRules === data.recurringRules) return data
+  return { ...data, recurringRules }
+}
+
+export function deleteRecurringRule(
+  data: FinanceData,
+  ruleId: string,
+  updatedAt = currentIsoTimestamp(),
+): FinanceData {
+  const recurringRules = data.recurringRules.filter((rule) => rule.id !== ruleId)
+  if (recurringRules.length === data.recurringRules.length) return data
+  const transactions = data.transactions.map((tx) =>
+    tx.sourceModule === 'recurring_bill' && (tx.sourceRefId === ruleId || tx.recurringRuleId === ruleId)
+      ? {
+          ...tx,
+          sourceModule: 'manual' as const,
+          sourceRefId: null,
+          recurringRuleId: null,
+          recurringMonthKey: null,
+          updatedAt,
+        }
+      : tx,
+  )
+  return { ...data, recurringRules, transactions }
+}
+
+export interface PayRecurringRuleOptions {
+  createTransaction?: boolean
+  amount?: number
+  date?: string
+  note?: string
+}
+
+export function payRecurringRule(
+  data: FinanceData,
+  ruleId: string,
+  monthKey: string,
+  options: PayRecurringRuleOptions = {},
+  updatedAt = currentIsoTimestamp(),
+): FinanceData {
+  const rule = data.recurringRules.find((r) => r.id === ruleId)
+  if (!rule) return data
+
+  const currentPaid = rule.paidMonthKeys ?? []
+  const nextPaidMonthKeys = currentPaid.includes(monthKey) ? currentPaid : [...currentPaid, monthKey]
+
+  const shouldCreateTx = options.createTransaction ?? (rule.autoGenerateTransaction !== false)
+  let nextTransactions = data.transactions
+
+  if (shouldCreateTx) {
+    const existingTx = data.transactions.find(
+      (tx) =>
+        tx.sourceModule === 'recurring_bill' &&
+        (tx.sourceRefId === ruleId || tx.recurringRuleId === ruleId) &&
+        (tx.recurringMonthKey === monthKey || tx.monthKey === monthKey || tx.date.startsWith(monthKey)),
+    )
+
+    const day = rule.dueDay ?? rule.dayOfMonth ?? 1
+    const today = currentDateInputValue()
+    const payDate = options.date || (today.startsWith(monthKey) ? today : getSafeDateInMonth(monthKey, String(day)))
+    const txMonthKey = getMonthKey(payDate)
+    const payAmount = Math.max(0, options.amount ?? (existingTx ? existingTx.amount : rule.amount))
+
+    if (!existingTx) {
+      const newTx: TransactionEntry = {
+        id: createId(),
+        type: 'expense',
+        date: payDate,
+        monthKey: txMonthKey,
+        category: rule.category,
+        categoryId: rule.categoryId || rule.category,
+        title: rule.name || rule.title,
+        amount: payAmount,
+        currency: 'THB',
+        status: 'cleared',
+        source: 'manual',
+        sourceModule: 'recurring_bill',
+        sourceRefId: rule.id,
+        recurringRuleId: rule.id,
+        recurringMonthKey: monthKey,
+        note: options.note ?? rule.note ?? undefined,
+        createdAt: updatedAt,
+        updatedAt,
+      }
+      nextTransactions = [newTx, ...data.transactions]
+    } else if (options.amount !== undefined || options.date || options.note !== undefined) {
+      nextTransactions = data.transactions.map((tx) =>
+        tx.id === existingTx.id
+          ? {
+              ...tx,
+              amount: payAmount,
+              date: payDate,
+              monthKey: txMonthKey,
+              recurringMonthKey: monthKey,
+              note: options.note !== undefined ? (options.note || undefined) : tx.note,
+              updatedAt,
+            }
+          : tx,
+      )
+    }
+  }
+
+  const updatedRule: RecurringRule = {
+    ...rule,
+    paidMonthKeys: nextPaidMonthKeys,
+    updatedAt,
+  }
+
+  return {
+    ...data,
+    recurringRules: data.recurringRules.map((r) => (r.id === ruleId ? updatedRule : r)),
+    transactions: nextTransactions,
+  }
+}
+
+export function unpayRecurringRule(
+  data: FinanceData,
+  ruleId: string,
+  monthKey: string,
+  updatedAt = currentIsoTimestamp(),
+): FinanceData {
+  const rule = data.recurringRules.find((r) => r.id === ruleId)
+  if (!rule) return data
+
+  const currentPaid = rule.paidMonthKeys ?? []
+  const nextPaidMonthKeys = currentPaid.filter((m) => m !== monthKey)
+
+  const nextTransactions = data.transactions.filter(
+    (tx) =>
+      !(
+        tx.sourceModule === 'recurring_bill' &&
+        (tx.sourceRefId === ruleId || tx.recurringRuleId === ruleId) &&
+        (tx.recurringMonthKey === monthKey || tx.monthKey === monthKey || tx.date.startsWith(monthKey))
+      ),
+  )
+
+  const updatedRule: RecurringRule = {
+    ...rule,
+    paidMonthKeys: nextPaidMonthKeys,
+    updatedAt,
+  }
+
+  return {
+    ...data,
+    recurringRules: data.recurringRules.map((r) => (r.id === ruleId ? updatedRule : r)),
+    transactions: nextTransactions,
+  }
 }
 
 export function addTrip(data: FinanceData, trip: Trip): FinanceData {
