@@ -8,6 +8,7 @@ import type { FinanceDataStatus, FinanceImportPreview } from '../../state/Financ
 import type { AppData, FinanceData } from '../../types/finance'
 import type { SyncStatus } from '../sync/syncTypes'
 import { th } from '../../i18n/th'
+import { ExcelExportSection } from '../export/components/ExcelExportSection'
 
 type MorePageProps = {
   data: AppData
@@ -194,6 +195,8 @@ export function MorePage({
           </span>
         </div>
       </section>
+
+      <ExcelExportSection data={data} ready={dataStatus.loadState === 'ready' && syncStatus.state !== 'loading' && !confirmingImport} hasUnsyncedChanges={syncStatus.dirty} />
 
       {/* ==================== 2 COLUMNS: FIREBASE & BACKUP ==================== */}
       <div className="grid gap-4 lg:grid-cols-2">

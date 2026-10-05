@@ -1,3 +1,4 @@
+import { th } from '../../../i18n/th'
 import { ActionButton } from '../../../components/ui/ActionButton'
 import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
@@ -203,13 +204,13 @@ export function RecurringBillTable({
           <table className="w-full min-w-[760px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">ชื่อบิล / ประเภท</th>
-                <th className="py-3 px-3">ประเภทยอด</th>
-                <th className="py-3 px-3">วันตัดรอบ</th>
-                <th className="py-3 px-3">วันครบกำหนด</th>
-                <th className="py-3 px-3">สถานะเดือนนี้</th>
-                <th className="py-3 px-3 text-right">ยอดชำระ</th>
-                <th className="py-3 px-4 text-center">การจัดการ</th>
+                <th className="py-3 px-4">{th.financeColumns.billNameType}</th>
+                <th className="py-3 px-3">{th.financeColumns.amountType}</th>
+                <th className="py-3 px-3">{th.financeColumns.statementDate}</th>
+                <th className="py-3 px-3">{th.financeColumns.dueDate}</th>
+                <th className="py-3 px-3">{th.financeColumns.statusMonth}</th>
+                <th className="py-3 px-3 text-right">{th.financeColumns.payment}</th>
+                <th className="py-3 px-4 text-center">{th.financeColumns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

@@ -64,7 +64,7 @@ const budgetStatusBar: Record<TripBudgetStatus, string> = {
 
 const tabLabels: Record<TripDetailTab, string> = {
   overview: 'ภาพรวม',
-  actual: 'รายการจริง',
+  actual: th.trips.actualTab,
   plan: 'แผนงบ',
 }
 
@@ -606,13 +606,13 @@ export function TripDetail({
                   <table className="w-full min-w-[760px] text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider">
-                        <th className="py-3 px-4">วันที่</th>
-                        <th className="py-3 px-4">รายการ / รายละเอียด</th>
-                        <th className="py-3 px-3">หมวดหมู่</th>
-                        <th className="py-3 px-3">การผูกผ่อน</th>
-                        <th className="py-3 px-3">สถานะ</th>
-                        <th className="py-3 px-4 text-right">จำนวนเงิน</th>
-                        <th className="py-3 px-4 text-center">การจัดการ</th>
+                        <th className="py-3 px-4">{th.financeColumns.date}</th>
+                        <th className="py-3 px-4">{th.financeColumns.titleDetails}</th>
+                        <th className="py-3 px-3">{th.financeColumns.category}</th>
+                        <th className="py-3 px-3">{th.financeColumns.installmentLink}</th>
+                        <th className="py-3 px-3">{th.financeColumns.status}</th>
+                        <th className="py-3 px-4 text-right">{th.financeColumns.amount}</th>
+                        <th className="py-3 px-4 text-center">{th.financeColumns.actions}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -895,13 +895,13 @@ export function TripDetail({
                   <table className="w-full min-w-[760px] text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider">
-                        <th className="py-3 px-4">หมวดหมู่</th>
-                        <th className="py-3 px-4 text-right">งบที่วางไว้</th>
+                        <th className="py-3 px-4">{th.financeColumns.category}</th>
+                        <th className="py-3 px-4 text-right">{th.financeColumns.plannedBudget}</th>
                         <th className="py-3 px-4 text-right">ใช้จริง</th>
-                        <th className="py-3 px-4 text-right">คงเหลือ</th>
+                        <th className="py-3 px-4 text-right">{th.financeColumns.remaining}</th>
                         <th className="py-3 px-4 w-44">การใช้งบ</th>
-                        <th className="py-3 px-3 text-center">สถานะ</th>
-                        <th className="py-3 px-4 text-center">การจัดการ</th>
+                        <th className="py-3 px-3 text-center">{th.financeColumns.status}</th>
+                        <th className="py-3 px-4 text-center">{th.financeColumns.actions}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">

@@ -19,6 +19,7 @@ import { parseMonthlySmartKeyword } from './monthlySmartFilter'
 import { deriveInstallmentTransactions, deriveInstallmentTransactionsForMonths } from '../../installments/utils/installmentPlans'
 import { deriveTripTransactions, deriveTripTransactionsForMonths } from '../../trips/utils/tripUtils'
 import { calculateEntryTotals } from '../../../lib/finance-calculations'
+import { currentMonthInputValue } from '../../../utils/formatters'
 import type { InstallmentPlan, TransactionEntry, Trip } from '../../../types/finance'
 
 function assert(condition: unknown, message?: string): asserts condition {
@@ -108,7 +109,7 @@ assert.equal(inclusiveMax.text, '', 'ไม่เกิน should be consumed as
 assert.equal(inclusiveMax.maxInclusive, true, 'ไม่เกิน should include the boundary')
 assert.equal(filterMonthlyTransactions(sampleTransactions, { ...defaultFilters, keyword: 'ไม่เกิน 500' }).length, 1, 'ไม่เกิน keeps amount equal to the boundary')
 assert.equal(filterMonthlyTransactions(sampleTransactions, { ...defaultFilters, keyword: 'เกิน 500' }).length, 2, 'เกิน excludes amount equal to the boundary')
-const previousMonth = addMonthsToMonthKey(defaultFilters.rangeStartMonth, -1)
+const previousMonth = addMonthsToMonthKey(currentMonthInputValue(), -1)
 assert.equal(resolveMonthlyFilterRange({ ...defaultFilters, keyword: 'เดือนก่อน' })[0], previousMonth, 'เดือนก่อน resolves the derived range')
 console.log('✓ filterMonthlyTransactions passed')
 

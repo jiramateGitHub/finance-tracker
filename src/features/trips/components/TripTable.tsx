@@ -1,3 +1,4 @@
+import { th } from '../../../i18n/th'
 import { ActionButton } from '../../../components/ui/ActionButton'
 import { Badge } from '../../../components/ui/Badge'
 import { EmptyState } from '../../../components/ui/EmptyState'
@@ -126,14 +127,14 @@ export function TripTable({
           <table className="w-full min-w-[780px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">ชื่อทริป / จุดหมาย</th>
-                <th className="py-3 px-3">ช่วงเวลา</th>
-                <th className="py-3 px-3 text-right">งบที่วางไว้</th>
-                <th className="py-3 px-3 text-right">ใช้จ่ายจริง</th>
-                <th className="py-3 px-3 text-right">คงเหลือ</th>
-                <th className="py-3 px-3">ใช้ไป</th>
-                <th className="py-3 px-3">สถานะ</th>
-                <th className="py-3 px-4 text-center">การจัดการ</th>
+                <th className="py-3 px-4">{th.financeColumns.tripDestination}</th>
+                <th className="py-3 px-3">{th.financeColumns.period}</th>
+                <th className="py-3 px-3 text-right">{th.financeColumns.plannedBudget}</th>
+                <th className="py-3 px-3 text-right">{th.financeColumns.actualSpending}</th>
+                <th className="py-3 px-3 text-right">{th.financeColumns.remaining}</th>
+                <th className="py-3 px-3">{th.financeColumns.usage}</th>
+                <th className="py-3 px-3">{th.financeColumns.status}</th>
+                <th className="py-3 px-4 text-center">{th.financeColumns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

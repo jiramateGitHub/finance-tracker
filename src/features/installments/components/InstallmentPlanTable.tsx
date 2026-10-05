@@ -1,3 +1,4 @@
+import { th } from '../../../i18n/th'
 import { useState } from 'react'
 import { ActionButton } from '../../../components/ui/ActionButton'
 import { Badge } from '../../../components/ui/Badge'
@@ -142,13 +143,13 @@ export function InstallmentPlanTable({
           <table className="w-full min-w-[760px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">ชื่อแผน / หมวด</th>
-                <th className="py-3 px-3">ค่างวด / เดือน</th>
-                <th className="py-3 px-3">ความคืบหน้างวด</th>
-                <th className="py-3 px-3">ครบกำหนด</th>
-                <th className="py-3 px-3">สถานะเดือนนี้</th>
-                <th className="py-3 px-3 text-right">ยอดคงเหลือ</th>
-                <th className="py-3 px-4 text-center">การจัดการ</th>
+                <th className="py-3 px-4">{th.financeColumns.planCategory}</th>
+                <th className="py-3 px-3">{th.financeColumns.monthlyPayment}</th>
+                <th className="py-3 px-3">{th.financeColumns.progress}</th>
+                <th className="py-3 px-3">{th.financeColumns.due}</th>
+                <th className="py-3 px-3">{th.financeColumns.statusMonth}</th>
+                <th className="py-3 px-3 text-right">{th.financeColumns.balance}</th>
+                <th className="py-3 px-4 text-center">{th.financeColumns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

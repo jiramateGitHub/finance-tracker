@@ -137,13 +137,13 @@ export function TransactionTable({
           <table className="w-full min-w-[820px] text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">วันที่</th>
-                <th className="py-3 px-4">รายการ / หมายเหตุ</th>
-                <th className="py-3 px-3">หมวดหมู่</th>
-                <th className="py-3 px-3">ที่มา</th>
-                <th className="py-3 px-3">สถานะ</th>
-                <th className="py-3 px-4 text-right">จำนวนเงิน</th>
-                <th className="py-3 px-4 text-center">การจัดการ</th>
+                <th className="py-3 px-4">{th.financeColumns.date}</th>
+                <th className="py-3 px-4">{th.financeColumns.titleNote}</th>
+                <th className="py-3 px-3">{th.financeColumns.category}</th>
+                <th className="py-3 px-3">{th.financeColumns.source}</th>
+                <th className="py-3 px-3">{th.financeColumns.status}</th>
+                <th className="py-3 px-4 text-right">{th.financeColumns.amount}</th>
+                <th className="py-3 px-4 text-center">{th.financeColumns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

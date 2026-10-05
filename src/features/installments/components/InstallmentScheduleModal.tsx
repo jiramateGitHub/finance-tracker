@@ -73,7 +73,7 @@ export function InstallmentScheduleModal({
             </div>
             <div>
               <h2 id="installment-schedule-title" className="text-base font-bold text-slate-900 leading-tight">
-                ตารางผ่อนชำระ: {plan.name}
+                {th.installments.scheduleTitle}: {plan.name}
               </h2>
               <p className="text-xs text-slate-500">
                 งวดทั้งหมด {months.length} งวด และการบันทึกชำระ
@@ -173,11 +173,11 @@ export function InstallmentScheduleModal({
               <table className="w-full min-w-[460px] text-left border-collapse text-xs">
                 <thead className="sticky top-0 bg-slate-100 z-10 text-slate-600 font-semibold border-b border-slate-200">
                   <tr>
-                    <th className="py-2.5 px-3">งวดที่</th>
-                    <th className="py-2.5 px-3">เดือนที่ครบกำหนด</th>
-                    <th className="py-2.5 px-3">ยอดชำระ</th>
-                    <th className="py-2.5 px-3">สถานะ</th>
-                    <th className="py-2.5 px-3 text-right">การจัดการ</th>
+                    <th className="py-2.5 px-3">{th.financeColumns.term}</th>
+                    <th className="py-2.5 px-3">{th.financeColumns.dueMonth}</th>
+                    <th className="py-2.5 px-3">{th.financeColumns.payment}</th>
+                    <th className="py-2.5 px-3">{th.financeColumns.status}</th>
+                    <th className="py-2.5 px-3 text-right">{th.financeColumns.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
